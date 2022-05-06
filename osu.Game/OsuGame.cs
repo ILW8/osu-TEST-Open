@@ -46,6 +46,7 @@ using osu.Game.IO;
 using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.Chat;
+using osu.Game.Online.WebSockets;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Solo;
@@ -955,6 +956,17 @@ namespace osu.Game
             });
 
             Add(sessionIdleTracker);
+
+            var broadcastServer = new GameStateBroadcastServer();
+            broadcastServer.AddRange(new GameStateBroadcaster[]
+            {
+                new RulesetStateBroadcaster(),
+                new BeatmapStateBroadcaster(),
+                new UserActivityStateBroadcaster(),
+            });
+
+            dependencies.CacheAs(broadcastServer);
+            Add(broadcastServer);
 
             AddRange(new Drawable[]
             {
