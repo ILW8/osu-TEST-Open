@@ -115,7 +115,7 @@ namespace osu.Game.Screens.Play
         [Resolved]
         private OsuGameBase game { get; set; }
 
-        [Resolved]
+        [Resolved(canBeNull: true)]
         private GameStateBroadcastServer broadcastServer { get; set; }
 
         private PlayerStateBroadcaster playerStateBroadcaster;
@@ -1112,7 +1112,7 @@ namespace osu.Game.Screens.Play
 
             StartGameplay();
             OnGameplayStarted?.Invoke();
-            broadcastServer.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
+            broadcastServer?.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
         }
 
         /// <summary>
@@ -1164,7 +1164,7 @@ namespace osu.Game.Screens.Play
             musicController.ResetTrackAdjustments();
 
             fadeOut();
-            broadcastServer.Remove(playerStateBroadcaster);
+            broadcastServer?.Remove(playerStateBroadcaster);
             return base.OnExiting(e);
         }
 
