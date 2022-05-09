@@ -957,17 +957,6 @@ namespace osu.Game
 
             Add(sessionIdleTracker);
 
-            var broadcastServer = new GameStateBroadcastServer();
-            broadcastServer.AddRange(new GameStateBroadcaster[]
-            {
-                new RulesetStateBroadcaster(),
-                new BeatmapStateBroadcaster(),
-                new UserActivityStateBroadcaster(),
-            });
-
-            dependencies.CacheAs(broadcastServer);
-            Add(broadcastServer);
-
             AddRange(new Drawable[]
             {
                 new VolumeControlReceptor

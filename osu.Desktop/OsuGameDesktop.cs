@@ -8,14 +8,19 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using osu.Desktop.Security;
-using osu.Framework.Platform;
-using osu.Game;
 using osu.Desktop.Updater;
+using osu.Desktop.WebSockets;
+using osu.Desktop.Windows;
 using osu.Framework;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
+using osu.Framework.Threading;
+using osu.Game;
 using osu.Game.Updater;
 using osu.Desktop.Windows;
 using osu.Game.IO;
+using osu.Game.Online.Broadcasts;
+using osu.Game.Updater;
 using osu.Game.IPC;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Utils;
@@ -141,6 +146,18 @@ namespace osu.Desktop
 
             osuSchemeLinkIPCChannel = new OsuSchemeLinkIPCChannel(Host, this);
             archiveImportIPCChannel = new ArchiveImportIPCChannel(Host, this);
+
+            LoadComponentAsync(new GameStateBroadcastServer(), loaded =>
+            {
+                loaded.AddRange(new GameStateBroadcaster[]
+                {
+                    new RulesetStateBroadcaster(),
+                    new BeatmapStateBroadcaster(),
+                    new UserActivityStateBroadcaster(),
+                });
+
+                Add(loaded);
+            });
         }
 
         public override void SetHost(GameHost host)
