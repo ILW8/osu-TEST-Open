@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -13,9 +14,12 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
 {
+    // ReSharper disable once PartialTypeWithSinglePart
     public partial class TeamIntroScreen : TournamentMatchScreen
     {
         private Container mainContainer;
+        public TournamentTeam TourneyTeamLeft { get; private set; }
+        public TournamentTeam TourneyTeamRight { get; private set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -45,7 +49,20 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             if (match.NewValue == null)
                 return;
 
-            const float y_flag_offset = 292;
+            // var firstPlayer = match.NewValue.Team1.Value.Players.FirstOrDefault();
+            //
+            // if (firstPlayer == null)
+            // {
+            //     return;
+            // }
+
+            TourneyTeamLeft = match.NewValue.Team1.Value;
+            TourneyTeamRight = match.NewValue.Team2.Value;
+
+            const float y_flag_screen_offset = 192f;
+            const float y_flag_relative_offset = 96f;
+
+            const float flag_size_scale = 1f;
 
             const float y_offset = 460;
 
@@ -55,17 +72,38 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Position = new Vector2(100, 100)
                 },
-                new DrawableTeamFlag(match.NewValue.Team1.Value)
+                new UserTile
                 {
-                    Position = new Vector2(165, y_flag_offset),
+                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(160, y_flag_screen_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
                 },
+                new UserTile
+                {
+                    User = TourneyTeamLeft?.Players.LastOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(160 + y_flag_relative_offset, y_flag_screen_offset + y_flag_relative_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
+                },
+
                 new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red)
                 {
                     Position = new Vector2(165, y_offset),
                 },
-                new DrawableTeamFlag(match.NewValue.Team2.Value)
+                new UserTile
                 {
-                    Position = new Vector2(740, y_flag_offset),
+                    User = TourneyTeamRight?.Players.FirstOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(696, y_flag_screen_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
+                },
+                new UserTile
+                {
+                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(696 + y_flag_relative_offset, y_flag_screen_offset + y_flag_relative_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue)
                 {
