@@ -19,6 +19,13 @@ namespace osu.Game.Tournament.Components
         private readonly TournamentTeam team;
         public Bindable<bool> IsFlipped = new Bindable<bool>();
 
+        // [UsedImplicitly]
+        // private Bindable<string> flag;
+
+        // private Sprite flagSprite;
+        // private UserTile leftUser;
+        // private UserTile rightUser;
+
         public DrawableTeamFlag(TournamentTeam team, bool isFlipped = false)
         {
             IsFlipped.Value = isFlipped;
@@ -30,27 +37,28 @@ namespace osu.Game.Tournament.Components
         {
             if (team != null)
             {
-                Child = new FillFlowContainer()
+                // Child = new UserTile // left team, top left
+                // {
+                //     User = team.Players.FirstOrDefault()?.ToAPIUser(),
+                //     Position = new Vector2(0, 0),
+                //     Size = new Vector2(64),
+                //     // Margin = new MarginPadding { Right = 20 }
+                // };
+                Children = new Drawable[]
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(8),
-                    Children = new Drawable[]
+                    new UserTile
                     {
-                        new UserTile
-                        {
-                            User = IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser(),
-                            // Position = IsFlipped.Value ? new Vector2(32, 0) : new Vector2(0, 0),
-                            Size = new Vector2(64),
-                            // Margin = new MarginPadding { Right = 20 },
-                        },
-                        new UserTile
-                        {
-                            User = IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser(),
-                            // Position = IsFlipped.Value ? new Vector2(0, 32) : new Vector2(32, 32),
-                            Size = new Vector2(64),
-                            // Margin = new MarginPadding { Right = 20 }
-                        },
+                        User = team.Players.LastOrDefault()?.ToAPIUser(),
+                        Position = IsFlipped.Value ? new Vector2(32, 0) : new Vector2(0, 0),
+                        Size = new Vector2(64),
+                        // Margin = new MarginPadding { Right = 20 },
+                    },
+                    new UserTile
+                    {
+                        User = team.Players.FirstOrDefault()?.ToAPIUser(),
+                        Position = IsFlipped.Value ? new Vector2(0, 32) : new Vector2(32, 32),
+                        Size = new Vector2(64),
+                        // Margin = new MarginPadding { Right = 20 }
                     },
                 };
             }
@@ -88,7 +96,7 @@ namespace osu.Game.Tournament.Components
             //         },
             //     };
 
-            Size = new Vector2(136, 64);
+            Size = new Vector2(96, 96);
             // Masking = true;
             // CornerRadius = 5;
 
