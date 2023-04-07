@@ -69,7 +69,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Flag,
                             new FillFlowContainer
                             {
-                                Margin = new MarginPadding { Top = 12f },
+                                // Margin = new MarginPadding { Top = 12f },
                                 AutoSizeAxes = Axes.Both,
                                 Direction = FillDirection.Vertical,
                                 Origin = anchor,
