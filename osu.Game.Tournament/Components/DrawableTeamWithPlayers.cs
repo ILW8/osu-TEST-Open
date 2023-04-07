@@ -14,6 +14,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
+    // ReSharper disable once PartialTypeWithSinglePart
     public partial class DrawableTeamWithPlayers : CompositeDrawable
     {
         public DrawableTeamWithPlayers(TournamentTeam team, TeamColour colour)
@@ -66,17 +67,9 @@ namespace osu.Game.Tournament.Components
                     Spacing = new Vector2(16),
                     Children = new Drawable[]
                     {
-                        // new UserTile
-                        // {
-                        //     User = p.ToAPIUser(),
-                        //     Size = new Vector2(32),
-                        //     // Position = new Vector2(727, y_flag_screen_offset + y_flag_relative_offset),
-                        //     // Scale = new Vector2(flag_size_scale),
-                        //     // Margin = new MarginPadding { Right = 20 }
-                        // },
                         new UpdateableFlag(p.CountryCode)
                         {
-                            Margin = new MarginPadding() { Top = 3 },
+                            Margin = new MarginPadding { Top = 3 },
                             Size = new Vector2(32, 23),
                         },
                         new TournamentSpriteText
