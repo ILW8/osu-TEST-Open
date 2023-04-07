@@ -8,6 +8,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osu.Game.Users.Drawables;
 using osuTK;
 using osuTK.Graphics;
 
@@ -41,12 +42,14 @@ namespace osu.Game.Tournament.Components
                                 {
                                     Direction = FillDirection.Vertical,
                                     AutoSizeAxes = Axes.Both,
+                                    Spacing = new Vector2(12),
                                     ChildrenEnumerable = team?.Players.Select(createPlayerText).Take(5) ?? Enumerable.Empty<Drawable>()
                                 },
                                 new FillFlowContainer
                                 {
                                     Direction = FillDirection.Vertical,
                                     AutoSizeAxes = Axes.Both,
+                                    Spacing = new Vector2(12),
                                     ChildrenEnumerable = team?.Players.Select(createPlayerText).Skip(5) ?? Enumerable.Empty<Drawable>()
                                 },
                             }
@@ -55,12 +58,34 @@ namespace osu.Game.Tournament.Components
                 },
             };
 
-            TournamentSpriteText createPlayerText(TournamentUser p) =>
-                new TournamentSpriteText
+            Drawable createPlayerText(TournamentUser p) =>
+                new FillFlowContainer
                 {
-                    Text = p.Username,
-                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold),
-                    Colour = Color4.White,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(16),
+                    Children = new Drawable[]
+                    {
+                        // new UserTile
+                        // {
+                        //     User = p.ToAPIUser(),
+                        //     Size = new Vector2(32),
+                        //     // Position = new Vector2(727, y_flag_screen_offset + y_flag_relative_offset),
+                        //     // Scale = new Vector2(flag_size_scale),
+                        //     // Margin = new MarginPadding { Right = 20 }
+                        // },
+                        new UpdateableFlag(p.CountryCode)
+                        {
+                            Margin = new MarginPadding() { Top = 3 },
+                            Size = new Vector2(32, 23),
+                        },
+                        new TournamentSpriteText
+                        {
+                            Text = p.Username,
+                            Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold),
+                            Colour = Color4.White,
+                        },
+                    }
                 };
         }
     }
