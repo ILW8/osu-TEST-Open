@@ -66,13 +66,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Position = new Vector2(100, 100)
                 },
-                new UserTile // left team, top left
-                {
-                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser(),
-                    Position = new Vector2(160, y_flag_screen_offset),
-                    Scale = new Vector2(1.08F, 1.08F),
-                    Margin = new MarginPadding { Right = 20 }
-                },
                 new UserTile // left team, bottom right
                 {
                     User = TourneyTeamLeft?.Players.LastOrDefault()?.ToAPIUser(),
@@ -80,23 +73,30 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
+                new UserTile // left team, top left
+                {
+                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(160, y_flag_screen_offset),
+                    Scale = new Vector2(1.08F, 1.08F),
+                    Margin = new MarginPadding { Right = 20 }
+                },
                 new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red)
                 {
                     Position = new Vector2(165, y_offset),
                 },
 
-                new UserTile // right team, top right
-                {
-                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser(),
-                    Position = new Vector2(727 + x_flag_relative_offset, y_flag_screen_offset),
-                    Scale = new Vector2(1.08F, 1.08F),
-                    Margin = new MarginPadding { Right = 20 }
-                },
                 new UserTile // right team, bottom left
                 {
                     User = TourneyTeamRight?.Players.FirstOrDefault()?.ToAPIUser(),
                     Position = new Vector2(727, y_flag_screen_offset + y_flag_relative_offset),
                     Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
+                },
+                new UserTile // right team, top right
+                {
+                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser(),
+                    Position = new Vector2(727 + x_flag_relative_offset, y_flag_screen_offset),
+                    Scale = new Vector2(1.08F, 1.08F),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue)
