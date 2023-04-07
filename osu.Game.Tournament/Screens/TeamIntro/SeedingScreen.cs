@@ -22,10 +22,12 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
 {
+    // [LongRunningLoad]
     public partial class UserTile : CompositeDrawable
     {
         public APIUser User
         {
+            get => avatar.User;
             set => avatar.User = value;
         }
 
@@ -286,6 +288,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
         private partial class LeftInfo : CompositeDrawable
         {
             public TournamentUser TourneyUser { get; }
+            public TournamentUser TourneyUser2 { get; }
             public TournamentTeam TourneyTeam { get; }
 
             public LeftInfo(TournamentTeam? team)
@@ -293,13 +296,15 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 FillFlowContainer fill;
 
                 var firstPlayer = team?.Players.FirstOrDefault();
+                var secondPlayer = team?.Players.LastOrDefault();
 
-                if (firstPlayer == null)
+                if (firstPlayer == null || secondPlayer == null)
                 {
                     return;
                 }
 
                 TourneyUser = firstPlayer;
+                TourneyUser2 = secondPlayer;
                 TourneyTeam = team;
 
                 Width = 200;
@@ -323,6 +328,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                                 Children = new Drawable[]
                                 {
                                     new UserTile { User = TourneyUser.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
+                                    new UserTile { User = TourneyUser2.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
                                     // new TeamDisplay(TourneyTeam)
                                 },
                                 Margin = new MarginPadding { Bottom = 30 }

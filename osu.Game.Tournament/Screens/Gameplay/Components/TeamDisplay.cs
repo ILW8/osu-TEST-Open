@@ -46,8 +46,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             Flag.RelativeSizeAxes = Axes.None;
             Flag.Scale = new Vector2(0.8f);
-            Flag.Origin = anchor;
-            Flag.Anchor = anchor;
+            // Flag.Origin = anchor;
+            // Flag.Anchor = anchor;
+            UpdateFlagAnchor(anchor);
 
             Margin = new MarginPadding(20);
 
@@ -60,12 +61,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     {
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(5),
+                        Spacing = new Vector2(16),
                         Children = new Drawable[]
                         {
                             Flag,
                             new FillFlowContainer
                             {
+                                Margin = new MarginPadding { Top = 12f },
                                 AutoSizeAxes = Axes.Both,
                                 Direction = FillDirection.Vertical,
                                 Origin = anchor,
