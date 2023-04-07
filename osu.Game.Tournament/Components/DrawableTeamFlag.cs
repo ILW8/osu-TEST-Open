@@ -48,15 +48,15 @@ namespace osu.Game.Tournament.Components
                 {
                     new UserTile
                     {
-                        User = team.Players.LastOrDefault()?.ToAPIUser(),
-                        Position = IsFlipped.Value ? new Vector2(32, 0) : new Vector2(0, 0),
+                        User = IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser(),
+                        Position = IsFlipped.Value ? new Vector2(0, 32) : new Vector2(32, 32),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 },
                     },
                     new UserTile
                     {
-                        User = team.Players.FirstOrDefault()?.ToAPIUser(),
-                        Position = IsFlipped.Value ? new Vector2(0, 32) : new Vector2(32, 32),
+                        User = IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser(),
+                        Position = IsFlipped.Value ? new Vector2(32, 0) : new Vector2(0, 0),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 }
                     },
