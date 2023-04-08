@@ -16,6 +16,10 @@ namespace osu.Game.Tournament.Components
 {
     public partial class DrawableTeamFlag : Container
     {
+        private readonly Bindable<float> playerOffsetX = new Bindable<float>(32f);
+        private readonly Bindable<float> playerOffsetY = new Bindable<float>(32f);
+        public float PlayerOffsetX { get => playerOffsetX.Value; set => playerOffsetX.Value = value; }
+        public float PlayerOffsetY { get => playerOffsetY.Value; set => playerOffsetY.Value = value; }
         private readonly TournamentTeam team;
         public Bindable<bool> IsFlipped = new Bindable<bool>();
 
@@ -31,6 +35,8 @@ namespace osu.Game.Tournament.Components
             IsFlipped.Value = isFlipped;
             this.team = team;
             IsFlipped.BindValueChanged(_ => updateChildren(), true);
+            playerOffsetX.BindValueChanged(_ => updateChildren(), true);
+            playerOffsetY.BindValueChanged(_ => updateChildren(), true);
         }
 
         private void updateChildren()
@@ -49,14 +55,14 @@ namespace osu.Game.Tournament.Components
                     new UserTile
                     {
                         User = IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser(),
-                        Position = IsFlipped.Value ? new Vector2(0, 32) : new Vector2(32, 32),
+                        Position = IsFlipped.Value ? new Vector2(0, playerOffsetY.Value) : new Vector2(playerOffsetX.Value, playerOffsetY.Value),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 },
                     },
                     new UserTile
                     {
                         User = IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser(),
-                        Position = IsFlipped.Value ? new Vector2(32, 0) : new Vector2(0, 0),
+                        Position = IsFlipped.Value ? new Vector2(playerOffsetX.Value, 0) : new Vector2(0, 0),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 }
                     },
