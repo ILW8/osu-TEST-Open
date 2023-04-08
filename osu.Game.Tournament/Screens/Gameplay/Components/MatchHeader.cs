@@ -17,6 +17,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay1;
         private TeamScoreDisplay teamDisplay2;
         private DrawableTournamentHeaderLogo logo;
+        private MatchRoundDisplay round;
 
         private bool showScores = true;
 
@@ -36,6 +37,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         private bool showLogo = true;
+        private bool showRound = true;
 
         public bool ShowLogo
         {
@@ -46,6 +48,21 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     return;
 
                 showLogo = value;
+
+                if (IsLoaded)
+                    updateDisplay();
+            }
+        }
+
+        public bool ShowRound
+        {
+            get => showRound;
+            set
+            {
+                if (value == showRound)
+                    return;
+
+                showRound = value;
 
                 if (IsLoaded)
                     updateDisplay();
@@ -78,11 +95,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                         },
-                        new MatchRoundDisplay
+                        round = new MatchRoundDisplay
                         {
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
-                            Scale = new Vector2(0.4f)
+                            Scale = new Vector2(0.4f),
+                            Alpha = showRound ? 1 : 0,
                         },
                     }
                 },
@@ -111,6 +129,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             teamDisplay2.ShowScore = showScores;
 
             logo.Alpha = showLogo ? 1 : 0;
+            round.Alpha = showRound ? 1 : 0;
         }
     }
 }

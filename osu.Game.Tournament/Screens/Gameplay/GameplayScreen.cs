@@ -51,7 +51,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 header = new MatchHeader
                 {
-                    ShowLogo = false
+                    ShowLogo = false,
+                    ShowRound = false,
                 },
                 new Container
                 {
