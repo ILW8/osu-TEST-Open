@@ -19,7 +19,6 @@ namespace osu.Game.Tournament.Screens.Showcase
         {
             AddRangeInternal(new Drawable[]
             {
-                new TournamentLogo(),
                 new TourneyVideo("showcase")
                 {
                     Loop = true,
@@ -38,7 +37,8 @@ namespace osu.Game.Tournament.Screens.Showcase
                         RelativeSizeAxes = Axes.Both,
                         Colour = new Color4(0, 255, 0, 255),
                     }
-                }
+                },
+                new TournamentLogo()
             });
         }
 
