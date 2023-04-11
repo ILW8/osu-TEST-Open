@@ -16,6 +16,12 @@ namespace osu.Game.Tournament.Screens.Showcase
 {
     public partial class ShowcaseScreen : BeatmapInfoScreen
     {
+        public ShowcaseScreen()
+        {
+            ShowReplayer = true;
+            SongBar.Animate = false;
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
