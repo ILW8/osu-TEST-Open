@@ -53,6 +53,19 @@ namespace osu.Game.Tournament.Components
             }
         }
 
+        private string replayer = "";
+
+        public string Replayer
+        {
+            get => replayer;
+            set
+            {
+                replayer = value;
+                // Logger.Log(replayer, LoggingTarget.Runtime, LogLevel.Important);
+                updateReplayer();
+            }
+        }
+
         private FillFlowContainer flow = null!;
 
         private bool expanded;
@@ -66,6 +79,20 @@ namespace osu.Game.Tournament.Components
                 flow.Direction = expanded ? FillDirection.Full : FillDirection.Vertical;
             }
         }
+
+        private bool animate = true;
+
+        public bool Animate
+        {
+            get => animate;
+            set
+            {
+                animate = value;
+                if (flow != null) flow.LayoutDuration = animate ? 500 : 0;
+            }
+        }
+
+        private FillFlowContainer replayerContainer;
 
         // Todo: This is a hack for https://github.com/ppy/osu-framework/issues/3617 since this container is at the very edge of the screen and potentially initially masked away.
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
@@ -91,6 +118,8 @@ namespace osu.Game.Tournament.Components
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    LayoutDuration = animate ? 500 : 0,
+                    LayoutEasing = Easing.OutQuint,
                     Direction = FillDirection.Full,
                     Anchor = Anchor.BottomRight,
                     Origin = Anchor.BottomRight,
@@ -98,6 +127,18 @@ namespace osu.Game.Tournament.Components
             };
 
             Expanded = true;
+        }
+
+        private void updateReplayer()
+        {
+            if (replayerContainer == null) return;
+
+            replayerContainer.FadeOut();
+            replayerContainer.Children = new Drawable[]
+            {
+                new DiffPiece(($"{(replayer.Length > 0 ? "Replay by" : " ")}", $"{(replayer.Length > 0 ? replayer : " ")}")),
+            };
+            replayerContainer.FadeIn(150);
         }
 
         private void refreshContent()
@@ -223,6 +264,18 @@ namespace osu.Game.Tournament.Components
                                             new DiffPiece(("BPM", $"{bpm:0.#}")),
                                         }
                                     },
+                                    replayerContainer = new FillFlowContainer
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Direction = FillDirection.Vertical,
+                                        Children = new Drawable[]
+                                        {
+                                            new DiffPiece(($"{(replayer.Length > 0 ? "Replay by" : " ")}", $"{(replayer.Length > 0 ? replayer : " ")}")),
+                                        }
+                                    },
                                     new Container
                                     {
                                         RelativeSizeAxes = Axes.Both,
@@ -270,7 +323,7 @@ namespace osu.Game.Tournament.Components
 
                 static void cp(SpriteText s, bool bold)
                 {
-                    s.Font = OsuFont.Torus.With(weight: bold ? FontWeight.Bold : FontWeight.Regular, size: 15);
+                    s.Font = OsuFont.Torus.With(weight:bold ? FontWeight.Bold : FontWeight.Regular, size:15);
                 }
 
                 for (int i = 0; i < tuples.Length; i++)
