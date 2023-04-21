@@ -6,10 +6,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using JetBrains.Annotations;
 using Microsoft.Win32;
-using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Logging;
@@ -21,39 +19,11 @@ using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
-using WebRequest = osu.Framework.IO.Network.WebRequest;
 
 namespace osu.Game.Tournament.IPC
 {
     public partial class FileBasedIPC : MatchIPCInfo
     {
-        public class GosuHasNameKey
-        {
-            [JsonProperty(@"name")]
-            public string Name { get; set; } = "";
-        }
-        public class GosuJson
-        {
-            [JsonProperty(@"gameplay")]
-            public GosuHasNameKey GosuGameplay { get; set; }
-
-            [JsonProperty(@"resultsScreen")]
-            public GosuHasNameKey GosuResultScreen { get; set; }
-        }
-        public class GosuJsonRequest : APIRequest<GosuJson>
-        {
-            protected override string Target => @"json";
-            protected override string Uri => $@"http://localhost:24050/{Target}";
-            protected override WebRequest CreateWebRequest()
-            {
-                Thread.Sleep(500); // allow gosu to update json
-                return new OsuJsonWebRequest<GosuJson>(Uri)
-                {
-                    AllowInsecureRequests = true,
-                    Timeout = 200,
-                };
-            }
-        }
         public Storage IPCStorage { get; private set; }
 
         [Resolved]
@@ -74,7 +44,6 @@ namespace osu.Game.Tournament.IPC
         private int lastBeatmapId;
         private ScheduledDelegate scheduled;
         private GetBeatmapRequest beatmapLookupRequest;
-        private GosuJsonRequest gosuReplayerLookupRequest;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -130,49 +99,6 @@ namespace osu.Game.Tournament.IPC
                                         beatmapLookupRequest.Success += b => Beatmap.Value = new TournamentBeatmap(b);
                                         API.Queue(beatmapLookupRequest);
                                     }
-
-                                    gosuReplayerLookupRequest?.Cancel();
-                                    Replayer.Value = "";
-                                    gosuReplayerLookupRequest = new GosuJsonRequest();
-                                    gosuReplayerLookupRequest.Success += gj =>
-                                    {
-                                        // Logger.Log($"Fetched gosu json: {gj.GosuGameplay.Name}, {gj.GosuResultScreen.Name}", LoggingTarget.Runtime, LogLevel.Important);
-                                        // if (gj.GosuGameplay.Name.Length + gj.GosuResultScreen.Name.Length == 0) return; // couldn't fetch name
-
-                                        // Replayer name can appear either in resultScreen.name or gameplay.name, depending on _when_ the API is queried.
-                                        var newVal = gj.GosuGameplay.Name.Length > 0
-                                            ? gj.GosuGameplay.Name
-                                            : gj.GosuResultScreen.Name;
-                                        Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
-                                        Replayer.Value = newVal;
-                                        // Replayer.Value = gj.GosuGameplay.Name.Length > 0
-                                        //     ? gj.GosuGameplay.Name
-                                        //     : gj.GosuResultScreen.Name;
-                                    };
-                                    gosuReplayerLookupRequest.Failure += exception =>
-                                    {
-                                        Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Debug);
-                                    };
-                                    API.Queue(gosuReplayerLookupRequest);
-
-                                    // API.Perform(gosuReplayerLookupRequest);
-                                    // GosuJson gj = gosuReplayerLookupRequest.Response;
-                                    //
-                                    // if (gj != null)
-                                    // {
-                                    //     var newVal = gj.GosuGameplay.Name.Length > 0
-                                    //         ? gj.GosuGameplay.Name
-                                    //         : gj.GosuResultScreen.Name;
-                                    //     Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Important);
-                                    //     Replayer.Value = newVal;
-                                    // }
-                                    // else
-                                    // {
-                                    //     Logger.Log($"Failed requesting gosu data", LoggingTarget.Runtime, LogLevel.Debug);
-                                    //     Logger.Log($"[IPC] Setting Replayer to \"\"", LoggingTarget.Runtime, LogLevel.Important);
-                                    //     Replayer.Value = "";
-                                    // }
-
                                 }
 
                                 Mods.Value = (LegacyMods)mods;

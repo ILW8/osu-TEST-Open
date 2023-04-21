@@ -34,7 +34,7 @@ namespace osu.Game.Tournament
         private LadderInfo ladder;
         private TournamentStorage storage;
         private DependencyContainer dependencies;
-        private FileBasedIPC ipc;
+        private FileAndGosuBasedIPC ipc;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
@@ -192,7 +192,7 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileAndGosuBasedIPC());
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
