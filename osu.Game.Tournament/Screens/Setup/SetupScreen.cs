@@ -74,7 +74,7 @@ namespace osu.Game.Tournament.Screens.Setup
 
         private void reload()
         {
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var fileBasedIpc = ipc as FileAndGosuBasedIPC;
             fillFlow.Children = new Drawable[]
             {
                 new ActionableInfo
