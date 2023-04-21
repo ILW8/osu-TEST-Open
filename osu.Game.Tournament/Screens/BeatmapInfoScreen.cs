@@ -36,16 +36,7 @@ namespace osu.Game.Tournament.Screens
             ipc.Mods.BindValueChanged(modsChanged, true);
 
             SongBar.Replayer.BindTo(ipc.Replayer);
-            // ipc.Replayer.BindValueChanged(replayerChanged, true);
         }
-
-        // private void replayerChanged(ValueChangedEvent<string> replayer)
-        // {
-        //     // Logger.Log($"replayerChanged: (old) {replayer.OldValue} | (new) {replayer.NewValue}", LoggingTarget.Runtime, LogLevel.Important);
-        //     if (ShowReplayer || replayer.NewValue == "") return;
-        //
-        //     SongBar.BindableReplayer.Value = ""; // overwrite to empty value if not ShowReplayer
-        // }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)
         {
