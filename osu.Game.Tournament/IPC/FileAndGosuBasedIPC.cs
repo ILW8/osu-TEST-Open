@@ -65,12 +65,16 @@ namespace osu.Game.Tournament.IPC
                     string newVal = gj.GosuGameplay.Name.Length > 0
                         ? gj.GosuGameplay.Name
                         : gj.GosuResultScreen.Name;
-                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
+
+                    if (Replayer.Value == newVal) return; // not strictly necessary with a bindable
+
+                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Important);
                     Replayer.Value = newVal;
                 };
                 gosuReplayerLookupRequest.Failure += exception =>
                 {
-                    Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Debug);
+                    Replayer.Value = "";
+                    Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
                 };
                 API.Queue(gosuReplayerLookupRequest);
             }, 1000, true);

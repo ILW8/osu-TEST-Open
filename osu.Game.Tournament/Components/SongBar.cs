@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
@@ -28,6 +29,18 @@ namespace osu.Game.Tournament.Components
 
         public const float HEIGHT = 145 / 2f;
 
+        private bool showReplayer;
+
+        public bool ShowReplayer
+        {
+            get => showReplayer;
+            set
+            {
+                showReplayer = value;
+                updateReplayer(Replayer.Value);
+            }
+        }
+
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; }
 
@@ -38,6 +51,8 @@ namespace osu.Game.Tournament.Components
                 if (beatmap == value)
                     return;
 
+                // Logger.Log("Beatmap updated, clearing replayer", LoggingTarget.Runtime, LogLevel.Important);
+                // BindableReplayer.Value = ""; // let replayer populate later
                 beatmap = value;
                 update();
             }
@@ -55,23 +70,7 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private string replayer = "";
-
-        public string Replayer
-        {
-            get => replayer;
-            set
-            {
-                // Logger.Log($"current value: {replayer} ", LoggingTarget.Information, LogLevel.Important);
-                // Logger.Log($"new value: {value}", LoggingTarget.Information, LogLevel.Important);
-                if (replayer == value)
-                    return;
-
-                replayer = value;
-                // Logger.Log(replayer, LoggingTarget.Runtime, LogLevel.Important);
-                updateReplayer();
-            }
-        }
+        public Bindable<string> Replayer = new Bindable<string>("");
 
         private FillFlowContainer flow;
 
@@ -110,6 +109,14 @@ namespace osu.Game.Tournament.Components
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
 
+            Replayer.BindValueChanged(vce =>
+            {
+                if (!ShowReplayer) return;
+
+                Logger.Log($"Updating (1) replayer from \"{vce.OldValue}\" to \"{vce.NewValue}\"", LoggingTarget.Information, LogLevel.Important);
+                updateReplayer(vce.NewValue);
+            }, true);
+
             InternalChildren = new Drawable[]
             {
                 flow = new FillFlowContainer
@@ -127,14 +134,14 @@ namespace osu.Game.Tournament.Components
             Expanded = true;
         }
 
-        private void updateReplayer()
+        private void updateReplayer(string newReplayer)
         {
             if (replayerContainer == null) return;
 
             replayerContainer.FadeOut();
             replayerContainer.Children = new Drawable[]
             {
-                new DiffPiece(($"{(replayer.Length > 0 ? "Replay by" : " ")}", $"{(replayer.Length > 0 ? replayer : " ")}")),
+                new DiffPiece(($"{(newReplayer.Length > 0 ? "Replay by" : " ")}", $"{(newReplayer.Length > 0 ? newReplayer : " ")}")),
             };
             replayerContainer.FadeIn(150);
         }
@@ -257,7 +264,7 @@ namespace osu.Game.Tournament.Components
                                         Direction = FillDirection.Vertical,
                                         Children = new Drawable[]
                                         {
-                                            new DiffPiece(($"{(replayer.Length > 0 ? "Replay by" : " ")}", $"{(replayer.Length > 0 ? replayer : " ")}")),
+                                            new DiffPiece(($"{(Replayer.Value.Length > 0 ? "Replay by" : " ")}", $"{(Replayer.Value.Length > 0 ? Replayer.Value : " ")}")),
                                         }
                                     },
                                     new Container
