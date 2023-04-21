@@ -62,6 +62,11 @@ namespace osu.Game.Tournament.Components
             get => replayer;
             set
             {
+                // Logger.Log($"current value: {replayer} ", LoggingTarget.Information, LogLevel.Important);
+                // Logger.Log($"new value: {value}", LoggingTarget.Information, LogLevel.Important);
+                if (replayer == value)
+                    return;
+
                 replayer = value;
                 // Logger.Log(replayer, LoggingTarget.Runtime, LogLevel.Important);
                 updateReplayer();
