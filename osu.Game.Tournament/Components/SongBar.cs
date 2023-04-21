@@ -52,7 +52,7 @@ namespace osu.Game.Tournament.Components
                     return;
 
                 // Logger.Log("Beatmap updated, clearing replayer", LoggingTarget.Runtime, LogLevel.Important);
-                // BindableReplayer.Value = ""; // let replayer populate later
+                Replayer.Value = ""; // let replayer populate later
                 beatmap = value;
                 update();
             }
