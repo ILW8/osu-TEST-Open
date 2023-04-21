@@ -56,8 +56,8 @@ namespace osu.Game.Tournament.IPC
 
             scheduled = Scheduler.AddDelayed(delegate
             {
+                Logger.Log("Executing gosu IPC scheduled delegate", LoggingTarget.Network, LogLevel.Debug);
                 gosuReplayerLookupRequest?.Cancel();
-                Replayer.Value = "";
                 gosuReplayerLookupRequest = new GosuJsonRequest();
                 gosuReplayerLookupRequest.Success += gj =>
                 {
