@@ -62,19 +62,19 @@ namespace osu.Game.Tournament.IPC
                 gosuReplayerLookupRequest.Success += gj =>
                 {
                     // Replayer name can appear either in resultScreen.name or gameplay.name, depending on _when_ the API is queried.
-                    string newVal = gj.GosuGameplay.Name.Length > 0
+                    string newVal = (gj.GosuGameplay?.Name?.Length > 0
                         ? gj.GosuGameplay.Name
-                        : gj.GosuResultScreen.Name;
+                        : gj.GosuResultScreen?.Name) ?? "";
 
                     if (Replayer.Value == newVal) return; // not strictly necessary with a bindable
 
-                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Important);
+                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
                     Replayer.Value = newVal;
                 };
                 gosuReplayerLookupRequest.Failure += exception =>
                 {
                     Replayer.Value = "";
-                    Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
+                    Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Debug);
                 };
                 API.Queue(gosuReplayerLookupRequest);
             }, 1000, true);
