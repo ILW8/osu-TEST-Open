@@ -18,6 +18,8 @@ namespace osu.Game.Tournament.IPC
         public Bindable<TourneyState> State { get; } = new Bindable<TourneyState>();
         public Bindable<string> ChatChannel { get; } = new Bindable<string>();
         public BindableInt Score1 { get; } = new BindableInt();
+        public BindableInt Score1WithMult { get; } = new BindableInt();
         public BindableInt Score2 { get; } = new BindableInt();
+        public BindableInt Score2WithMult { get; } = new BindableInt();
     }
 }

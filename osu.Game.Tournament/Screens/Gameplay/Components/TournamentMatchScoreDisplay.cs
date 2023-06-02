@@ -9,6 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -26,6 +27,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly BindableInt score2 = new BindableInt();
 
         private readonly MatchScoreCounter score1Text;
+        private readonly MatchScoreCounter score1MultipliedText;
         private readonly MatchScoreCounter score2Text;
 
         private readonly Drawable score1Bar;
@@ -73,6 +75,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre
                 },
+                score1MultipliedText = new MatchScoreCounter
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre
+                },
                 score2Bar = new Box
                 {
                     Name = "top bar blue",
@@ -105,6 +112,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             score1Text.Current.Value = score1.Value;
             score2Text.Current.Value = score2.Value;
+            score1MultipliedText.Current.Value = score1.Value * 2f;
 
             var winningText = score1.Value > score2.Value ? score1Text : score2Text;
             var losingText = score1.Value <= score2.Value ? score1Text : score2Text;
@@ -125,6 +133,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             base.UpdateAfterChildren();
             score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
+            score1MultipliedText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
+            score1MultipliedText.Y = 24;
+            // Logger.Log($"Ypos {score1MultipliedText.Y}", LoggingTarget.Information, LogLevel.Important);
             score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
         }
 
