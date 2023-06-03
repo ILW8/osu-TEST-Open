@@ -61,7 +61,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     RelativeSizeAxes = Axes.X,
                     Height = bar_height,
                     Width = 0,
-                    Colour = new OsuColour().Red,
+                    Colour = new OsuColour().Blue,
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopLeft
                 },
@@ -171,9 +171,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             losingText.Winning = false;
 
             var winningBar = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
-            var winningBarM = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2Bar;
+            var winningBarM = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
             var losingBar = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
-            var losingBarM = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2Bar;
+            var losingBarM = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
 
             int diffBaseScore = Math.Max(score1.Value, score2.Value) - Math.Min(score1.Value, score2.Value);
             int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
