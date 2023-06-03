@@ -49,8 +49,8 @@ namespace osu.Game.Tournament.IPC
         private void load()
         {
             string stablePath = stableInfo.StablePath ?? findStablePath();
-            Score1WithMult.BindTo(Score1);
-            Score2WithMult.BindTo(Score2);
+            // Score1WithMult.BindTo(Score1);
+            // Score2WithMult.BindTo(Score2);
             initialiseIPCStorage(stablePath);
         }
 
