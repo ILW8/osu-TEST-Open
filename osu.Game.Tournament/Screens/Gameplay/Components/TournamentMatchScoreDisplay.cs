@@ -25,13 +25,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private readonly BindableInt score1 = new BindableInt();
         private readonly BindableInt score2 = new BindableInt();
+        private readonly BindableInt score1Mult = new BindableInt();
+        private readonly BindableInt score2Mult = new BindableInt();
 
         private readonly MatchScoreCounter score1Text;
         private readonly MatchScoreCounter score1MultipliedText;
         private readonly MatchScoreCounter score2Text;
+        private readonly MatchScoreCounter score2MultipliedText;
 
         private readonly Drawable score1Bar;
+        private readonly Drawable score1BarMultiplied;
         private readonly Drawable score2Bar;
+        private readonly Drawable score2BarMultiplied;
 
         public TournamentMatchScoreDisplay()
         {
@@ -40,6 +45,26 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             InternalChildren = new[]
             {
+                score1BarMultiplied = new Box
+                {
+                    Name = "top bar red mult",
+                    RelativeSizeAxes = Axes.X,
+                    Height = bar_height,
+                    Width = 0,
+                    Colour = new OsuColour().Red,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopRight
+                },
+                score2BarMultiplied = new Box
+                {
+                    Name = "top bar blue mult",
+                    RelativeSizeAxes = Axes.X,
+                    Height = bar_height,
+                    Width = 0,
+                    Colour = new OsuColour().Red,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopLeft
+                },
                 new Box
                 {
                     Name = "top bar red (static)",
@@ -73,12 +98,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 score1Text = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre
+                    Origin = Anchor.TopCentre,
+                    Scale = new Vector2(0.8f)
                 },
                 score1MultipliedText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre
+                    Origin = Anchor.TopCentre,
+                    Scale = new Vector2(0.8f)
+                },
+                score2MultipliedText = new MatchScoreCounter
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Scale = new Vector2(0.8f)
                 },
                 score2Bar = new Box
                 {
@@ -103,16 +136,33 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             score1.BindValueChanged(_ => updateScores());
             score1.BindTo(ipc.Score1);
+            score1Mult.BindTo(ipc.Score1WithMult);
 
             score2.BindValueChanged(_ => updateScores());
             score2.BindTo(ipc.Score2);
+            score2Mult.BindTo(ipc.Score2WithMult);
         }
 
         private void updateScores()
         {
             score1Text.Current.Value = score1.Value;
             score2Text.Current.Value = score2.Value;
-            score1MultipliedText.Current.Value = score1.Value * 2f;
+
+            if (score1Mult.Value == -1 || score2Mult.Value == -1 || (score1.Value == 0 && score2.Value == 0))
+            {
+                score1Mult.Value = score1.Value;
+                score2Mult.Value = score2.Value;
+            }
+
+            score1MultipliedText.Current.Value = score1Mult.Value;
+            score2MultipliedText.Current.Value = score2Mult.Value;
+
+            Logger.Log($"[Match Score Display] score {score1.Value}:{score1Mult.Value} score mult", LoggingTarget.Runtime, LogLevel.Important);
+
+            // todo: replace this
+            // float multFactor = (float)(score1MultipliedText.Current.Value / score1Text.Current.Value);
+            // multFactor = Math.Max(1.0f, multFactor);
+            const float mult_factor = 1.3f;
 
             var winningText = score1.Value > score2.Value ? score1Text : score2Text;
             var losingText = score1.Value <= score2.Value ? score1Text : score2Text;
@@ -120,23 +170,36 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             winningText.Winning = true;
             losingText.Winning = false;
 
-            var winningBar = score1.Value > score2.Value ? score1Bar : score2Bar;
-            var losingBar = score1.Value <= score2.Value ? score1Bar : score2Bar;
+            var winningBar = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
+            var winningBarM = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2Bar;
+            var losingBar = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
+            var losingBarM = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2Bar;
 
-            int diff = Math.Max(score1.Value, score2.Value) - Math.Min(score1.Value, score2.Value);
+            int diffBaseScore = Math.Max(score1.Value, score2.Value) - Math.Min(score1.Value, score2.Value);
+            int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
 
-            losingBar.ResizeWidthTo(0, 400, Easing.OutQuint);
-            winningBar.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diff / 1500000f, 0.5f) / 2), 400, Easing.OutQuint);
+            Logger.Log($"delta {diffBaseScore} | delta mult {diffMultScore}", LoggingTarget.Runtime, LogLevel.Important);
+
+            // todo: redo ratio calc
+            losingBar .ResizeWidthTo(0, 400, Easing.OutQuint);
+            losingBarM.ResizeWidthTo(0, 400, Easing.OutQuint);
+            // winningBar.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diff / 1500000f, 0.5f) / 2) / multFactor, 400, Easing.OutQuint);
+            winningBar .ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diffBaseScore / 1500000f, 0.5f) / 2) / mult_factor, 400, Easing.OutQuint);
+            winningBarM.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diffBaseScore / 1500000f, 0.5f) / 2), 400, Easing.OutQuint);
         }
 
         protected override void UpdateAfterChildren()
         {
             base.UpdateAfterChildren();
+            score1Text.Y = -4;
+            score1MultipliedText.Y = 28;
             score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
             score1MultipliedText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
-            score1MultipliedText.Y = 24;
-            // Logger.Log($"Ypos {score1MultipliedText.Y}", LoggingTarget.Information, LogLevel.Important);
+
+            score2Text.Y = -4;
+            score2MultipliedText.Y = 28;
             score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
+            score2MultipliedText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
         }
 
         private partial class MatchScoreCounter : CommaSeparatedScoreCounter

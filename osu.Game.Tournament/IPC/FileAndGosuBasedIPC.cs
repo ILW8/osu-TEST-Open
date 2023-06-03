@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.IO.Network;
@@ -137,9 +138,6 @@ namespace osu.Game.Tournament.IPC
                 GosuMultipliersRequest req = new GosuMultipliersRequest();
                 req.Success += newMultipliers =>
                 {
-                    // IList<string> keys = multipliers.Properties().Select(p => p.Name).ToList();
-                    // var a = newMultipliers.ContainsKey("19271241");
-                    // var b = newMultipliers.ContainsKey("3455269");
                     Logger.Log("Loaded multipliers", LoggingTarget.Runtime, LogLevel.Important);
                     multipliers = newMultipliers;
                 };
@@ -154,45 +152,47 @@ namespace osu.Game.Tournament.IPC
             {
                 Logger.Log("Executing gosu IPC scheduled delegate", LoggingTarget.Network, LogLevel.Debug);
 
-                if (gosuRequestWaitUntil > DateTime.Now)
+                if (gosuRequestWaitUntil > DateTime.Now) // request inhibited
                 {
+                    Score1WithMult.Value = -1;
+                    Score2WithMult.Value = -1;
                     return;
                 }
                 gosuJsonQueryRequest?.Cancel();
                 gosuJsonQueryRequest = new GosuJsonRequest();
                 gosuJsonQueryRequest.Success += gj =>
                 {
-                    Logger.Log("hi, entered success", LoggingTarget.Runtime, LogLevel.Important);
-
                     if (multipliers == null)
                     {
                         Logger.Log("multipliers not yet loaded, skipping...", LoggingTarget.Runtime, LogLevel.Important);
+                        gosuRequestWaitUntil = DateTime.Now.AddSeconds(1); // inhibit score fetching until multipliers are updated
                         return;
                     }
-                    // Score1WithMult.UnbindAll();
-                    // Score2WithMult.UnbindAll();
-                    // Replayer name can appear either in resultScreen.name or gameplay.name, depending on _when_ the API is queried.
-                    string newVal = (gj.GosuGameplay?.Name?.Length > 0
-                        ? gj.GosuGameplay.Name
-                        : gj.GosuResultScreen?.Name) ?? "";
 
-                    if (Replayer.Value == newVal) return; // not strictly necessary with a bindable
-
-                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
-                    Replayer.Value = newVal;
-
-                    if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id))
+                    if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id.ToString()))
                     {
-                        Logger.Log("map needs multiplier", LoggingTarget.Runtime, LogLevel.Important);
+                        Logger.Log($"map {gj.GosuMenu.Bm.Id.ToString()} needs multiplier: {multipliers[gj.GosuMenu.Bm.Id.ToString()]}", LoggingTarget.Runtime, LogLevel.Important);
                     }
+
+                    List<int> left = new List<int>();
+                    List<int> right = new List<int>();
+
+                    foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients)
+                    {
+                        // Logger.Log($"{ipcClient.Team}: {ipcClient.Gameplay.Score}".PadLeft(7), LoggingTarget.Runtime, LogLevel.Important);
+
+                        // todo: handle multipliers here
+                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * 1.3f));
+                    }
+                    Score1WithMult.Value = left.Sum();
+                    Score2WithMult.Value = right.Sum();
                 };
                 gosuJsonQueryRequest.Failure += exception =>
                 {
-                    Replayer.Value = "";
                     Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
-                    // Score1WithMult.BindTo(Score1);
-                    // Score2WithMult.BindTo(Score2);
                     gosuRequestWaitUntil = DateTime.Now.AddSeconds(2); // inhibit calling gosu api again for 2 seconds if failure occured
+                    Score1WithMult.Value = -1;
+                    Score2WithMult.Value = -1;
                 };
                 API.Queue(gosuJsonQueryRequest);
             }, 250, true);
