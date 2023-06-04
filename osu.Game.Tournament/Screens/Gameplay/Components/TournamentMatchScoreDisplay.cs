@@ -15,6 +15,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.IPC;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -105,6 +106,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     Scale = new Vector2(0.8f),
+                    Colour = new Color4(0, 255, 12, 255),
                     Y = -48
                 },
                 score2MultipliedText = new MatchScoreCounter
@@ -112,6 +114,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     Scale = new Vector2(0.8f),
+                    Colour = new Color4(0, 255, 12, 255),
                     Y = -48
                 },
                 score2Bar = new Box
@@ -146,59 +149,41 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateScores()
         {
-            score1Text.Current.Value = score1.Value;
-            score2Text.Current.Value = score2.Value;
-
             if (score1Mult.Value == -1 || score2Mult.Value == -1 || (score1.Value == 0 && score2.Value == 0))
             {
                 score1Mult.Value = score1.Value;
                 score2Mult.Value = score2.Value;
             }
-
+            score1Text.Current.Value = score1.Value;
+            score2Text.Current.Value = score2.Value;
             score1MultipliedText.Current.Value = score1Mult.Value;
             score2MultipliedText.Current.Value = score2Mult.Value;
+            int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
 
-            Logger.Log($"[Match Score Display] score {score1.Value}:{score1Mult.Value} score mult", LoggingTarget.Runtime, LogLevel.Important);
-
-            // todo: replace this
-            // float multFactor = (float)(score1MultipliedText.Current.Value / score1Text.Current.Value);
-            // multFactor = Math.Max(1.0f, multFactor);
-            // const float mult_factor = 1.3f;
+            // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
+            int winnerDiffBaseScore = Math.Max(0, score1Mult.Value > score2Mult.Value ? score1.Value - score2Mult.Value : score2.Value - score1Mult.Value);
+            // this will only work if theBaseScoreAdvantageOverLoserTeam <= diffMultScore (which is always the case when multiplier >= 1.0x
+            float winDeltaBaseScoreRatio = diffMultScore > 0 ? winnerDiffBaseScore / (float)diffMultScore : 1.0f; // ternary to handle when both scores == 0
+            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
 
             var winningText = score1.Value > score2.Value ? score1Text : score2Text;
             var losingText = score1.Value <= score2.Value ? score1Text : score2Text;
-
-            winningText.Winning = true;
-            losingText.Winning = false;
-
             var winningBarBase = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
             var losingBarBase = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
             var winningBarMult = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
             var losingBarMult = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
-
-            int diffBaseScore = Math.Max(score1.Value, score2.Value) - Math.Min(score1.Value, score2.Value);
-            int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
-
-            // if one team is winning but score difference is less than bonus granted by multiplier, then neither dark bars should show and only one light bar should be present
-            // int winningBonusScore = score1Mult.Value > score2Mult.Value ? score1Mult.Value - score1.Value : score2Mult.Value - score2.Value;
-            // int losingBonusScore = score1Mult.Value <= score2Mult.Value ? score1Mult.Value - score1.Value : score2Mult.Value - score2.Value;
-
-            // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
-            int theBaseScoreAdvantageOverLoserTeam = score1Mult.Value > score2Mult.Value ? score1.Value - score2Mult.Value : score2.Value - score1Mult.Value;
-            theBaseScoreAdvantageOverLoserTeam = Math.Max(0, theBaseScoreAdvantageOverLoserTeam); // ensure not negative
-
-            Logger.Log($"delta {diffBaseScore} | delta mult {diffMultScore}", LoggingTarget.Runtime, LogLevel.Important);
-
-            // this will only work if theBaseScoreAdvantageOverLoserTeam <= diffMultScore (which is always the case when multiplier >= 1.0x
-            float winDeltaBaseScoreRatio = diffMultScore > 0 ? theBaseScoreAdvantageOverLoserTeam / (float)diffMultScore : 1.0f; // ternary to handle when both scores == 0
-
-            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
-
+            winningText.Winning = true;
+            losingText.Winning = false;
             losingBarBase.ResizeWidthTo(0, 400, Easing.OutQuint);
             losingBarMult.ResizeWidthTo(0, 400, Easing.OutQuint);
-
             winningBarBase.ResizeWidthTo(fullWinnerWidth * winDeltaBaseScoreRatio, 400, Easing.OutQuint);
             winningBarMult.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
+
+            Logger.Log($"advantage left base: {score1.Value} mult:{score1Mult.Value} || "
+                + $"right base: {score2.Value} mult: {score2.Value} || "
+                + $"delta base ratio: {winDeltaBaseScoreRatio}",
+                LoggingTarget.Runtime, LogLevel.Important);
+
         }
 
         protected override void UpdateAfterChildren()
