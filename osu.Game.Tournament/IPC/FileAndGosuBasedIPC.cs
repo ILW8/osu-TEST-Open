@@ -182,7 +182,7 @@ namespace osu.Game.Tournament.IPC
                         // Logger.Log($"{ipcClient.Team}: {ipcClient.Gameplay.Score}".PadLeft(7), LoggingTarget.Runtime, LogLevel.Important);
 
                         // todo: handle multipliers here
-                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * 1.3f));
+                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * 1.15f));
                     }
                     Score1WithMult.Value = left.Sum();
                     Score2WithMult.Value = right.Sum();
