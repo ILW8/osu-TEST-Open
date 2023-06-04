@@ -31,9 +31,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly BindableBool useMult = new BindableBool();
 
         private readonly MatchScoreCounter score1Text;
-        private readonly MatchScoreCounter score1MultipliedText;
+        private readonly MatchScoreCounter score1HiddenText;
         private readonly MatchScoreCounter score2Text;
-        private readonly MatchScoreCounter score2MultipliedText;
+        private readonly MatchScoreCounter score2HiddenText;
 
         private readonly Drawable score1Bar;
         private readonly Drawable score1BarMultiplied;
@@ -102,7 +102,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                 },
-                score1MultipliedText = new MatchScoreCounter
+                score1HiddenText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
@@ -110,7 +110,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Colour = new Color4(0, 255, 12, 255),
                     Y = -48
                 },
-                score2MultipliedText = new MatchScoreCounter
+                score2HiddenText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
@@ -160,8 +160,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
             score1Text.Current.Value = score1.Value;
             score2Text.Current.Value = score2.Value;
-            score1MultipliedText.Current.Value = score1Mult.Value;
-            score2MultipliedText.Current.Value = score2Mult.Value;
+            score1HiddenText.Current.Value = score1Mult.Value;
+            score2HiddenText.Current.Value = score2Mult.Value;
             int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
 
             // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
@@ -170,8 +170,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             float winDeltaBaseScoreRatio = diffMultScore > 0 ? Math.Min(1.0f, winnerDiffBaseScore / (float)diffMultScore) : 1.0f; // ternary to handle when both scores == 0
             float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
 
-            var winningText = score1.Value > score2.Value ? score1Text : score2Text;
-            var losingText = score1.Value <= score2.Value ? score1Text : score2Text;
+            var winningText = score1Mult.Value > score2Mult.Value ? score1Text : score2Text;
+            var losingText = score1Mult.Value <= score2Mult.Value ? score1Text : score2Text;
             var winningBarBase = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
             var losingBarBase = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
             var winningBarMult = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
@@ -193,12 +193,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             base.UpdateAfterChildren();
             // score1MultipliedText.Y = 28;
-            score1Text.X = -Math.Max(5 + score1MultipliedText.DrawWidth / 2, score1BarMultiplied.DrawWidth);
-            score1MultipliedText.X = -Math.Max(5 + score1MultipliedText.DrawWidth / 2, score1BarMultiplied.DrawWidth);
+            score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1BarMultiplied.DrawWidth);
+            score1HiddenText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1BarMultiplied.DrawWidth);
 
             // score2MultipliedText.Y = 28;
-            score2Text.X = Math.Max(5 + score2MultipliedText.DrawWidth / 2, score2BarMultiplied.DrawWidth);
-            score2MultipliedText.X = Math.Max(5 + score2MultipliedText.DrawWidth / 2, score2BarMultiplied.DrawWidth);
+            score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2BarMultiplied.DrawWidth);
+            score2HiddenText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2BarMultiplied.DrawWidth);
         }
 
         private partial class MatchScoreCounter : CommaSeparatedScoreCounter
