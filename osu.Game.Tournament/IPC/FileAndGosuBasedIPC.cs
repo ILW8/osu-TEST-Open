@@ -7,10 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.IO.Network;
 using osu.Framework.Logging;
 using osu.Framework.Threading;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 
 namespace osu.Game.Tournament.IPC
@@ -38,6 +40,18 @@ namespace osu.Game.Tournament.IPC
             public GosuIpcClientMods Mods { get; set; }
         }
 
+        public class GosuIpcClientSpectating
+        {
+            [JsonProperty(@"name")]
+            public string Name { get; set; }
+
+            [JsonProperty(@"country")]
+            public string Country { get; set; }
+
+            [JsonProperty(@"userID")]
+            public string UserID { get; set; }
+        }
+
         public class GosuIpcClientMods
         {
             [JsonProperty(@"num")]
@@ -54,6 +68,9 @@ namespace osu.Game.Tournament.IPC
 
             [JsonProperty(@"gameplay")]
             public GosuIpcClientGameplay Gameplay { get; set; }
+
+            [JsonProperty(@"spectating")]
+            public GosuIpcClientSpectating Spectating { get; set; }
         }
 
         public class GosuTourney
@@ -105,6 +122,24 @@ namespace osu.Game.Tournament.IPC
                     AllowInsecureRequests = true,
                     Timeout = 200,
                 };
+            }
+        }
+
+        public int ModStringToInt(string modString)
+        {
+            switch (modString)
+            {
+                case "HD": return (int)LegacyMods.Hidden;
+
+                case "HR": return (int)LegacyMods.HardRock;
+
+                case "EZ": return (int)LegacyMods.Easy;
+
+                case "FL": return (int)LegacyMods.Flashlight;
+
+                case "NF": return (int)LegacyMods.NoFail;
+
+                default: return 0;
             }
         }
 
@@ -169,11 +204,6 @@ namespace osu.Game.Tournament.IPC
                         return;
                     }
 
-                    if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id.ToString()))
-                    {
-                        Logger.Log($"map {gj.GosuMenu.Bm.Id.ToString()} needs multiplier: {multipliers[gj.GosuMenu.Bm.Id.ToString()]}", LoggingTarget.Runtime, LogLevel.Important);
-                    }
-
                     List<int> left = new List<int>();
                     List<int> right = new List<int>();
 
@@ -181,8 +211,42 @@ namespace osu.Game.Tournament.IPC
                     {
                         // Logger.Log($"{ipcClient.Team}: {ipcClient.Gameplay.Score}".PadLeft(7), LoggingTarget.Runtime, LogLevel.Important);
 
-                        // todo: handle multipliers here
-                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * 1.15f));
+                        float scoreMultiplier = 1.0f;
+                        float scoreMultiplierExclusive = 1.0f;
+                        int modsMatched = 0;
+
+                        if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id.ToString()))
+                        {
+                            foreach (dynamic x in (JObject)multipliers[gj.GosuMenu.Bm.Id.ToString()])
+                            {
+                                Logger.Log($"{x.Key} ({ModStringToInt(x.Key)}): {x.Value["mult"]}x (exclusive: {x.Value["exclusive"]})", LoggingTarget.Runtime, LogLevel.Important);
+                                int modInt = ModStringToInt(x.Key);
+
+                                if ((modInt & ipcClient.Gameplay.Mods.Num & -2) <= 0) continue; // check if mod match, ignore no fail
+
+                                modsMatched++;
+
+                                if (x.Value["exclusive"] && x.Value["mult"] > scoreMultiplierExclusive)
+                                {
+                                    scoreMultiplierExclusive = x.Value["mult"];
+                                }
+                                else
+                                {
+                                    scoreMultiplier = x.Value["mult"] > scoreMultiplier ? x.Value["mult"] : scoreMultiplier;
+                                }
+
+                            }
+
+                            // use exclusive multiplier if only one mod found. Otherwise use highest non-exclusive mult
+                            scoreMultiplier = modsMatched == 1 && scoreMultiplierExclusive > scoreMultiplier ? scoreMultiplierExclusive : scoreMultiplier;
+
+                            if (scoreMultiplier > 1.0f)
+                            {
+                                Logger.Log($"({gj.GosuMenu.Bm.Id.ToString()}) applying {scoreMultiplier} multiplier to {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
+                            }
+                        }
+
+                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
                     }
                     Score1WithMult.Value = left.Sum();
                     Score2WithMult.Value = right.Sum();
