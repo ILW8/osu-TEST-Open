@@ -163,7 +163,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
             int winnerDiffBaseScore = Math.Max(0, score1Mult.Value > score2Mult.Value ? score1.Value - score2Mult.Value : score2.Value - score1Mult.Value);
             // this will only work if theBaseScoreAdvantageOverLoserTeam <= diffMultScore (which is always the case when multiplier >= 1.0x
-            float winDeltaBaseScoreRatio = diffMultScore > 0 ? winnerDiffBaseScore / (float)diffMultScore : 1.0f; // ternary to handle when both scores == 0
+            float winDeltaBaseScoreRatio = diffMultScore > 0 ? Math.Min(1.0f, winnerDiffBaseScore / (float)diffMultScore) : 1.0f; // ternary to handle when both scores == 0
             float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
 
             var winningText = score1.Value > score2.Value ? score1Text : score2Text;
