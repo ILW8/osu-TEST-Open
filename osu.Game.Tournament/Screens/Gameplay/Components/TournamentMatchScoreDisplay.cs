@@ -139,10 +139,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void load(MatchIPCInfo ipc)
         {
             score1.BindValueChanged(_ => updateScores());
+            score1Mult.BindValueChanged(_ => updateScores());
             score1.BindTo(ipc.Score1);
             score1Mult.BindTo(ipc.Score1WithMult);
 
             score2.BindValueChanged(_ => updateScores());
+            score2Mult.BindValueChanged(_ => updateScores());
             score2.BindTo(ipc.Score2);
             score2Mult.BindTo(ipc.Score2WithMult);
         }
