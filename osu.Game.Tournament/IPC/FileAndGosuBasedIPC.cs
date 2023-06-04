@@ -221,6 +221,7 @@ namespace osu.Game.Tournament.IPC
 
                     List<int> left = new List<int>();
                     List<int> right = new List<int>();
+                    int ipcClientIndex = 0;
 
                     foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients)
                     {
@@ -263,7 +264,8 @@ namespace osu.Game.Tournament.IPC
                             }
                         }
 
-                        (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
+                        (ipcClientIndex >= gj.GosuTourney.IpcClients.Count / 2 ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
+                        ipcClientIndex++;
                     }
 
                     if (Score1WithMult.Value == left.Sum() && Score2WithMult.Value == right.Sum()) return;
