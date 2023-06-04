@@ -96,6 +96,9 @@ namespace osu.Game.Tournament.IPC
 
         public class GosuJson
         {
+            [JsonProperty(@"error")]
+            public string GosuError { get; set; }
+
             [JsonProperty(@"gameplay")]
             public GosuHasNameKey GosuGameplay { get; set; }
 
@@ -166,10 +169,10 @@ namespace osu.Game.Tournament.IPC
 
             scheduledMultiplier = Scheduler.AddDelayed(delegate
             {
-                if (multipliers != null)
-                {
-                    scheduledMultiplier?.Cancel();
-                }
+                // if (multipliers != null)
+                // {
+                //     scheduledMultiplier?.Cancel();
+                // }
                 GosuMultipliersRequest req = new GosuMultipliersRequest();
                 req.Success += newMultipliers =>
                 {
@@ -197,6 +200,18 @@ namespace osu.Game.Tournament.IPC
                 gosuJsonQueryRequest = new GosuJsonRequest();
                 gosuJsonQueryRequest.Success += gj =>
                 {
+                    if (gj == null)
+                    {
+                        Logger.Log($"[Warning] failed to parse gosumemory json", LoggingTarget.Runtime, LogLevel.Important);
+                        return;
+                    }
+
+                    if (gj.GosuError != null)
+                    {
+                        Logger.Log($"[Warning] gosumemory reported an error: {gj.GosuError}", LoggingTarget.Runtime, LogLevel.Important);
+                        return;
+                    }
+
                     if (multipliers == null)
                     {
                         Logger.Log("multipliers not yet loaded, skipping...", LoggingTarget.Runtime, LogLevel.Important);
@@ -219,20 +234,22 @@ namespace osu.Game.Tournament.IPC
                         {
                             foreach (dynamic x in (JObject)multipliers[gj.GosuMenu.Bm.Id.ToString()])
                             {
-                                Logger.Log($"{x.Key} ({ModStringToInt(x.Key)}): {x.Value["mult"]}x (exclusive: {x.Value["exclusive"]})", LoggingTarget.Runtime, LogLevel.Important);
+                                // Logger.Log($"{x.Key} ({ModStringToInt(x.Key)}): {x.Value["mult"]}x (exclusive: {x.Value["exclusive"]})", LoggingTarget.Runtime, LogLevel.Important);
                                 int modInt = ModStringToInt(x.Key);
 
                                 if ((modInt & ipcClient.Gameplay.Mods.Num & -2) <= 0) continue; // check if mod match, ignore no fail
 
                                 modsMatched++;
+                                float mult = (float)x.Value["mult"];
+                                bool isExclusive = (bool)x.Value["exclusive"];
 
-                                if (x.Value["exclusive"] && x.Value["mult"] > scoreMultiplierExclusive)
+                                if (isExclusive && mult > scoreMultiplierExclusive)
                                 {
-                                    scoreMultiplierExclusive = x.Value["mult"];
+                                    scoreMultiplierExclusive = mult;
                                 }
                                 else
                                 {
-                                    scoreMultiplier = x.Value["mult"] > scoreMultiplier ? x.Value["mult"] : scoreMultiplier;
+                                    scoreMultiplier = mult > scoreMultiplier ? mult : scoreMultiplier;
                                 }
 
                             }
