@@ -176,8 +176,11 @@ namespace osu.Game.Tournament.IPC
                 GosuMultipliersRequest req = new GosuMultipliersRequest();
                 req.Success += newMultipliers =>
                 {
+                    if (JToken.DeepEquals(multipliers, newMultipliers)) return;
+
                     Logger.Log("Loaded/updated multipliers", LoggingTarget.Runtime, LogLevel.Important);
                     multipliers = newMultipliers;
+
                 };
                 req.Failure += exception =>
                 {
