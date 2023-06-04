@@ -179,8 +179,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             winningBarBase.ResizeWidthTo(fullWinnerWidth * winDeltaBaseScoreRatio, 400, Easing.OutQuint);
             winningBarMult.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
 
-            Logger.Log($"advantage left base: {score1.Value} mult:{score1Mult.Value} || "
-                + $"right base: {score2.Value} mult: {score2.Value} || "
+            Logger.Log($"winner advantage base: {winnerDiffBaseScore} mult:{diffMultScore} || "
                 + $"delta base ratio: {winDeltaBaseScoreRatio}",
                 LoggingTarget.Runtime, LogLevel.Important);
 
