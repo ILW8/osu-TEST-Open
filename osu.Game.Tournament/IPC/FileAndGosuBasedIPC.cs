@@ -176,7 +176,7 @@ namespace osu.Game.Tournament.IPC
                 GosuMultipliersRequest req = new GosuMultipliersRequest();
                 req.Success += newMultipliers =>
                 {
-                    Logger.Log("Loaded multipliers", LoggingTarget.Runtime, LogLevel.Important);
+                    Logger.Log("Loaded/updated multipliers", LoggingTarget.Runtime, LogLevel.Important);
                     multipliers = newMultipliers;
                 };
                 req.Failure += exception =>
@@ -265,6 +265,9 @@ namespace osu.Game.Tournament.IPC
 
                         (ipcClient.Team == "left" ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
                     }
+
+                    if (Score1WithMult.Value == left.Sum() && Score2WithMult.Value == right.Sum()) return;
+
                     Score1WithMult.Value = left.Sum();
                     Score2WithMult.Value = right.Sum();
                 };
