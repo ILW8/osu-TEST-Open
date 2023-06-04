@@ -99,19 +99,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Scale = new Vector2(0.8f)
                 },
                 score1MultipliedText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Scale = new Vector2(0.8f)
+                    Scale = new Vector2(0.8f),
+                    Y = -48
                 },
                 score2MultipliedText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Scale = new Vector2(0.8f)
+                    Scale = new Vector2(0.8f),
+                    Y = -48
                 },
                 score2Bar = new Box
                 {
@@ -162,7 +163,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             // todo: replace this
             // float multFactor = (float)(score1MultipliedText.Current.Value / score1Text.Current.Value);
             // multFactor = Math.Max(1.0f, multFactor);
-            const float mult_factor = 1.3f;
+            // const float mult_factor = 1.3f;
 
             var winningText = score1.Value > score2.Value ? score1Text : score2Text;
             var losingText = score1.Value <= score2.Value ? score1Text : score2Text;
@@ -170,36 +171,46 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             winningText.Winning = true;
             losingText.Winning = false;
 
-            var winningBar = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
-            var winningBarM = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
-            var losingBar = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
-            var losingBarM = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
+            var winningBarBase = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
+            var losingBarBase = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
+            var winningBarMult = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
+            var losingBarMult = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
 
             int diffBaseScore = Math.Max(score1.Value, score2.Value) - Math.Min(score1.Value, score2.Value);
             int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
 
+            // if one team is winning but score difference is less than bonus granted by multiplier, then neither dark bars should show and only one light bar should be present
+            // int winningBonusScore = score1Mult.Value > score2Mult.Value ? score1Mult.Value - score1.Value : score2Mult.Value - score2.Value;
+            // int losingBonusScore = score1Mult.Value <= score2Mult.Value ? score1Mult.Value - score1.Value : score2Mult.Value - score2.Value;
+
+            // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
+            int theBaseScoreAdvantageOverLoserTeam = score1Mult.Value > score2Mult.Value ? score1.Value - score2Mult.Value : score2.Value - score1Mult.Value;
+            theBaseScoreAdvantageOverLoserTeam = Math.Max(0, theBaseScoreAdvantageOverLoserTeam); // ensure not negative
+
             Logger.Log($"delta {diffBaseScore} | delta mult {diffMultScore}", LoggingTarget.Runtime, LogLevel.Important);
 
-            // todo: redo ratio calc
-            losingBar .ResizeWidthTo(0, 400, Easing.OutQuint);
-            losingBarM.ResizeWidthTo(0, 400, Easing.OutQuint);
-            // winningBar.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diff / 1500000f, 0.5f) / 2) / multFactor, 400, Easing.OutQuint);
-            winningBar .ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diffBaseScore / 1500000f, 0.5f) / 2) / mult_factor, 400, Easing.OutQuint);
-            winningBarM.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diffBaseScore / 1500000f, 0.5f) / 2), 400, Easing.OutQuint);
+            // this will only work if theBaseScoreAdvantageOverLoserTeam <= diffMultScore (which is always the case when multiplier >= 1.0x
+            float winDeltaBaseScoreRatio = diffMultScore > 0 ? theBaseScoreAdvantageOverLoserTeam / (float)diffMultScore : 1.0f; // ternary to handle when both scores == 0
+
+            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
+
+            losingBarBase.ResizeWidthTo(0, 400, Easing.OutQuint);
+            losingBarMult.ResizeWidthTo(0, 400, Easing.OutQuint);
+
+            winningBarBase.ResizeWidthTo(fullWinnerWidth * winDeltaBaseScoreRatio, 400, Easing.OutQuint);
+            winningBarMult.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
         }
 
         protected override void UpdateAfterChildren()
         {
             base.UpdateAfterChildren();
-            score1Text.Y = -4;
-            score1MultipliedText.Y = 28;
-            score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
-            score1MultipliedText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
+            // score1MultipliedText.Y = 28;
+            score1Text.X = -Math.Max(5 + score1MultipliedText.DrawWidth / 2, score1BarMultiplied.DrawWidth);
+            score1MultipliedText.X = -Math.Max(5 + score1MultipliedText.DrawWidth / 2, score1BarMultiplied.DrawWidth);
 
-            score2Text.Y = -4;
-            score2MultipliedText.Y = 28;
-            score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
-            score2MultipliedText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
+            // score2MultipliedText.Y = 28;
+            score2Text.X = Math.Max(5 + score2MultipliedText.DrawWidth / 2, score2BarMultiplied.DrawWidth);
+            score2MultipliedText.X = Math.Max(5 + score2MultipliedText.DrawWidth / 2, score2BarMultiplied.DrawWidth);
         }
 
         private partial class MatchScoreCounter : CommaSeparatedScoreCounter
