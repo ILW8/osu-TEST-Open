@@ -219,6 +219,8 @@ namespace osu.Game.Tournament.IPC
                         return;
                     }
 
+                    bool shouldUseMult = false;
+
                     List<int> left = new List<int>();
                     List<int> right = new List<int>();
                     int ipcClientIndex = 0;
@@ -260,11 +262,15 @@ namespace osu.Game.Tournament.IPC
 
                             if (scoreMultiplier > 1.0f)
                             {
+                                Logger.Log($"{modsMatched} mods matched for {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
                                 Logger.Log($"({gj.GosuMenu.Bm.Id.ToString()}) applying {scoreMultiplier} multiplier to {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
+                                shouldUseMult = true;
                             }
                         }
 
-                        (ipcClientIndex >= gj.GosuTourney.IpcClients.Count / 2 ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
+                        bool theConditional = ipcClientIndex < gj.GosuTourney.IpcClients.Count / 2;
+                        Logger.Log($"isLeft: {theConditional}: {ipcClient.Gameplay.Score * scoreMultiplier}");
+                        (theConditional ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
                         ipcClientIndex++;
                     }
 
@@ -272,6 +278,8 @@ namespace osu.Game.Tournament.IPC
 
                     Score1WithMult.Value = left.Sum();
                     Score2WithMult.Value = right.Sum();
+
+                    if (ShouldUseMult.Value != shouldUseMult) ShouldUseMult.Value = shouldUseMult;
                 };
                 gosuJsonQueryRequest.Failure += exception =>
                 {

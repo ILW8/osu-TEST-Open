@@ -21,5 +21,6 @@ namespace osu.Game.Tournament.IPC
         public BindableInt Score1WithMult { get; } = new BindableInt();
         public BindableInt Score2 { get; } = new BindableInt();
         public BindableInt Score2WithMult { get; } = new BindableInt();
+        public BindableBool ShouldUseMult { get; } = new BindableBool();
     }
 }

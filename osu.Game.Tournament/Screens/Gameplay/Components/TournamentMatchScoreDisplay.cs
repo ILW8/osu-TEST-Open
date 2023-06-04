@@ -28,6 +28,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly BindableInt score2 = new BindableInt();
         private readonly BindableInt score1Mult = new BindableInt();
         private readonly BindableInt score2Mult = new BindableInt();
+        private readonly BindableBool useMult = new BindableBool();
 
         private readonly MatchScoreCounter score1Text;
         private readonly MatchScoreCounter score1MultipliedText;
@@ -138,6 +139,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
+            useMult.BindTo(ipc.ShouldUseMult);
             score1.BindValueChanged(_ => updateScores());
             score1Mult.BindValueChanged(_ => updateScores());
             score1.BindTo(ipc.Score1);
@@ -151,7 +153,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateScores()
         {
-            if (score1Mult.Value == -1 || score2Mult.Value == -1 || (score1.Value == 0 && score2.Value == 0))
+            if (score1Mult.Value == -1 || score2Mult.Value == -1 || (score1.Value == 0 && score2.Value == 0) || !useMult.Value)
             {
                 score1Mult.Value = score1.Value;
                 score2Mult.Value = score2.Value;
@@ -181,9 +183,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             winningBarBase.ResizeWidthTo(fullWinnerWidth * winDeltaBaseScoreRatio, 400, Easing.OutQuint);
             winningBarMult.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
 
-            Logger.Log($"winner advantage base: {winnerDiffBaseScore} mult:{diffMultScore} || "
-                + $"delta base ratio: {winDeltaBaseScoreRatio}",
-                LoggingTarget.Runtime, LogLevel.Important);
+            // Logger.Log($"winner advantage base: {winnerDiffBaseScore} mult:{diffMultScore} || "
+            //     + $"delta base ratio: {winDeltaBaseScoreRatio}",
+            //     LoggingTarget.Runtime, LogLevel.Important);
 
         }
 
