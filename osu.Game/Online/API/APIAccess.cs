@@ -403,7 +403,7 @@ namespace osu.Game.Online.API
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error occurred while handling an API request.");
+                Logger.Error(ex, $"Error occurred while handling an API request. {ex}");
                 return false;
             }
         }

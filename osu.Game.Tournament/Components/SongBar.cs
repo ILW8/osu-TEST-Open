@@ -37,7 +37,7 @@ namespace osu.Game.Tournament.Components
             set
             {
                 showReplayer = value;
-                updateReplayer(Replayer.Value);
+                updateReplayer(Replayer.Value, Slot.Value);
             }
         }
 
@@ -71,6 +71,7 @@ namespace osu.Game.Tournament.Components
         }
 
         public Bindable<string> Replayer = new Bindable<string>("");
+        public Bindable<string> Slot = new Bindable<string>("");
 
         private FillFlowContainer flow;
 
@@ -114,7 +115,14 @@ namespace osu.Game.Tournament.Components
                 if (!ShowReplayer) return;
 
                 Logger.Log($"Updating (1) replayer from \"{vce.OldValue}\" to \"{vce.NewValue}\"", LoggingTarget.Information, LogLevel.Important);
-                updateReplayer(vce.NewValue);
+                updateReplayer(vce.NewValue, Slot.Value);
+            }, true);
+
+            Slot.BindValueChanged(vce =>
+            {
+                if (!ShowReplayer) return;
+
+                updateReplayer(Replayer.Value, vce.NewValue);
             }, true);
 
             InternalChildren = new Drawable[]
@@ -134,7 +142,7 @@ namespace osu.Game.Tournament.Components
             Expanded = true;
         }
 
-        private void updateReplayer(string newReplayer)
+        private void updateReplayer(string newReplayer, string newSlot)
         {
             if (replayerContainer == null) return;
 
@@ -142,6 +150,7 @@ namespace osu.Game.Tournament.Components
             replayerContainer.Children = new Drawable[]
             {
                 new DiffPiece(($"{(newReplayer.Length > 0 ? "Replay by" : " ")}", $"{(newReplayer.Length > 0 ? newReplayer : " ")}")),
+                new DiffPiece(($"{(newSlot.Length > 0 ? "Showcasing" : " ")}", $"{(newSlot.Length > 0 ? newSlot : " ")}")),
             };
             replayerContainer.FadeIn(150);
         }
