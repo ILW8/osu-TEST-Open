@@ -36,6 +36,7 @@ namespace osu.Game.Tournament.Screens
             ipc.Mods.BindValueChanged(modsChanged, true);
 
             SongBar.Replayer.BindTo(ipc.Replayer);
+            SongBar.Slot.BindTo(ipc.Slot);
         }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)

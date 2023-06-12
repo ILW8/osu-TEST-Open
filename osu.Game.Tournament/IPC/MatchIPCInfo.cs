@@ -14,6 +14,7 @@ namespace osu.Game.Tournament.IPC
     {
         public Bindable<TournamentBeatmap> Beatmap { get; } = new Bindable<TournamentBeatmap>();
         public Bindable<string> Replayer { get; } = new Bindable<string>("");
+        public Bindable<string> Slot { get; } = new Bindable<string>("");
         public Bindable<LegacyMods> Mods { get; } = new Bindable<LegacyMods>();
         public Bindable<TourneyState> State { get; } = new Bindable<TourneyState>();
         public Bindable<string> ChatChannel { get; } = new Bindable<string>();

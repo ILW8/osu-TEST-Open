@@ -21,8 +21,10 @@ namespace osu.Game.Tournament.IPC
     {
         private DateTime gosuRequestWaitUntil = DateTime.Now.AddSeconds(15); // allow 15 seconds for lazer to start and get ready
         private dynamic multipliers;
+        private List<MappoolShowcaseMap> maps = new List<MappoolShowcaseMap>();
         private ScheduledDelegate scheduled;
         private ScheduledDelegate scheduledMultiplier;
+        private ScheduledDelegate scheduledShowcase;
         private GosuJsonRequest gosuJsonQueryRequest;
 
         public class GosuHasNameKey
@@ -84,6 +86,9 @@ namespace osu.Game.Tournament.IPC
             [JsonProperty(@"id")]
             public int Id { get; set; }
 
+            [JsonProperty(@"md5")]
+            public string MD5 { get; set; }
+
             [JsonProperty(@"set")]
             public int Set { get; set; }
         }
@@ -92,6 +97,24 @@ namespace osu.Game.Tournament.IPC
         {
             [JsonProperty(@"bm")]
             public GosuMenuBeatmap Bm { get; set; }
+        }
+
+        public class MappoolShowcaseMap
+        {
+            [JsonProperty(@"id")]
+            public int Id { get; set; }
+
+            [JsonProperty(@"md5")]
+            public string MD5 { get; set; }
+
+            [JsonProperty(@"slot")]
+            public string Slot { get; set; }
+        }
+
+        public class MappoolShowcaseData
+        {
+            [JsonProperty(@"maps")]
+            public List<MappoolShowcaseMap> Maps { get; set; }
         }
 
         public class GosuJson
@@ -161,11 +184,27 @@ namespace osu.Game.Tournament.IPC
             }
         }
 
+        public class GosuMappoolShowcaseRequest : APIRequest<MappoolShowcaseData>
+        {
+            protected override string Target => @"showcase.json";
+            protected override string Uri => $@"http://localhost:24050/{Target}";
+
+            protected override WebRequest CreateWebRequest()
+            {
+                return new OsuJsonWebRequest<MappoolShowcaseData>(Uri)
+                {
+                    AllowInsecureRequests = true,
+                    Timeout = 2000,
+                };
+            }
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
             scheduled?.Cancel();
             scheduledMultiplier?.Cancel();
+            scheduledShowcase?.Cancel();
 
             scheduledMultiplier = Scheduler.AddDelayed(delegate
             {
@@ -188,6 +227,26 @@ namespace osu.Game.Tournament.IPC
                 };
                 API.Queue(req);
             }, 1000, true);
+
+            scheduledShowcase = Scheduler.AddDelayed(delegate
+            {
+                GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
+                req.Success += newMappoolData =>
+                {
+                    // Logger.Log("hey", LoggingTarget.Runtime, LogLevel.Important);
+                    // foreach (var map in newMappoolData.Maps)
+                    // {
+                        // Logger.Log(map.Slot, LoggingTarget.Runtime, LogLevel.Important);
+                    // }
+                    // Logger.Log(newMappoolData.Maps);
+                    maps = newMappoolData.Maps;
+                };
+                req.Failure += exception =>
+                {
+                    Logger.Log($"Failed requesting mappool data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
+                };
+                API.Queue(req);
+            }, 5000, true);
 
             scheduled = Scheduler.AddDelayed(delegate
             {
@@ -215,74 +274,33 @@ namespace osu.Game.Tournament.IPC
                         return;
                     }
 
-                    if (multipliers == null)
+                    UpdateScore(gj);
+
+                    // =====
+                    // set replayer
+                    // Replayer name can appear either in resultScreen.name or gameplay.name, depending on _when_ the API is queried.
+                    string newVal = (gj.GosuGameplay?.Name?.Length > 0
+                        ? gj.GosuGameplay.Name
+                        : gj.GosuResultScreen?.Name) ?? "";
+
+                    if (Replayer.Value == newVal) return; // not strictly necessary with a bindable
+
+                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
+                    Replayer.Value = newVal;
+
+                    // ====
+                    // set slot
+                    foreach (var map in maps)
                     {
-                        Logger.Log("multipliers not yet loaded, skipping...", LoggingTarget.Runtime, LogLevel.Important);
-                        gosuRequestWaitUntil = DateTime.Now.AddSeconds(1); // inhibit score fetching until multipliers are updated
-                        return;
+                        if (gj.GosuMenu.Bm.Id != map.Id && gj.GosuMenu.Bm.MD5 != map.MD5) continue;
+
+                        // Logger.Log("we hit a match!", LoggingTarget.Runtime, LogLevel.Important);
+
+                        if (Slot.Value == map.Slot) return;
+
+                        Slot.Value = map.Slot;
+                        break;
                     }
-
-                    bool shouldUseMult = false;
-
-                    List<int> left = new List<int>();
-                    List<int> right = new List<int>();
-                    int ipcClientIndex = 0;
-
-                    foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients)
-                    {
-                        // Logger.Log($"{ipcClient.Team}: {ipcClient.Gameplay.Score}".PadLeft(7), LoggingTarget.Runtime, LogLevel.Important);
-
-                        float scoreMultiplier = 1.0f;
-                        float scoreMultiplierExclusive = 1.0f;
-                        int modsMatched = 0;
-
-                        if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id.ToString()))
-                        {
-                            foreach (dynamic x in (JObject)multipliers[gj.GosuMenu.Bm.Id.ToString()])
-                            {
-                                // Logger.Log($"{x.Key} ({ModStringToInt(x.Key)}): {x.Value["mult"]}x (exclusive: {x.Value["exclusive"]})", LoggingTarget.Runtime, LogLevel.Important);
-                                int modInt = ModStringToInt(x.Key);
-
-                                if ((modInt & ipcClient.Gameplay.Mods.Num & -2) <= 0) continue; // check if mod match, ignore no fail
-
-                                modsMatched++;
-                                float mult = (float)x.Value["mult"];
-                                bool isExclusive = (bool)x.Value["exclusive"];
-
-                                if (isExclusive && mult > scoreMultiplierExclusive)
-                                {
-                                    scoreMultiplierExclusive = mult;
-                                }
-                                else
-                                {
-                                    scoreMultiplier = mult > scoreMultiplier ? mult : scoreMultiplier;
-                                }
-
-                            }
-
-                            // use exclusive multiplier if only one mod found. Otherwise use highest non-exclusive mult
-                            scoreMultiplier = modsMatched == 1 && scoreMultiplierExclusive > scoreMultiplier ? scoreMultiplierExclusive : scoreMultiplier;
-
-                            if (scoreMultiplier > 1.0f)
-                            {
-                                Logger.Log($"{modsMatched} mods matched for {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
-                                Logger.Log($"({gj.GosuMenu.Bm.Id.ToString()}) applying {scoreMultiplier} multiplier to {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
-                                shouldUseMult = true;
-                            }
-                        }
-
-                        bool theConditional = ipcClientIndex < gj.GosuTourney.IpcClients.Count / 2;
-                        Logger.Log($"isLeft: {theConditional}: {ipcClient.Gameplay.Score * scoreMultiplier}");
-                        (theConditional ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
-                        ipcClientIndex++;
-                    }
-
-                    if (Score1WithMult.Value == left.Sum() && Score2WithMult.Value == right.Sum()) return;
-
-                    Score1WithMult.Value = left.Sum();
-                    Score2WithMult.Value = right.Sum();
-
-                    if (ShouldUseMult.Value != shouldUseMult) ShouldUseMult.Value = shouldUseMult;
                 };
                 gosuJsonQueryRequest.Failure += exception =>
                 {
@@ -290,9 +308,81 @@ namespace osu.Game.Tournament.IPC
                     gosuRequestWaitUntil = DateTime.Now.AddSeconds(2); // inhibit calling gosu api again for 2 seconds if failure occured
                     Score1WithMult.Value = -1;
                     Score2WithMult.Value = -1;
+                    Replayer.Value = "";
                 };
                 API.Queue(gosuJsonQueryRequest);
             }, 250, true);
+        }
+        private void UpdateScore(GosuJson gj)
+        {
+            if (multipliers == null)
+            {
+                Logger.Log("multipliers not yet loaded, skipping...", LoggingTarget.Runtime, LogLevel.Important);
+                gosuRequestWaitUntil = DateTime.Now.AddSeconds(1); // inhibit score fetching until multipliers are updated
+                return;
+            }
+
+            bool shouldUseMult = false;
+
+            List<int> left = new List<int>();
+            List<int> right = new List<int>();
+            int ipcClientIndex = 0;
+
+            foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients ?? new List<GosuIpcClient>())
+            {
+                // Logger.Log($"{ipcClient.Team}: {ipcClient.Gameplay.Score}".PadLeft(7), LoggingTarget.Runtime, LogLevel.Important);
+
+                float scoreMultiplier = 1.0f;
+                float scoreMultiplierExclusive = 1.0f;
+                int modsMatched = 0;
+
+                if (multipliers.ContainsKey(gj.GosuMenu.Bm.Id.ToString()))
+                {
+                    foreach (dynamic x in (JObject)multipliers[gj.GosuMenu.Bm.Id.ToString()])
+                    {
+                        // Logger.Log($"{x.Key} ({ModStringToInt(x.Key)}): {x.Value["mult"]}x (exclusive: {x.Value["exclusive"]})", LoggingTarget.Runtime, LogLevel.Important);
+                        int modInt = ModStringToInt(x.Key);
+
+                        if ((modInt & ipcClient.Gameplay.Mods.Num & -2) <= 0) continue; // check if mod match, ignore no fail
+
+                        modsMatched++;
+                        float mult = (float)x.Value["mult"];
+                        bool isExclusive = (bool)x.Value["exclusive"];
+
+                        if (isExclusive && mult > scoreMultiplierExclusive)
+                        {
+                            scoreMultiplierExclusive = mult;
+                        }
+                        else
+                        {
+                            scoreMultiplier = mult > scoreMultiplier ? mult : scoreMultiplier;
+                        }
+
+                    }
+
+                    // use exclusive multiplier if only one mod found. Otherwise use highest non-exclusive mult
+                    scoreMultiplier = modsMatched == 1 && scoreMultiplierExclusive > scoreMultiplier ? scoreMultiplierExclusive : scoreMultiplier;
+
+                    if (scoreMultiplier > 1.0f)
+                    {
+                        Logger.Log($"{modsMatched} mods matched for {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
+                        Logger.Log($"({gj.GosuMenu.Bm.Id.ToString()}) applying {scoreMultiplier} multiplier to {ipcClient.Spectating.Name}", LoggingTarget.Runtime, LogLevel.Important);
+                        shouldUseMult = true;
+                    }
+                }
+
+                bool theConditional = ipcClientIndex < gj.GosuTourney.IpcClients.Count / 2;
+                Logger.Log($"isLeft: {theConditional}: {ipcClient.Gameplay.Score * scoreMultiplier}");
+                (theConditional ? left : right).Add((int)(ipcClient.Gameplay.Score * scoreMultiplier));
+                ipcClientIndex++;
+            }
+
+            if (Score1WithMult.Value == left.Sum() && Score2WithMult.Value == right.Sum()) return;
+
+            Score1WithMult.Value = left.Sum();
+            Score2WithMult.Value = right.Sum();
+
+            if (ShouldUseMult.Value != shouldUseMult) ShouldUseMult.Value = shouldUseMult;
         }
     }
 }
