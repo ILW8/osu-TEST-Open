@@ -141,12 +141,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             useMult.BindTo(ipc.ShouldUseMult);
             score1.BindValueChanged(_ => updateScores());
-            score1Mult.BindValueChanged(_ => updateScores());
+            // score1Mult.BindValueChanged(_ => updateScores());
+            score1Mult.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
             score1.BindTo(ipc.Score1);
             score1Mult.BindTo(ipc.Score1WithMult);
 
             score2.BindValueChanged(_ => updateScores());
-            score2Mult.BindValueChanged(_ => updateScores());
+            score2Mult.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
             score2.BindTo(ipc.Score2);
             score2Mult.BindTo(ipc.Score2WithMult);
         }
@@ -158,10 +159,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 score1Mult.Value = score1.Value;
                 score2Mult.Value = score2.Value;
             }
-            score1Text.Current.Value = score1.Value;
-            score2Text.Current.Value = score2.Value;
-            score1HiddenText.Current.Value = score1Mult.Value;
-            score2HiddenText.Current.Value = score2Mult.Value;
+            score1Text.Current.Value = score1Mult.Value;
+            score2Text.Current.Value = score2Mult.Value;
+            score1HiddenText.Current.Value = score1.Value;
+            score2HiddenText.Current.Value = score2.Value;
             int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
 
             // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
