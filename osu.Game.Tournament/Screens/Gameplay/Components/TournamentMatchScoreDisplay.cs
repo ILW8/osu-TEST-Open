@@ -6,9 +6,11 @@
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -26,19 +28,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private readonly BindableInt score1 = new BindableInt();
         private readonly BindableInt score2 = new BindableInt();
-        private readonly BindableInt score1Mult = new BindableInt();
-        private readonly BindableInt score2Mult = new BindableInt();
-        private readonly BindableBool useMult = new BindableBool();
+        private readonly BindableFloat accuracy1 = new BindableFloat();
+        private readonly BindableFloat accuracy2 = new BindableFloat();
 
         private readonly MatchScoreCounter score1Text;
         private readonly MatchScoreCounter score1HiddenText;
         private readonly MatchScoreCounter score2Text;
         private readonly MatchScoreCounter score2HiddenText;
+        private readonly AccScoreCounter acc1Text;
+        private readonly AccScoreCounter acc2Text;
 
         private readonly Drawable score1Bar;
-        private readonly Drawable score1BarMultiplied;
         private readonly Drawable score2Bar;
-        private readonly Drawable score2BarMultiplied;
 
         public TournamentMatchScoreDisplay()
         {
@@ -47,26 +48,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             InternalChildren = new[]
             {
-                score1BarMultiplied = new Box
-                {
-                    Name = "top bar red mult",
-                    RelativeSizeAxes = Axes.X,
-                    Height = bar_height,
-                    Width = 0,
-                    Colour = new OsuColour().Red,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopRight
-                },
-                score2BarMultiplied = new Box
-                {
-                    Name = "top bar blue mult",
-                    RelativeSizeAxes = Axes.X,
-                    Height = bar_height,
-                    Width = 0,
-                    Colour = new OsuColour().Blue,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopLeft
-                },
                 new Box
                 {
                     Name = "top bar red (static)",
@@ -110,6 +91,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Colour = new Color4(0, 255, 12, 255),
                     Y = -48
                 },
+                acc1Text = new AccScoreCounter
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Y = -128
+                },
                 score2HiddenText = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
@@ -117,6 +104,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Scale = new Vector2(0.8f),
                     Colour = new Color4(0, 255, 12, 255),
                     Y = -48
+                },
+                acc2Text = new AccScoreCounter
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Y = -128
                 },
                 score2Bar = new Box
                 {
@@ -139,67 +132,61 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
-            useMult.BindTo(ipc.ShouldUseMult);
             score1.BindValueChanged(_ => updateScores());
             // score1Mult.BindValueChanged(_ => updateScores());
-            score1Mult.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
             score1.BindTo(ipc.Score1);
-            score1Mult.BindTo(ipc.Score1WithMult);
 
             score2.BindValueChanged(_ => updateScores());
-            score2Mult.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
             score2.BindTo(ipc.Score2);
-            score2Mult.BindTo(ipc.Score2WithMult);
+
+            accuracy1.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
+            accuracy1.BindTo(ipc.Accuracy1);
+            accuracy2.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
+            accuracy2.BindTo(ipc.Accuracy2);
         }
 
         private void updateScores()
         {
-            if (score1Mult.Value == -1 || score2Mult.Value == -1 || (score1.Value == 0 && score2.Value == 0) || !useMult.Value)
-            {
-                score1Mult.Value = score1.Value;
-                score2Mult.Value = score2.Value;
-            }
-            score1Text.Current.Value = score1Mult.Value;
-            score2Text.Current.Value = score2Mult.Value;
+            score1Text.Current.Value = score1.Value;
+            score2Text.Current.Value = score2.Value;
+            acc1Text.Current.Value = accuracy1.Value;
+            acc2Text.Current.Value = accuracy2.Value;
             score1HiddenText.Current.Value = score1.Value;
             score2HiddenText.Current.Value = score2.Value;
-            int diffMultScore = Math.Max(score1Mult.Value, score2Mult.Value) - Math.Min(score1Mult.Value, score2Mult.Value);
+            float diffMultScore = Math.Max(accuracy1.Value, accuracy2.Value) - Math.Min(accuracy1.Value, accuracy2.Value);
 
-            // if winning side's point advantage is less than its score bonus, base bar needs to be 0.
-            int winnerDiffBaseScore = Math.Max(0, score1Mult.Value > score2Mult.Value ? score1.Value - score2Mult.Value : score2.Value - score1Mult.Value);
-            // this will only work if theBaseScoreAdvantageOverLoserTeam <= diffMultScore (which is always the case when multiplier >= 1.0x
-            float winDeltaBaseScoreRatio = diffMultScore > 0 ? Math.Min(1.0f, winnerDiffBaseScore / (float)diffMultScore) : 1.0f; // ternary to handle when both scores == 0
-            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 1500000f, 0.5f) / 2);
+            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 10f, 0.5f) / 2);
 
-            var winningText = score1Mult.Value > score2Mult.Value ? score1Text : score2Text;
-            var losingText = score1Mult.Value <= score2Mult.Value ? score1Text : score2Text;
-            var winningBarBase = score1Mult.Value > score2Mult.Value ? score1Bar : score2Bar;
-            var losingBarBase = score1Mult.Value <= score2Mult.Value ? score1Bar : score2Bar;
-            var winningBarMult = score1Mult.Value > score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
-            var losingBarMult = score1Mult.Value <= score2Mult.Value ? score1BarMultiplied : score2BarMultiplied;
+            var winningText = accuracy1.Value > accuracy2.Value ? acc1Text : acc2Text;
+            var losingText = accuracy1.Value <= accuracy2.Value ? acc1Text : acc2Text;
+            var winningBarBase = accuracy1.Value > accuracy2.Value ? score1Bar : score2Bar;
+            var losingBarBase = accuracy1.Value <= accuracy2.Value ? score1Bar : score2Bar;
+
             winningText.Winning = true;
-            losingText.Winning = false;
+            losingText.Winning = Math.Abs(accuracy1.Value - accuracy2.Value) < 0.005; // mark both as winning if same accuracy
             losingBarBase.ResizeWidthTo(0, 400, Easing.OutQuint);
-            losingBarMult.ResizeWidthTo(0, 400, Easing.OutQuint);
-            winningBarBase.ResizeWidthTo(fullWinnerWidth * winDeltaBaseScoreRatio, 400, Easing.OutQuint);
-            winningBarMult.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
-
-            // Logger.Log($"winner advantage base: {winnerDiffBaseScore} mult:{diffMultScore} || "
-            //     + $"delta base ratio: {winDeltaBaseScoreRatio}",
-            //     LoggingTarget.Runtime, LogLevel.Important);
-
+            winningBarBase.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
         }
 
         protected override void UpdateAfterChildren()
         {
             base.UpdateAfterChildren();
             // score1MultipliedText.Y = 28;
-            score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1BarMultiplied.DrawWidth);
-            score1HiddenText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1BarMultiplied.DrawWidth);
+            score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
+            score1HiddenText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
+            acc1Text.X = -Math.Max(5 + acc1Text.DrawWidth / 2, score1Bar.DrawWidth);
 
             // score2MultipliedText.Y = 28;
-            score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2BarMultiplied.DrawWidth);
-            score2HiddenText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2BarMultiplied.DrawWidth);
+            score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
+            score2HiddenText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
+            acc2Text.X = Math.Max(5 + acc2Text.DrawWidth / 2, score2Bar.DrawWidth);
+        }
+
+        private partial class AccScoreCounter : MatchScoreCounter
+        {
+            protected override double RollingDuration => 500;
+
+            protected override LocalisableString FormatCount(double count) => $"{count:F2}%";
         }
 
         private partial class MatchScoreCounter : CommaSeparatedScoreCounter
