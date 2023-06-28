@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using osu.Framework.Allocation;
@@ -19,7 +18,7 @@ namespace osu.Game.Tournament.IPC
 {
     public partial class FileAndGosuBasedIPC : FileBasedIPC
     {
-        private DateTime gosuRequestWaitUntil = DateTime.Now.AddSeconds(15); // allow 15 seconds for lazer to start and get ready
+        private DateTime gosuRequestWaitUntil = DateTime.Now.AddSeconds(5); // allow 15 seconds for lazer to start and get ready
         private dynamic multipliers;
         private List<MappoolShowcaseMap> maps = new List<MappoolShowcaseMap>();
         private ScheduledDelegate scheduled;
@@ -227,6 +226,10 @@ namespace osu.Game.Tournament.IPC
                 // {
                 //     scheduledMultiplier?.Cancel();
                 // }
+                if (!API.IsLoggedIn)
+                {
+                    return;
+                }
                 GosuMultipliersRequest req = new GosuMultipliersRequest();
                 req.Success += newMultipliers =>
                 {
@@ -245,6 +248,10 @@ namespace osu.Game.Tournament.IPC
 
             scheduledShowcase = Scheduler.AddDelayed(delegate
             {
+                if (!API.IsLoggedIn)
+                {
+                    return;
+                }
                 GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
                 req.Success += newMappoolData =>
                 {
@@ -265,9 +272,9 @@ namespace osu.Game.Tournament.IPC
 
             scheduled = Scheduler.AddDelayed(delegate
             {
-                Logger.Log("Executing gosu IPC scheduled delegate", LoggingTarget.Network, LogLevel.Debug);
+                // Logger.Log("Executing gosu IPC scheduled delegate", LoggingTarget.Network, LogLevel.Debug);
 
-                if (gosuRequestWaitUntil > DateTime.Now) // request inhibited
+                if (!API.IsLoggedIn || gosuRequestWaitUntil > DateTime.Now) // request inhibited
                 {
                     Accuracy1.Value = 0f;
                     Accuracy2.Value = 0f;

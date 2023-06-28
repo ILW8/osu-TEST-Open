@@ -9,6 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
@@ -153,10 +154,13 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
                     private readonly Container drawableContainer;
+                    private SettingsDropdown<WinCondition> roundDropdown;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
                     {
                         Model = beatmap;
+
+                        // Model.WinCondition.BindValueChanged(e => Logger.Log($"win condition changed to {e.NewValue}", LoggingTarget.Runtime, LogLevel.Important), true);
 
                         Margin = new MarginPadding(10);
 
@@ -178,30 +182,44 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Margin = new MarginPadding(5),
                                 Padding = new MarginPadding { Right = 160 },
                                 Spacing = new Vector2(5),
-                                Direction = FillDirection.Horizontal,
-                                AutoSizeAxes = Axes.Both,
+                                AutoSizeAxes = Axes.Y,
+                                RelativeSizeAxes = Axes.X,
+                                Direction = FillDirection.Vertical,
                                 Children = new Drawable[]
                                 {
-                                    new SettingsNumberBox
+                                    new FillFlowContainer
                                     {
-                                        LabelText = "Beatmap ID",
-                                        RelativeSizeAxes = Axes.None,
-                                        Width = 200,
-                                        Current = beatmapId,
+                                        Margin = new MarginPadding(5),
+                                        Padding = new MarginPadding { Right = 160 },
+                                        Spacing = new Vector2(5),
+                                        Direction = FillDirection.Horizontal,
+                                        AutoSizeAxes = Axes.Both,
+                                        Children = new Drawable[]
+                                        {
+                                            new SettingsNumberBox
+                                            {
+                                                LabelText = "Beatmap ID",
+                                                RelativeSizeAxes = Axes.None,
+                                                Width = 200,
+                                                Current = beatmapId,
+                                            },
+                                            new SettingsTextBox
+                                            {
+                                                LabelText = "Mods",
+                                                RelativeSizeAxes = Axes.None,
+                                                Width = 200,
+                                                Current = mods,
+                                            },
+                                            drawableContainer = new Container
+                                            {
+                                                Size = new Vector2(100, 70),
+                                            },
+                                        }
                                     },
-                                    new SettingsTextBox
-                                    {
-                                        LabelText = "Mods",
-                                        RelativeSizeAxes = Axes.None,
-                                        Width = 200,
-                                        Current = mods,
-                                    },
-                                    drawableContainer = new Container
-                                    {
-                                        Size = new Vector2(100, 70),
-                                    },
+                                    roundDropdown = new SettingsWinConditionDropdown { LabelText = "Win condition", Current = Model.WinCondition, Width = 0.5f },
                                 }
                             },
+
                             new DangerousSettingsButton
                             {
                                 Anchor = Anchor.CentreRight,
@@ -218,6 +236,17 @@ namespace osu.Game.Tournament.Screens.Editors
                         };
                     }
 
+                    private partial class SettingsWinConditionDropdown : SettingsDropdown<WinCondition>
+                    {
+                        public SettingsWinConditionDropdown()
+                        {
+                            Logger.Log($"Created a new win condition dropdown, current value: {Control.Current.Value}", LoggingTarget.Runtime, LogLevel.Important);
+                            Control.AddDropdownItem(WinCondition.Accuracy);
+                            Control.AddDropdownItem(WinCondition.MissCount);
+                            Control.Current.TriggerChange();
+                        }
+                    }
+
                     [BackgroundDependencyLoader]
                     private void load()
                     {
@@ -232,6 +261,7 @@ namespace osu.Game.Tournament.Screens.Editors
                             if (Model.Beatmap != null)
                             {
                                 updatePanel();
+                                // roundDropdown.Current = Model.WinCondition ?? new Bindable<WinCondition>();
                                 return;
                             }
 

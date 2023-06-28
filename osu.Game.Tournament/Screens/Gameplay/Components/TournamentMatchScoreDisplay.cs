@@ -4,9 +4,9 @@
 #nullable disable
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -16,6 +16,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
 
@@ -24,12 +25,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     // TODO: Update to derive from osu-side class?
     public partial class TournamentMatchScoreDisplay : CompositeDrawable
     {
+        [Resolved]
+        protected LadderInfo LadderInfo { get; private set; }
+
         private const float bar_height = 18;
 
         private readonly BindableInt score1 = new BindableInt();
         private readonly BindableInt score2 = new BindableInt();
         private readonly BindableFloat accuracy1 = new BindableFloat();
         private readonly BindableFloat accuracy2 = new BindableFloat();
+        private readonly BindableInt missCount1 = new BindableInt();
+        private readonly BindableInt missCount2 = new BindableInt();
+
+        private readonly Bindable<WinCondition> winCondition = new Bindable<WinCondition>();
+        private readonly Bindable<TournamentBeatmap> currentBeatmap = new Bindable<TournamentBeatmap>();
 
         private readonly MatchScoreCounter score1Text;
         private readonly MatchScoreCounter score1HiddenText;
@@ -82,6 +91,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
+                    Alpha = 0
                 },
                 score1HiddenText = new MatchScoreCounter
                 {
@@ -89,13 +99,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.TopCentre,
                     Scale = new Vector2(0.8f),
                     Colour = new Color4(0, 255, 12, 255),
-                    Y = -48
+                    Y = -48,
+                    Alpha = 0
                 },
                 acc1Text = new AccScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Y = -128
+                    // Y = -128
                 },
                 score2HiddenText = new MatchScoreCounter
                 {
@@ -103,13 +114,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.TopCentre,
                     Scale = new Vector2(0.8f),
                     Colour = new Color4(0, 255, 12, 255),
-                    Y = -48
+                    Y = -48,
+                    Alpha = 0
                 },
                 acc2Text = new AccScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Y = -128
+                    // Y = -128
                 },
                 score2Bar = new Box
                 {
@@ -124,7 +136,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 score2Text = new MatchScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre
+                    Origin = Anchor.TopCentre,
+                    Alpha = 0
                 },
             };
         }
@@ -143,27 +156,103 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             accuracy1.BindTo(ipc.Accuracy1);
             accuracy2.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
             accuracy2.BindTo(ipc.Accuracy2);
+
+            missCount1.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
+            missCount1.BindTo(ipc.MissCount1);
+            missCount2.BindValueChanged(_ => Scheduler.AddOnce(updateScores));
+            missCount2.BindTo(ipc.MissCount2);
+
+            currentBeatmap.BindTo(ipc.Beatmap);
+            currentBeatmap.BindValueChanged(_ => Scheduler.AddOnce(updateWinCondition));
+            //
+            // winCondition.BindValueChanged(vce =>
+            // {
+            //     Logger.Log($"win condition updated: {vce.NewValue}", LoggingTarget.Runtime, LogLevel.Important);
+            // });
+
+            // new thing
+            //             if (CurrentMatch.Value.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId))
+
+            /*
+             *         [BackgroundDependencyLoader]
+        private void load(MatchIPCInfo ipc)
+        {
+            ipc.Beatmap.BindValueChanged(beatmapChanged);
+        }
+
+        private void beatmapChanged(ValueChangedEvent<TournamentBeatmap> beatmap)
+        {
+            if (CurrentMatch.Value == null || CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) < 2)
+                return;
+
+            // if bans have already been placed, beatmap changes result in a selection being made autoamtically
+            if (beatmap.NewValue.OnlineID > 0)
+                addForBeatmap(beatmap.NewValue.OnlineID);
+        }
+             */
+
+        }
+
+        // protected override void LoadComplete()
+        // {
+        //     base.LoadComplete();
+        //
+        //     LadderInfo.CurrentMatch.BindValueChanged(vce =>
+        //     {
+        //         TournamentMatch match = vce.NewValue;
+        //         if (match.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId))
+        //
+        //     }, true);
+        // }
+
+        private void updateWinCondition()
+        {
+            var activeBeatmap = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps?.FirstOrDefault(b => b.Beatmap.OnlineID == currentBeatmap.Value?.OnlineID);
+
+            if (activeBeatmap is null) return;
+
+            if (winCondition.Value == activeBeatmap.WinCondition.Value) return;
+
+            Logger.Log($"Found matching beatmap in mappool, win condition updated: {activeBeatmap.WinCondition}", LoggingTarget.Runtime, LogLevel.Important);
+            winCondition.Value = activeBeatmap.WinCondition.Value;
+            (winCondition.Value == WinCondition.Accuracy ? score1Text : acc1Text).FadeOut(250);
+            (winCondition.Value == WinCondition.Accuracy ? score2Text : acc2Text).FadeOut(250);
+            (winCondition.Value == WinCondition.Accuracy ? acc1Text : score1Text).Delay(350).FadeIn(250);
+            (winCondition.Value == WinCondition.Accuracy ? acc2Text : score2Text).Delay(350).FadeIn(250);
+            Scheduler.AddOnce(updateScores);
         }
 
         private void updateScores()
         {
-            score1Text.Current.Value = score1.Value;
-            score2Text.Current.Value = score2.Value;
+            score1Text.Current.Value = missCount1.Value;
+            score2Text.Current.Value = missCount2.Value;
             acc1Text.Current.Value = accuracy1.Value;
             acc2Text.Current.Value = accuracy2.Value;
             score1HiddenText.Current.Value = score1.Value;
             score2HiddenText.Current.Value = score2.Value;
-            float diffMultScore = Math.Max(accuracy1.Value, accuracy2.Value) - Math.Min(accuracy1.Value, accuracy2.Value);
+            float accDiff = Math.Max(accuracy1.Value, accuracy2.Value) - Math.Min(accuracy1.Value, accuracy2.Value);
 
-            float fullWinnerWidth = Math.Min(0.4f, MathF.Pow(diffMultScore / 10f, 0.5f) / 2);
+            float fullWinnerWidth = winCondition.Value == WinCondition.Accuracy
+                ? Math.Min(0.4f, MathF.Pow(accDiff / 8f, 0.7f) / 2)
+                : Math.Min(0.4f, MathF.Pow(Math.Abs(missCount1.Value - missCount2.Value) / 32f, 0.75f) / 2);
 
-            var winningText = accuracy1.Value > accuracy2.Value ? acc1Text : acc2Text;
-            var losingText = accuracy1.Value <= accuracy2.Value ? acc1Text : acc2Text;
-            var winningBarBase = accuracy1.Value > accuracy2.Value ? score1Bar : score2Bar;
-            var losingBarBase = accuracy1.Value <= accuracy2.Value ? score1Bar : score2Bar;
+            Logger.Log($"miss1: {missCount1.Value} | miss2: {missCount2.Value}", LoggingTarget.Runtime, LogLevel.Important);
 
-            winningText.Winning = true;
-            losingText.Winning = Math.Abs(accuracy1.Value - accuracy2.Value) < 0.005; // mark both as winning if same accuracy
+            bool winnerSide = winCondition.Value == WinCondition.Accuracy ? accuracy1.Value > accuracy2.Value : missCount1.Value <= missCount2.Value;
+
+            var winningAccText = winnerSide ? acc1Text : acc2Text;
+            var winningMissText = winnerSide ? score1Text : score2Text;
+            var losingAccText = !winnerSide ? acc1Text : acc2Text;
+            var losingMissText = !winnerSide ? score1Text : score2Text;
+            var winningBarBase = winnerSide ? score1Bar : score2Bar;
+            var losingBarBase = !winnerSide ? score1Bar : score2Bar;
+
+            winningAccText.Winning = true;
+            winningMissText.Winning = true;
+            // mark both as winning if same accuracy/miss count
+            losingAccText.Winning = Math.Abs(accuracy1.Value - accuracy2.Value) < 0.005;
+            losingMissText.Winning = missCount1.Value == missCount2.Value;
+
             losingBarBase.ResizeWidthTo(0, 400, Easing.OutQuint);
             winningBarBase.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
         }
@@ -186,11 +275,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             protected override double RollingDuration => 500;
 
-            protected override LocalisableString FormatCount(double count) => $"{count:F2}%";
+            protected override LocalisableString FormatCount(double count) => $"{count:F2} %";
         }
 
         private partial class MatchScoreCounter : CommaSeparatedScoreCounter
         {
+            protected override double RollingDuration => 200;
             private OsuSpriteText displayedSpriteText;
 
             public MatchScoreCounter()
