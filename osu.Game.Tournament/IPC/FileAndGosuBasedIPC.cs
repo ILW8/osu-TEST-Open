@@ -6,12 +6,10 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.IO.Network;
 using osu.Framework.Logging;
 using osu.Framework.Threading;
-using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 
 namespace osu.Game.Tournament.IPC
@@ -19,10 +17,8 @@ namespace osu.Game.Tournament.IPC
     public partial class FileAndGosuBasedIPC : FileBasedIPC
     {
         private DateTime gosuRequestWaitUntil = DateTime.Now.AddSeconds(5); // allow 15 seconds for lazer to start and get ready
-        private dynamic multipliers;
         private List<MappoolShowcaseMap> maps = new List<MappoolShowcaseMap>();
         private ScheduledDelegate scheduled;
-        private ScheduledDelegate scheduledMultiplier;
         private ScheduledDelegate scheduledShowcase;
         private GosuJsonRequest gosuJsonQueryRequest;
 
@@ -165,39 +161,6 @@ namespace osu.Game.Tournament.IPC
             }
         }
 
-        public int ModStringToInt(string modString)
-        {
-            switch (modString)
-            {
-                case "HD": return (int)LegacyMods.Hidden;
-
-                case "HR": return (int)LegacyMods.HardRock;
-
-                case "EZ": return (int)LegacyMods.Easy;
-
-                case "FL": return (int)LegacyMods.Flashlight;
-
-                case "NF": return (int)LegacyMods.NoFail;
-
-                default: return 0;
-            }
-        }
-
-        public class GosuMultipliersRequest : APIRequest<dynamic>
-        {
-            protected override string Target => @"multipliers.json";
-            protected override string Uri => $@"http://localhost:24050/{Target}";
-
-            protected override WebRequest CreateWebRequest()
-            {
-                return new OsuJsonWebRequest<dynamic>(Uri)
-                {
-                    AllowInsecureRequests = true,
-                    Timeout = 1000,
-                };
-            }
-        }
-
         public class GosuMappoolShowcaseRequest : APIRequest<MappoolShowcaseData>
         {
             protected override string Target => @"showcase.json";
@@ -217,34 +180,10 @@ namespace osu.Game.Tournament.IPC
         private void load()
         {
             scheduled?.Cancel();
-            scheduledMultiplier?.Cancel();
             scheduledShowcase?.Cancel();
 
-            scheduledMultiplier = Scheduler.AddDelayed(delegate
-            {
-                // if (multipliers != null)
-                // {
-                //     scheduledMultiplier?.Cancel();
-                // }
-                if (!API.IsLoggedIn)
-                {
-                    return;
-                }
-                GosuMultipliersRequest req = new GosuMultipliersRequest();
-                req.Success += newMultipliers =>
-                {
-                    if (JToken.DeepEquals(multipliers, newMultipliers)) return;
-
-                    Logger.Log("Loaded/updated multipliers", LoggingTarget.Runtime, LogLevel.Important);
-                    multipliers = newMultipliers;
-
-                };
-                req.Failure += exception =>
-                {
-                    Logger.Log($"Failed requesting multipliers data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
-                };
-                API.Queue(req);
-            }, 1000, true);
+            Accuracy1.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
+            Accuracy2.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
 
             scheduledShowcase = Scheduler.AddDelayed(delegate
             {
@@ -252,15 +191,10 @@ namespace osu.Game.Tournament.IPC
                 {
                     return;
                 }
+
                 GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
                 req.Success += newMappoolData =>
                 {
-                    // Logger.Log("hey", LoggingTarget.Runtime, LogLevel.Important);
-                    // foreach (var map in newMappoolData.Maps)
-                    // {
-                        // Logger.Log(map.Slot, LoggingTarget.Runtime, LogLevel.Important);
-                    // }
-                    // Logger.Log(newMappoolData.Maps);
                     maps = newMappoolData.Maps;
                 };
                 req.Failure += exception =>
@@ -282,13 +216,14 @@ namespace osu.Game.Tournament.IPC
                     MissCount2.Value = 0;
                     return;
                 }
+
                 gosuJsonQueryRequest?.Cancel();
                 gosuJsonQueryRequest = new GosuJsonRequest();
                 gosuJsonQueryRequest.Success += gj =>
                 {
                     if (gj == null)
                     {
-                        Logger.Log($"[Warning] failed to parse gosumemory json", LoggingTarget.Runtime, LogLevel.Important);
+                        Logger.Log("[Warning] failed to parse gosumemory json", LoggingTarget.Runtime, LogLevel.Important);
                         return;
                     }
 
@@ -341,6 +276,7 @@ namespace osu.Game.Tournament.IPC
                 API.Queue(gosuJsonQueryRequest);
             }, 250, true);
         }
+
         private void updateScore(GosuJson gj)
         {
             int ipcIndex = 0;
