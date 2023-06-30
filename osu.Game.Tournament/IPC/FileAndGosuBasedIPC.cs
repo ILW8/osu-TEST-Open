@@ -283,6 +283,7 @@ namespace osu.Game.Tournament.IPC
 
             foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients ?? new List<GosuIpcClient>()) // assumes there are only two clients
             {
+                Logger.Log($"[{ipcIndex}] {ipcClient.Gameplay}", LoggingTarget.Runtime, LogLevel.Important);
                 // Logger.Log($"({ipcIndex}) {ipcClient.Gameplay.Hits.MissCount}: {ipcClient.Gameplay.Accuracy}", LoggingTarget.Runtime, LogLevel.Important);
                 (ipcIndex % 2 == 0 ? MissCount1 : MissCount2).Value = ipcClient.Gameplay.Hits.MissCount;
                 (ipcIndex % 2 == 0 ? Accuracy1 : Accuracy2).Value = ipcClient.Gameplay.Accuracy;
