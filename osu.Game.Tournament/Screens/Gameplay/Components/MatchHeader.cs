@@ -15,7 +15,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
-        private MatchRoundDisplay round;
+        private MatchRoundDisplay round = null!;
 
         private bool showScores = true;
 

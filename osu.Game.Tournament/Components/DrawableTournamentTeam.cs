@@ -28,7 +28,7 @@ namespace osu.Game.Tournament.Components
 
             // Flag = new DrawableTeamFlag(team);
 
-            Flag = new DrawableTeamFlag(team);
+            Flag = new DrawableTeamFlag(team ?? new TournamentTeam());
 
             // Flag = team == null
             //     ? new DrawableTeamFlag(null)

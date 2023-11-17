@@ -96,7 +96,7 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private FillFlowContainer replayerContainer;
+        private FillFlowContainer replayerContainer = null!;
 
         // Todo: This is a hack for https://github.com/ppy/osu-framework/issues/3617 since this container is at the very edge of the screen and potentially initially masked away.
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;

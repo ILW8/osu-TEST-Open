@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -25,7 +24,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
     // [LongRunningLoad]
     public partial class UserTile : CompositeDrawable
     {
-        public APIUser User
+        public APIUser? User
         {
             get => avatar.User;
             set => avatar.User = value;
@@ -41,7 +40,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
             InternalChildren = new Drawable[]
             {
-                avatar = new UpdateableAvatar(showUsernameTooltip: true) { RelativeSizeAxes = Axes.Both },
+                avatar = new UpdateableAvatar(showUserPanelOnHover: true) { RelativeSizeAxes = Axes.Both },
             };
         }
     }
@@ -282,9 +281,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
         private partial class LeftInfo : CompositeDrawable
         {
-            public TournamentUser TourneyUser { get; }
-            public TournamentUser TourneyUser2 { get; }
-            public TournamentTeam TourneyTeam { get; }
+            public TournamentUser? TourneyUser { get; }
+            public TournamentUser? TourneyUser2 { get; }
+            public TournamentTeam? TourneyTeam { get; }
 
             public LeftInfo(TournamentTeam? team)
             {
@@ -300,7 +299,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
                 TourneyUser = firstPlayer;
                 TourneyUser2 = secondPlayer;
-                TourneyTeam = team;
+                TourneyTeam = team ?? new TournamentTeam();
 
                 Width = 200;
 

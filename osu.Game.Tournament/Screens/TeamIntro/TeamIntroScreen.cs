@@ -1,15 +1,15 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
+using osu.Game.Users;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
@@ -18,8 +18,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
     public partial class TeamIntroScreen : TournamentMatchScreen
     {
         private Container mainContainer = null!;
-        public TournamentTeam TourneyTeamLeft { get; private set; }
-        public TournamentTeam TourneyTeamRight { get; private set; }
+        public TournamentTeam? TourneyTeamLeft { get; private set; }
+        public TournamentTeam? TourneyTeamRight { get; private set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -68,14 +68,14 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 },
                 new UserTile // left team, bottom right
                 {
-                    User = TourneyTeamLeft?.Players.LastOrDefault()?.ToAPIUser(),
+                    User = TourneyTeamLeft?.Players.LastOrDefault()?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(160 + x_flag_relative_offset, y_flag_screen_offset + y_flag_relative_offset),
                     Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new UserTile // left team, top left
                 {
-                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser(),
+                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(160, y_flag_screen_offset),
                     Scale = new Vector2(1.08F, 1.08F),
                     Margin = new MarginPadding { Right = 20 }
@@ -87,14 +87,14 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
                 new UserTile // right team, bottom left
                 {
-                    User = TourneyTeamRight?.Players.FirstOrDefault()?.ToAPIUser(),
+                    User = TourneyTeamRight?.Players.FirstOrDefault()?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(727, y_flag_screen_offset + y_flag_relative_offset),
                     Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new UserTile // right team, top right
                 {
-                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser(),
+                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(727 + x_flag_relative_offset, y_flag_screen_offset),
                     Scale = new Vector2(1.08F, 1.08F),
                     Margin = new MarginPadding { Right = 20 }

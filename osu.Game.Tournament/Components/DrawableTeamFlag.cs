@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.TeamIntro;
 using osuTK;
@@ -52,14 +53,14 @@ namespace osu.Game.Tournament.Components
                 {
                     new UserTile
                     {
-                        User = IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser(),
+                        User = (IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser()) ?? new APIUser(),
                         Position = IsFlipped.Value ? new Vector2(0, playerOffsetY.Value) : new Vector2(playerOffsetX.Value, playerOffsetY.Value),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 },
                     },
                     new UserTile
                     {
-                        User = IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser(),
+                        User = (IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser()) ?? new APIUser(),
                         Position = IsFlipped.Value ? new Vector2(playerOffsetX.Value, 0) : new Vector2(0, 0),
                         Size = new Vector2(64),
                         // Margin = new MarginPadding { Right = 20 }
