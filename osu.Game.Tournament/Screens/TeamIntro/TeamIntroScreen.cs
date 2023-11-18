@@ -9,7 +9,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
-using osu.Game.Users;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
@@ -52,9 +51,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             TourneyTeamLeft = match.NewValue.Team1.Value;
             TourneyTeamRight = match.NewValue.Team2.Value;
 
-            const float y_flag_screen_offset = 192f;
-            const float y_flag_relative_offset = 50f;
-            const float x_flag_relative_offset = 93.5f;
+            const float y_flag_screen_offset = 256f;
+            // const float y_flag_relative_offset = 50f;
+            const float x_flag_relative_offset = 128 + 16;
 
             const float flag_size_scale = 1f;
 
@@ -66,37 +65,50 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Position = new Vector2(100, 100)
                 },
+                new UserTile //
+                {
+                    User = TourneyTeamLeft?.Players.ElementAtOrDefault(2)?.ToAPIUser() ?? new APIUser(),
+                    Position = new Vector2(160 + 2 * x_flag_relative_offset, y_flag_screen_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
+                },
                 new UserTile // left team, bottom right
                 {
-                    User = TourneyTeamLeft?.Players.LastOrDefault()?.ToAPIUser() ?? new APIUser(),
-                    Position = new Vector2(160 + x_flag_relative_offset, y_flag_screen_offset + y_flag_relative_offset),
+                    User = TourneyTeamLeft?.Players.ElementAtOrDefault(1)?.ToAPIUser() ?? new APIUser(),
+                    Position = new Vector2(160 + x_flag_relative_offset, y_flag_screen_offset),
                     Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new UserTile // left team, top left
                 {
-                    User = TourneyTeamLeft?.Players.FirstOrDefault()?.ToAPIUser() ?? new APIUser(),
+                    User = TourneyTeamLeft?.Players.ElementAtOrDefault(0)?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(160, y_flag_screen_offset),
-                    Scale = new Vector2(1.08F, 1.08F),
+                    Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red)
                 {
                     Position = new Vector2(165, y_offset),
                 },
-
+                new UserTile //
+                {
+                    User = TourneyTeamRight?.Players.ElementAtOrDefault(0)?.ToAPIUser() ?? new APIUser(),
+                    Position = new Vector2(727, y_flag_screen_offset),
+                    Scale = new Vector2(flag_size_scale),
+                    Margin = new MarginPadding { Right = 20 }
+                },
                 new UserTile // right team, bottom left
                 {
-                    User = TourneyTeamRight?.Players.FirstOrDefault()?.ToAPIUser() ?? new APIUser(),
-                    Position = new Vector2(727, y_flag_screen_offset + y_flag_relative_offset),
+                    User = TourneyTeamRight?.Players.ElementAtOrDefault(1)?.ToAPIUser() ?? new APIUser(),
+                    Position = new Vector2(727 + x_flag_relative_offset, y_flag_screen_offset),
                     Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new UserTile // right team, top right
                 {
-                    User = TourneyTeamRight?.Players.LastOrDefault()?.ToAPIUser() ?? new APIUser(),
-                    Position = new Vector2(727 + x_flag_relative_offset, y_flag_screen_offset),
-                    Scale = new Vector2(1.08F, 1.08F),
+                    User = TourneyTeamRight?.Players.ElementAtOrDefault(2)?.ToAPIUser() ?? new APIUser(),
+                    Position = new Vector2(727 + 2 * x_flag_relative_offset, y_flag_screen_offset),
+                    Scale = new Vector2(flag_size_scale),
                     Margin = new MarginPadding { Right = 20 }
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue)
