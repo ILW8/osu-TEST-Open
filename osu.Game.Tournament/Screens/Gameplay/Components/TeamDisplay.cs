@@ -50,7 +50,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             // Flag.Anchor = anchor;
             UpdateFlagAnchor(anchor);
 
-            Margin = new MarginPadding(20);
+            Margin = new MarginPadding(8);
 
             InternalChild = new Container
             {

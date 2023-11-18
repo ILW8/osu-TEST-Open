@@ -16,8 +16,9 @@ namespace osu.Game.Tournament.Components
 {
     public partial class DrawableTeamFlag : Container
     {
-        private readonly Bindable<float> playerOffsetX = new Bindable<float>(32f);
-        private readonly Bindable<float> playerOffsetY = new Bindable<float>(64f);
+        private const float user_tile_size = 47f;
+        private readonly Bindable<float> playerOffsetX = new Bindable<float>(user_tile_size /2);
+        private readonly Bindable<float> playerOffsetY = new Bindable<float>(user_tile_size);
         public float PlayerOffsetX { get => playerOffsetX.Value; set => playerOffsetX.Value = value; }
         public float PlayerOffsetY { get => playerOffsetY.Value; set => playerOffsetY.Value = value; }
         private readonly TournamentTeam? team;
@@ -37,8 +38,6 @@ namespace osu.Game.Tournament.Components
             IsFlipped.BindValueChanged(_ => updateChildren(), true);
             playerOffsetX.BindValueChanged(_ => updateChildren(), true);
             playerOffsetY.BindValueChanged(_ => updateChildren(), true);
-            Y = -PlayerOffsetY / 3.0f;
-            X = -PlayerOffsetX / 2.0f;
         }
 
         private void updateChildren()
@@ -59,19 +58,19 @@ namespace osu.Game.Tournament.Components
                 {
                     User = players.ElementAtOrDefault(0)?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(0, playerOffsetY.Value),
-                    Size = new Vector2(64),
+                    Size = new Vector2(user_tile_size),
                 },
                 new UserTile
                 {
                     User = players.ElementAtOrDefault(1)?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(2 * playerOffsetX.Value, playerOffsetY.Value),
-                    Size = new Vector2(64),
+                    Size = new Vector2(user_tile_size),
                 },
                 new UserTile
                 {
                     User = players.ElementAtOrDefault(2)?.ToAPIUser() ?? new APIUser(),
                     Position = new Vector2(playerOffsetX.Value, 0),
-                    Size = new Vector2(64),
+                    Size = new Vector2(user_tile_size),
                 },
             };
         }
@@ -81,7 +80,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = new Vector2(96, 96);
+            Size = new Vector2(user_tile_size * 2, user_tile_size * 2);
         }
     }
 }
