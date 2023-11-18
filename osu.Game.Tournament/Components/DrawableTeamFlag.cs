@@ -40,33 +40,37 @@ namespace osu.Game.Tournament.Components
 
         private void updateChildren()
         {
-            if (team != null)
+            if (team == null) return;
+
+            if (IsFlipped.Value)
             {
-                // Child = new UserTile // left team, top left
+                Position = new Vector2(playerOffsetX.Value, 0);
+            }
+
+            Children = new Drawable[]
+            {
+                new UserTile
+                {
+                    User = (IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser()) ?? new APIUser(),
+                    Position = IsFlipped.Value ? new Vector2(-playerOffsetX.Value, playerOffsetY.Value) : new Vector2(playerOffsetX.Value, playerOffsetY.Value),
+                    Size = new Vector2(64),
+                    // Margin = new MarginPadding { Right = 20 },
+                },
+                new UserTile
+                {
+                    User = (IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser()) ?? new APIUser(),
+                    Position = new Vector2(0, 0),
+                    Size = new Vector2(64),
+                    // Margin = new MarginPadding { Right = 20 }
+                },
+                // new UserTile
                 // {
-                //     User = team.Players.FirstOrDefault()?.ToAPIUser(),
-                //     Position = new Vector2(0, 0),
+                //     User = (IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser()) ?? new APIUser(),
+                //     Position = IsFlipped.Value ? new Vector2(playerOffsetX.Value, 0) : new Vector2(0, 0),
                 //     Size = new Vector2(64),
                 //     // Margin = new MarginPadding { Right = 20 }
-                // };
-                Children = new Drawable[]
-                {
-                    new UserTile
-                    {
-                        User = (IsFlipped.Value ? team.Players.FirstOrDefault()?.ToAPIUser() : team.Players.LastOrDefault()?.ToAPIUser()) ?? new APIUser(),
-                        Position = IsFlipped.Value ? new Vector2(0, playerOffsetY.Value) : new Vector2(playerOffsetX.Value, playerOffsetY.Value),
-                        Size = new Vector2(64),
-                        // Margin = new MarginPadding { Right = 20 },
-                    },
-                    new UserTile
-                    {
-                        User = (IsFlipped.Value ? team.Players.LastOrDefault()?.ToAPIUser() : team.Players.FirstOrDefault()?.ToAPIUser()) ?? new APIUser(),
-                        Position = IsFlipped.Value ? new Vector2(playerOffsetX.Value, 0) : new Vector2(0, 0),
-                        Size = new Vector2(64),
-                        // Margin = new MarginPadding { Right = 20 }
-                    },
-                };
-            }
+                // },
+            };
         }
 
         [BackgroundDependencyLoader]
@@ -74,61 +78,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            // Flag = team == null
-            //     ? new DrawableTeamFlag(null)
-            //     : new Container
-            //     {
-            //         AutoSizeAxes = Axes.Both,
-            //         // Direction = FillDirection.Horizontal,
-            //         Padding = new MarginPadding { Left = 0 },
-            //         // Spacing = new Vector2(0),
-            //         Children = new Drawable[]
-            //         {
-            //             new UserTile // left team, top left
-            //             {
-            //                 // User = team.Players.FirstOrDefault()?.ToAPIUser(),
-            //                 Position = new Vector2(0, 0),
-            //                 Size = new Vector2(64),
-            //                 Margin = new MarginPadding { Right = 20 }
-            //             },
-            //             new UserTile // left team, bottom right
-            //             {
-            //                 // User = team.Players.LastOrDefault()?.ToAPIUser(),
-            //                 Position = new Vector2(48, 48),
-            //                 Size = new Vector2(64),
-            //                 Margin = new MarginPadding { Right = 20 }
-            //             },
-            //         },
-            //     };
-
             Size = new Vector2(96, 96);
-            // Masking = true;
-            // CornerRadius = 5;
-
-            // Child = new UserTile // left team, top left
-            // {
-            //     User = team.Players.FirstOrDefault()?.ToAPIUser(),
-            //     Position = new Vector2(0, 0),
-            //     Size = new Vector2(64),
-            //     // Margin = new MarginPadding { Right = 20 }
-            // };
-
-            // Child = flagSprite = new Sprite
-            // {
-            //     RelativeSizeAxes = Axes.Both,
-            //     Anchor = Anchor.Centre,
-            //     Origin = Anchor.Centre,
-            //     FillMode = FillMode.Fill
-            // };
-            // Child = new UserTile // left team, top left
-            // {
-            //     User = team.Players.FirstOrDefault()?.ToAPIUser(),
-            //     Position = new Vector2(0, 0),
-            //     Size = new Vector2(64),
-            //     // Margin = new MarginPadding { Right = 20 }
-            // };
-
-            // (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ => flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}"), true);
         }
     }
 }
