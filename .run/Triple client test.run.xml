@@ -2,7 +2,7 @@
   <configuration default="false" name="Triple client test" type="CompoundRunConfigurationType">
     <toRun name="osu!" type="DotNetProject" />
     <toRun name="osu! (Second Client)" type="DotNetProject" />
-    <toRun name="osu! (Third Client)" type="DotNetProject" />
+    <toRun name="osu! (Third client)" type="DotNetProject" />
     <method v="2" />
   </configuration>
 </component>
