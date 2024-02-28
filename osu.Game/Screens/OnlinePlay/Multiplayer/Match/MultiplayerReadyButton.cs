@@ -151,9 +151,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                 {
                     case MultiplayerUserState.Spectating:
                     case MultiplayerUserState.Ready:
+                        if (multiplayerClient.IsHost && room.State != MultiplayerRoomState.Open)
+                        {
+                            Text = "Abort the match";
+                            break;
+                        }
+
                         Text = multiplayerClient.IsHost
-                            ? $"Start match {countText}"
-                            : $"Waiting for host... {countText}";
+                                   ? $"Start match {countText}"
+                                   : $"Waiting for host... {countText}";
                         break;
 
                     default:
@@ -205,6 +211,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
 
                 case MultiplayerUserState.Spectating:
                 case MultiplayerUserState.Ready:
+                    if (multiplayerClient.IsHost && room.State != MultiplayerRoomState.Open)
+                    {
+                        setRed();
+                        break;
+                    }
+
                     if (multiplayerClient.IsHost && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
                         setGreen();
                     else

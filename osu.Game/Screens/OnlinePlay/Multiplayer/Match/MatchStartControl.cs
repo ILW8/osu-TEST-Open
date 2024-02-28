@@ -227,6 +227,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
             // At all times, the countdown button should only be enabled when no match is in progress.
             countdownButton.Enabled.Value &= Room.State == MultiplayerRoomState.Open;
 
+            // force enable ready button to allow host to abort regardless of state
+            if (Client.IsHost && Room.State is MultiplayerRoomState.WaitingForLoad or MultiplayerRoomState.Playing)
+                readyButton.Enabled.Value = true;
+
             if (newCountReady == countReady)
                 return;
 
