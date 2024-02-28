@@ -553,10 +553,15 @@ namespace osu.Game.Online.Multiplayer
 
                 if (!(state == MultiplayerUserState.Idle &&
                       user.UserID == LocalUser?.UserID &&
-                      LocalUser.State == MultiplayerUserState.Spectating))
+                      LocalUser.State == MultiplayerUserState.Spectating &&
+                      Room?.State != MultiplayerRoomState.Open))
                 {
                     user.State = state;
                     updateUserPlayingState(userId, state);
+                }
+                else
+                {
+                    ChangeState(MultiplayerUserState.Spectating).FireAndForget();
                 }
 
                 RoomUpdated?.Invoke();
