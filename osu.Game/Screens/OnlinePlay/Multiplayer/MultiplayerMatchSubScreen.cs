@@ -400,7 +400,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             Debug.Assert(client.LocalUser != null);
             Debug.Assert(client.Room != null);
 
-            int[] userIds = client.CurrentMatchPlayingUserIds.ToArray();
+            // force using room Users order when collecting players
+            // int[] userIds = client.CurrentMatchPlayingUserIds.ToArray();
+            int[] userIds = client.Room.Users.Where(u => u.State >= MultiplayerUserState.WaitingForLoad && u.State <= MultiplayerUserState.FinishedPlay).Select(u => u.UserID).ToArray();
             MultiplayerRoomUser[] users = userIds.Select(id => client.Room.Users.First(u => u.UserID == id)).ToArray();
 
             switch (client.LocalUser.State)
