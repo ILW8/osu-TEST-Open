@@ -113,19 +113,15 @@ namespace osu.Game.Graphics.Cursor
             if (State.Value == Visibility.Hidden)
                 return false;
 
-            // only hide cursor when game is focused, otherwise it should always be displayed.
-            if (gameActive.Value)
-            {
-                // do not display when last input is not mouse.
-                if (hideCursorOnNonMouseInput && !lastInputWasMouse.Value)
-                    return false;
+            // always hide cursor if game isn't active (foreground).
+            if (!gameActive.Value) return false;
 
-                // do not display when game is idle.
-                if (gameIdle.Value)
-                    return false;
-            }
+            // do not display when last input is not mouse.
+            if (hideCursorOnNonMouseInput && !lastInputWasMouse.Value)
+                return false;
 
-            return true;
+            // do not display when game is idle.
+            return !gameIdle.Value;
         }
 
         protected override void Update()
