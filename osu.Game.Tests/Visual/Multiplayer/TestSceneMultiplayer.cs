@@ -93,6 +93,45 @@ namespace osu.Game.Tests.Visual.Multiplayer
         }
 
         [Test]
+        [FlakyTest] // See above
+        public void TestReorderUsersInLobby()
+        {
+            createRoom(() => new Room
+            {
+                Name = { Value = "Test Room" },
+                QueueMode = { Value = QueueMode.AllPlayers },
+                Playlist =
+                {
+                    new PlaylistItem(beatmaps.GetWorkingBeatmap(importedSet.Beatmaps.First(b => b.Ruleset.OnlineID == 0)).BeatmapInfo)
+                    {
+                        RulesetID = new OsuRuleset().RulesetInfo.OnlineID,
+                    }
+                }
+            });
+
+            AddStep("join other user", () => multiplayerClient.AddUser(new APIUser { Id = 2 }));
+            AddStep("set other user ready", () => multiplayerClient.ChangeUserState(2, MultiplayerUserState.Ready));
+            AddStep("join other user", () => multiplayerClient.AddUser(new APIUser { Id = 3 }));
+            AddStep("set other user ready", () => multiplayerClient.ChangeUserState(3, MultiplayerUserState.Ready));
+            AddStep("join other user", () => multiplayerClient.AddUser(new APIUser { Id = 4 }));
+            AddStep("set other user ready", () => multiplayerClient.ChangeUserState(4, MultiplayerUserState.Ready));
+            AddStep("join other user", () => multiplayerClient.AddUser(new APIUser { Id = 5 }));
+            AddStep("set other user ready", () => multiplayerClient.ChangeUserState(5, MultiplayerUserState.Ready));
+
+            // pressReadyButton(1234);
+            // AddUntilStep("wait for gameplay", () => (multiplayerComponents.CurrentScreen as MultiSpectatorScreen)?.IsLoaded == true);
+            //
+            // AddStep("press back button and exit", () =>
+            // {
+            //     multiplayerComponents.OnBackButton();
+            //     multiplayerComponents.Exit();
+            // });
+            //
+            // AddUntilStep("wait for return to match subscreen", () => multiplayerComponents.MultiplayerScreen.IsCurrentScreen());
+            // AddUntilStep("user state is idle", () => multiplayerClient.LocalUser?.State == MultiplayerUserState.Idle);
+        }
+
+        [Test]
         public void TestLobbyEvents()
         {
             createRoom(() => new Room

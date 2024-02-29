@@ -382,6 +382,11 @@ namespace osu.Game.Online.Multiplayer
 
         public abstract Task RemovePlaylistItem(long playlistItemId);
 
+        public virtual void ForceInvokeRoomUpdated()
+        {
+            Scheduler.Add(() => RoomUpdated?.Invoke());
+        }
+
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
             Scheduler.Add(() =>

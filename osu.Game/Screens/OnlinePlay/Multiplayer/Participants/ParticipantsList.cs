@@ -45,23 +45,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 panels.Clear();
             else
             {
-                // Remove panels for users no longer in the room.
-                foreach (var p in panels)
-                {
-                    // Note that we *must* use reference equality here, as this call is scheduled and a user may have left and joined since it was last run.
-                    if (Room.Users.All(u => !ReferenceEquals(p.User, u)))
-                        p.Expire();
-                }
+                panels.Clear();
 
                 // Add panels for all users new to the room.
-                foreach (var user in Room.Users.Except(panels.Select(p => p.User)))
+                foreach (var user in Room.Users)
                     panels.Add(new ParticipantPanel(user));
 
                 if (currentHostPanel == null || !currentHostPanel.User.Equals(Room.Host))
                 {
-                    // Reset position of previous host back to normal, if one existing.
-                    if (currentHostPanel != null && panels.Contains(currentHostPanel))
-                        panels.SetLayoutPosition(currentHostPanel, 0);
+                    // // Reset position of previous host back to normal, if one existing.
+                    // if (currentHostPanel != null && panels.Contains(currentHostPanel))
+                    //     panels.SetLayoutPosition(currentHostPanel, 0);
 
                     currentHostPanel = null;
 
@@ -70,10 +64,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     {
                         currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(Room.Host));
 
-                        if (currentHostPanel != null)
-                            panels.SetLayoutPosition(currentHostPanel, -1);
+                        // if (currentHostPanel != null)
+                        //     panels.SetLayoutPosition(currentHostPanel, -1);
                     }
                 }
+
+                // for (int i = 0; i < panels.Count; i++)
+                // {
+                //     panels[i].ParticipantSlotNumber = i + 1;
+                // }
             }
         }
     }
