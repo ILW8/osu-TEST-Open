@@ -201,10 +201,6 @@ namespace osu.Game
 
         private SessionAverageHitErrorTracker hitErrorTracker;
 
-        protected SpectatorClient SpectatorClient { get; private set; }
-
-        protected MultiplayerClient MultiplayerClient { get; private set; }
-
         private MetadataClient metadataClient;
 
         private RealmAccess realm;
@@ -323,8 +319,6 @@ namespace osu.Game
 
             // TODO: OsuGame or OsuGameBase?
             dependencies.CacheAs(beatmapUpdater = new BeatmapUpdater(BeatmapManager, difficultyCache, API, Storage));
-            dependencies.CacheAs(SpectatorClient = new OnlineSpectatorClient(endpoints));
-            dependencies.CacheAs(MultiplayerClient = new OnlineMultiplayerClient(endpoints));
             dependencies.CacheAs(metadataClient = new OnlineMetadataClient(endpoints));
 
             base.Content.Add(new BeatmapOnlineChangeIngest(beatmapUpdater, realm, metadataClient));
@@ -365,8 +359,6 @@ namespace osu.Game
             if (API is APIAccess apiAccess)
                 base.Content.Add(apiAccess);
 
-            base.Content.Add(SpectatorClient);
-            base.Content.Add(MultiplayerClient);
             base.Content.Add(metadataClient);
 
             base.Content.Add(rulesetConfigCache);

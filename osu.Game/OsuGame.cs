@@ -46,8 +46,10 @@ using osu.Game.IO;
 using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Solo;
+using osu.Game.Online.Spectator;
 using osu.Game.Overlays;
 using osu.Game.Overlays.BeatmapListing;
 using osu.Game.Overlays.Music;
@@ -145,6 +147,10 @@ namespace osu.Game
         private readonly ScreenshotManager screenshotManager = new ScreenshotManager();
 
         protected SentryLogger SentryLogger;
+
+        protected SpectatorClient SpectatorClient { get; private set; }
+
+        protected MultiplayerClient MultiplayerClient { get; private set; }
 
         public virtual StableStorage GetStorageForStableInstall() => null;
 
@@ -344,7 +350,14 @@ namespace osu.Game
         {
             SentryLogger.AttachUser(API.LocalUser);
 
+            EndpointConfiguration endpoints = CreateEndpoints();
+
             dependencies.Cache(osuLogo = new OsuLogo { Alpha = 0 });
+            dependencies.CacheAs(SpectatorClient = new OnlineSpectatorClient(endpoints));
+            dependencies.CacheAs(MultiplayerClient = new OnlineMultiplayerClient(endpoints));
+
+            base.Content.Add(SpectatorClient);
+            base.Content.Add(MultiplayerClient);
 
             // bind config int to database RulesetInfo
             configRuleset = LocalConfig.GetBindable<string>(OsuSetting.Ruleset);
