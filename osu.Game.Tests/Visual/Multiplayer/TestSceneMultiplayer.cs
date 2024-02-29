@@ -49,7 +49,7 @@ using ReadyButton = osu.Game.Screens.OnlinePlay.Components.ReadyButton;
 
 namespace osu.Game.Tests.Visual.Multiplayer
 {
-    public partial class TestSceneMultiplayer : ScreenTestScene
+    public partial class TestSceneMultiplayer : MultiplayerTestScene
     {
         private BeatmapManager beatmaps = null!;
         private BeatmapSetInfo importedSet = null!;
