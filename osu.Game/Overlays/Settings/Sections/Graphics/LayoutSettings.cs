@@ -36,6 +36,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
         private Bindable<ScalingMode> scalingMode = null!;
         private Bindable<Size> sizeFullscreen = null!;
+        private Bindable<Size> sizeWindowed = null!;
 
         private readonly BindableList<Size> resolutions = new BindableList<Size>(new[] { new Size(9999, 9999) });
         private readonly IBindable<FullscreenCapability> fullscreenCapability = new Bindable<FullscreenCapability>(FullscreenCapability.Capable);
@@ -70,6 +71,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
             scalingMode = osuConfig.GetBindable<ScalingMode>(OsuSetting.Scaling);
             sizeFullscreen = config.GetBindable<Size>(FrameworkSetting.SizeFullscreen);
+            sizeWindowed = config.GetBindable<Size>(FrameworkSetting.WindowedSize);
             scalingSizeX = osuConfig.GetBindable<float>(OsuSetting.ScalingSizeX);
             scalingSizeY = osuConfig.GetBindable<float>(OsuSetting.ScalingSizeY);
             scalingPositionX = osuConfig.GetBindable<float>(OsuSetting.ScalingPositionX);
@@ -105,7 +107,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                     LabelText = GraphicsSettingsStrings.Resolution,
                     ShowsDefaultIndicator = false,
                     ItemSource = resolutions,
-                    Current = sizeFullscreen
+                    Current = windowModeDropdown.Current.Value == WindowMode.Windowed ? sizeWindowed : sizeFullscreen
                 },
                 minimiseOnFocusLossCheckbox = new SettingsCheckbox
                 {
@@ -194,6 +196,15 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
             windowModeDropdown.Current.BindValueChanged(_ =>
             {
+                if (windowModeDropdown.Current.Value == WindowMode.Windowed)
+                {
+                    resolutions[0] = sizeWindowed.Value;
+                }
+                else
+                {
+                    resolutions[0] = new Size(9999, 9999);
+                }
+
                 updateDisplaySettingsVisibility();
                 updateScreenModeWarning();
             }, true);
@@ -210,10 +221,19 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                                                                           .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
                                                                           .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
                                                                           .Select(m => m.Size)
+                                                                          .Except(resolutions)
                                                                           .Distinct());
 
                 updateDisplaySettingsVisibility();
             }), true);
+
+            sizeWindowed.BindValueChanged(changeEvent =>
+            {
+                if (resolutions.Contains(changeEvent.NewValue))
+                    return;
+
+                Schedule(() => resolutions[0] = changeEvent.NewValue);
+            });
 
             scalingMode.BindValueChanged(_ =>
             {
@@ -260,7 +280,8 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
         private void updateDisplaySettingsVisibility()
         {
-            resolutionDropdown.CanBeShown.Value = resolutions.Count > 1 && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
+            resolutionDropdown.CanBeShown.Value = resolutions.Count > 1;
+            resolutionDropdown.Current = windowModeDropdown.Current.Value == WindowMode.Windowed ? sizeWindowed : sizeFullscreen;
             displayDropdown.CanBeShown.Value = displayDropdown.Items.Count() > 1;
             minimiseOnFocusLossCheckbox.CanBeShown.Value = RuntimeInfo.IsDesktop && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
             safeAreaConsiderationsCheckbox.CanBeShown.Value = host.Window?.SafeAreaPadding.Value.Total != Vector2.Zero;
@@ -381,6 +402,11 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                 {
                     if (item == new Size(9999, 9999))
                         return CommonStrings.Default;
+
+                    if (ItemSource.Count > 0 && ItemSource[0] == item)
+                    {
+                        return (LocalisableString)$"Custom: {item.Width}x{item.Height}";
+                    }
 
                     return $"{item.Width}x{item.Height}";
                 }
