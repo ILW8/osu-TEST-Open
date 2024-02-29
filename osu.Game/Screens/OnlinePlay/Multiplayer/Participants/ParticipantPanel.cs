@@ -408,6 +408,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     return;
                 }
 
+                newSlot = Math.Max(newSlot, 0);
                 newSlot = Math.Min(newSlot, room.Users.Count - 1);
 
                 room.Users.Remove(user);
