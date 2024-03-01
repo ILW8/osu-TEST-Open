@@ -218,6 +218,7 @@ namespace osu.Game.Online.Multiplayer
                     postServerShuttingDownNotification();
 
                     OnRoomJoined();
+                    RoomUpdated?.Invoke();
                 }, cancellationSource.Token).ConfigureAwait(false);
             }, cancellationSource.Token).ConfigureAwait(false);
         }

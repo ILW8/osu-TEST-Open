@@ -15,8 +15,10 @@ using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Online;
+using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
@@ -43,6 +45,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         public override string Title { get; }
 
         public override string ShortTitle => "room";
+        private LinkFlowContainer linkFlowContainer = null!;
 
         [Resolved]
         private MultiplayerClient client { get; set; }
@@ -201,11 +204,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 RelativeSizeAxes = Axes.Both,
                                 Content = new[]
                                 {
+                                    new Drawable[] { new OverlinedHeader("Lobby ID") },
+                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
                                     new Drawable[] { new OverlinedHeader("Chat") },
                                     new Drawable[] { new MatchChatDisplay(Room) { RelativeSizeAxes = Axes.Both } }
                                 },
                                 RowDimensions = new[]
                                 {
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
                                 }
@@ -348,6 +355,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             addItemButton.Alpha = localUserCanAddItem ? 1 : 0;
 
             Scheduler.AddOnce(UpdateMods);
+            Scheduler.AddOnce(() =>
+            {
+                string roomLink = $"https://{MessageFormatter.WebsiteRootUrl}/multiplayer/rooms/{Room.RoomID}";
+                linkFlowContainer.Clear();
+                linkFlowContainer.AddLink(roomLink, roomLink);
+            });
 
             Activity.Value = new UserActivity.InLobby(Room);
         }
