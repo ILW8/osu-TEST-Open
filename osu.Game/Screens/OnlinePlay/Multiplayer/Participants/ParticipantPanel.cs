@@ -263,14 +263,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 {
                     return new MenuItem[]
                     {
-                        new OsuMenuItem("Move to slot", MenuItemType.Standard, () =>
-                        {
-                            // Ensure the local user is still host.
-                            if (!Client.IsHost)
-                                return;
-
-                            this.ShowPopover();
-                        })
+                        new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover)
                     };
                 }
 
@@ -284,14 +277,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                         Client.TransferHost(targetUser).FireAndForget();
                     }),
-                    new OsuMenuItem("Move to slot", MenuItemType.Standard, () =>
-                    {
-                        // Ensure the local user is still host.
-                        if (!Client.IsHost)
-                            return;
-
-                        this.ShowPopover();
-                    }),
+                    new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover),
                     new OsuMenuItem("Kick", MenuItemType.Destructive, () =>
                     {
                         // Ensure the local user is still host.

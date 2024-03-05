@@ -45,13 +45,27 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 panels.Clear();
             else
             {
-                panels.Clear();
+                // Remove panels for users no longer in the room.
+                foreach (ParticipantPanel p in panels.Where(p => Room.Users.All(u => !ReferenceEquals(p.User, u))))
+                {
+                    p.Expire();
+                }
 
                 // Add panels for all users new to the room.
-                foreach (var user in Room.Users)
+                foreach (var user in Room.Users.Where(u => panels.SingleOrDefault(panel => panel.User.Equals(u)) == null))
                     panels.Add(new ParticipantPanel(user));
 
-                if (currentHostPanel == null || !currentHostPanel.User.Equals(Room.Host))
+                // sort users
+                foreach ((var roomUser, int listPosition) in Room.Users.Select((value, i) => (value, i)))
+                {
+                    var panel = panels.SingleOrDefault(u => u.User.Equals(roomUser));
+
+                    if (panel != null)
+                        panels.SetLayoutPosition(panel, listPosition);
+                }
+
+                if (currentHostPanel != null && currentHostPanel.User.Equals(Room.Host)) return;
+
                 {
                     // // Reset position of previous host back to normal, if one existing.
                     // if (currentHostPanel != null && panels.Contains(currentHostPanel))
@@ -68,11 +82,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                         //     panels.SetLayoutPosition(currentHostPanel, -1);
                     }
                 }
-
-                // for (int i = 0; i < panels.Count; i++)
-                // {
-                //     panels[i].ParticipantSlotNumber = i + 1;
-                // }
             }
         }
     }
