@@ -28,6 +28,7 @@ namespace osu.Game.Online.Multiplayer
 {
     public abstract partial class MultiplayerClient : Component, IMultiplayerClient, IMultiplayerRoomServer
     {
+        public bool ManualExitRequested = false;
         public Action<Notification>? PostNotification { protected get; set; }
 
         public Action<Room, string>? PresentMatch { protected get; set; }
@@ -565,9 +566,14 @@ namespace osu.Game.Online.Multiplayer
                     user.State = state;
                     updateUserPlayingState(userId, state);
                 }
-                else
+                else if (!ManualExitRequested)
                 {
                     ChangeState(MultiplayerUserState.Spectating).FireAndForget();
+                }
+                else
+                {
+                    user.State = state;
+                    ManualExitRequested = false;
                 }
 
                 RoomUpdated?.Invoke();
