@@ -12,6 +12,7 @@ using osu.Desktop.Updater;
 using osu.Desktop.WebSockets;
 using osu.Desktop.Windows;
 using osu.Framework;
+using osu.Framework.Allocation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game;
@@ -29,6 +30,11 @@ namespace osu.Desktop
     {
         private OsuSchemeLinkIPCChannel? osuSchemeLinkIPCChannel;
         private ArchiveImportIPCChannel? archiveImportIPCChannel;
+
+        private DependencyContainer dependencies = null!;
+
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+            => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
         public OsuGameDesktop(string[]? args = null)
             : base(args)
@@ -154,6 +160,7 @@ namespace osu.Desktop
                 });
 
                 Add(loaded);
+                dependencies.CacheAs<IGameStateBroadcastServer>(loaded);
             });
         }
 

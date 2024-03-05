@@ -27,6 +27,7 @@ using osu.Game.Extensions;
 using osu.Game.Graphics.Containers;
 using osu.Game.IO.Archives;
 using osu.Game.Online.API;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -112,6 +113,11 @@ namespace osu.Game.Screens.Play
 
         [Resolved]
         private OsuGameBase game { get; set; }
+
+        [Resolved]
+        private IGameStateBroadcastServer broadcastServer { get; set; }
+
+        private PlayerStateBroadcaster playerStateBroadcaster;
 
         public GameplayState GameplayState { get; private set; }
 
@@ -1105,6 +1111,7 @@ namespace osu.Game.Screens.Play
 
             StartGameplay();
             OnGameplayStarted?.Invoke();
+            broadcastServer.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
         }
 
         /// <summary>
@@ -1127,6 +1134,7 @@ namespace osu.Game.Screens.Play
             screenSuspension?.RemoveAndDisposeImmediately();
 
             fadeOut();
+            broadcastServer.Remove(playerStateBroadcaster);
             base.OnSuspending(e);
         }
 
