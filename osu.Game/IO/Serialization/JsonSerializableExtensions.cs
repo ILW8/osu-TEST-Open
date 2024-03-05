@@ -11,11 +11,11 @@ namespace osu.Game.IO.Serialization
 {
     public static class JsonSerializableExtensions
     {
-        public static string Serialize(this object obj) => JsonConvert.SerializeObject(obj, JsonSerializerSettings);
+        public static string Serialize(this object obj) => JsonConvert.SerializeObject(obj, jsonSerializerSettings);
 
-        public static T Deserialize<T>(this string objString) => JsonConvert.DeserializeObject<T>(objString, JsonSerializerSettings);
+        public static T Deserialize<T>(this string objString) => JsonConvert.DeserializeObject<T>(objString, jsonSerializerSettings);
 
-        public static void DeserializeInto<T>(this string objString, T target) => JsonConvert.PopulateObject(objString, target, JsonSerializerSettings);
+        public static void DeserializeInto<T>(this string objString, T target) => JsonConvert.PopulateObject(objString, target, jsonSerializerSettings);
 
         private static JsonSerializerSettings createGlobalSettings() => new JsonSerializerSettings
         {
@@ -27,6 +27,6 @@ namespace osu.Game.IO.Serialization
             ContractResolver = new SnakeCaseKeyContractResolver()
         };
 
-        public static JsonSerializerSettings JsonSerializerSettings => createGlobalSettings();
+        private static JsonSerializerSettings jsonSerializerSettings => createGlobalSettings();
     }
 }
