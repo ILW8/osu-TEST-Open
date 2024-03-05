@@ -17,7 +17,7 @@ using osu.Framework.Graphics.Containers;
 
 namespace osu.Desktop.WebSockets
 {
-    public abstract class WebSocketServer : CompositeDrawable
+    public abstract partial class WebSocketServer : CompositeDrawable
     {
         /// <summary>
         /// Whether this is current listening.
@@ -45,7 +45,7 @@ namespace osu.Desktop.WebSockets
         public int Connected => connections.Count;
 
         private int nextClientId = -1;
-        private IWebHost webHost;
+        private IWebHost? webHost;
         private readonly ConcurrentDictionary<int, WebSocketConnection> connections = new ConcurrentDictionary<int, WebSocketConnection>();
 
         /// <summary>
@@ -82,7 +82,8 @@ namespace osu.Desktop.WebSockets
             connections.Clear();
 
             var cts = new CancellationTokenSource(10000);
-            await webHost.StopAsync(cts.Token).ConfigureAwait(false);
+            if (webHost != null)
+                await webHost.StopAsync(cts.Token).ConfigureAwait(false);
 
             IsListening = false;
         }
@@ -172,8 +173,11 @@ namespace osu.Desktop.WebSockets
         {
         }
 
-        private void onConnectionStart(object sender, EventArgs args)
+        private void onConnectionStart(object? sender, EventArgs args)
         {
+            if (sender == null)
+                return;
+
             var connection = (WebSocketConnection)sender;
 
             connections.TryAdd(connection.ID, connection);
@@ -181,8 +185,11 @@ namespace osu.Desktop.WebSockets
             OnConnectionStart(connection);
         }
 
-        private void onConnectionClose(object sender, bool requested)
+        private void onConnectionClose(object? sender, bool requested)
         {
+            if (sender == null)
+                return;
+
             var connection = (WebSocketConnection)sender;
 
             if (!requested)
@@ -193,34 +200,40 @@ namespace osu.Desktop.WebSockets
             OnConnectionClose(connection, requested);
         }
 
-        private void onConnectionMessage(object sender, Message args)
+        private void onConnectionMessage(object? sender, Message args)
         {
+            if (sender == null)
+                return;
+
             OnConnectionMessage((WebSocketConnection)sender, args);
         }
 
-        private void onConnectionReady(object sender, EventArgs args)
+        private void onConnectionReady(object? sender, EventArgs args)
         {
+            if (sender == null)
+                return;
+
             OnConnectionReady((WebSocketConnection)sender);
         }
 
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
-            Task.Run(() => Close()).ContinueWith(t => webHost.Dispose());
+            Task.Run(Close).ContinueWith(t => webHost?.Dispose());
         }
 
         protected class WebSocketConnection : IAsyncDisposable
         {
             public readonly int ID;
-            public event EventHandler OnStart;
-            public event EventHandler OnReady;
-            public event EventHandler<bool> OnClose;
-            public event EventHandler<Message> OnMessage;
+            public event EventHandler OnStart = null!;
+            public event EventHandler OnReady = null!;
+            public event EventHandler<bool> OnClose = null!;
+            public event EventHandler<Message> OnMessage = null!;
 
             private bool isDisposed;
             private bool isReady;
             private bool hasStarted;
-            private Task processTask;
+            private Task processTask = null!;
             private readonly WebSocket socket;
             private readonly TaskCompletionSource completionSource = new TaskCompletionSource();
             private readonly IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent();
@@ -335,7 +348,8 @@ namespace osu.Desktop.WebSockets
 
                 cts.Cancel();
 
-                await processTask.ConfigureAwait(false);
+                if (processTask != null)
+                    await processTask.ConfigureAwait(false);
 
                 completionSource.SetResult();
 
