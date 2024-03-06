@@ -12,6 +12,11 @@ namespace osu.Game.Online.API
         internal string Email = string.Empty;
         internal string Password = string.Empty;
 
+        public RegistrationRequest()
+        {
+            AllowInsecureRequests = true;
+        }
+
         protected override void PrePerform()
         {
             AddParameter("user[username]", Username);
