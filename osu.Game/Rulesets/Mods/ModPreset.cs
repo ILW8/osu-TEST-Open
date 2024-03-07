@@ -12,11 +12,73 @@ using Realms;
 
 namespace osu.Game.Rulesets.Mods
 {
+    public interface IModPreset : IHasGuidPrimaryKey, ISoftDelete
+    {
+        /// <summary>
+        /// The ruleset that the preset is valid for.
+        /// </summary>
+        public RulesetInfo Ruleset { get; set; }
+
+        /// <summary>
+        /// The name of the mod preset.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// The description of the mod preset.
+        /// </summary>
+        public string Description { get; set; }
+
+        public ICollection<Mod> Mods { get; set; }
+    }
+
+    public class FreeModModPreset : RealmObject, IModPreset
+    {
+        [PrimaryKey]
+        public Guid ID { get; set; } = Guid.NewGuid();
+
+        public RulesetInfo Ruleset { get; set; } = null!;
+
+        public string Name { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        [Ignored]
+        public ICollection<Mod> Mods
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(ModsJson))
+                    return Array.Empty<Mod>();
+
+                var apiMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(ModsJson);
+                var ruleset = Ruleset.CreateInstance();
+                return apiMods.AsNonNull().Select(mod => mod.ToMod(ruleset)).ToArray();
+            }
+            set
+            {
+                var apiMods = value.Select(mod => new APIMod(mod)).ToArray();
+                ModsJson = JsonConvert.SerializeObject(apiMods);
+            }
+        }
+
+        /// <summary>
+        /// The set of configured mods that are part of the preset, serialised as a JSON blob.
+        /// </summary>
+        [MapTo("Mods")]
+        public string ModsJson { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Whether the preset has been soft-deleted by the user.
+        /// </summary>
+        public bool DeletePending { get; set; }
+    }
+
     /// <summary>
     /// A mod preset is a named collection of configured mods.
     /// Presets are presented to the user in the mod select overlay for convenience.
     /// </summary>
-    public class ModPreset : RealmObject, IHasGuidPrimaryKey, ISoftDelete
+    public class ModPreset : RealmObject, IModPreset
     {
         /// <summary>
         /// The internal database ID of the preset.
@@ -24,24 +86,12 @@ namespace osu.Game.Rulesets.Mods
         [PrimaryKey]
         public Guid ID { get; set; } = Guid.NewGuid();
 
-        /// <summary>
-        /// The ruleset that the preset is valid for.
-        /// </summary>
         public RulesetInfo Ruleset { get; set; } = null!;
 
-        /// <summary>
-        /// The name of the mod preset.
-        /// </summary>
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>
-        /// The description of the mod preset.
-        /// </summary>
         public string Description { get; set; } = string.Empty;
 
-        /// <summary>
-        /// The set of configured mods that are part of the preset.
-        /// </summary>
         [Ignored]
         public ICollection<Mod> Mods
         {

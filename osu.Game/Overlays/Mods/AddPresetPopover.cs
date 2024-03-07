@@ -18,12 +18,14 @@ using osu.Game.Localisation;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osuTK;
+using Realms;
 
 namespace osu.Game.Overlays.Mods
 {
-    internal partial class AddPresetPopover : OsuPopover
+    internal partial class AddPresetPopover<T> : OsuPopover
+        where T : IModPreset, IRealmObject, new()
     {
-        private readonly AddPresetButton button;
+        private readonly AddPresetButton<T> button;
 
         private readonly LabelledTextBox nameTextBox;
         private readonly LabelledTextBox descriptionTextBox;
@@ -38,7 +40,7 @@ namespace osu.Game.Overlays.Mods
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
-        public AddPresetPopover(AddPresetButton addPresetButton)
+        public AddPresetPopover(AddPresetButton<T> addPresetButton)
         {
             button = addPresetButton;
 
@@ -111,7 +113,7 @@ namespace osu.Game.Overlays.Mods
 
         private void createPreset()
         {
-            realm.Write(r => r.Add(new ModPreset
+            realm.Write(r => r.Add(new T
             {
                 Name = nameTextBox.Current.Value,
                 Description = descriptionTextBox.Current.Value,

@@ -250,7 +250,7 @@ namespace osu.Game.Tests.Visual.UserInterface
 
             AddStep("select mod preset with mod requiring configuration", () =>
             {
-                InputManager.MoveMouseTo(this.ChildrenOfType<ModPresetPanel>().First());
+                InputManager.MoveMouseTo(this.ChildrenOfType<ModPresetPanel<ModPreset>>().First());
                 InputManager.Click(MouseButton.Left);
             });
             assertCustomisationToggleState(disabled: false, active: false);
@@ -842,7 +842,7 @@ namespace osu.Game.Tests.Visual.UserInterface
 
             AddStep("select mod preset with half time", () =>
             {
-                InputManager.MoveMouseTo(this.ChildrenOfType<ModPresetPanel>().Single(preset => preset.Preset.Value.Name == "Half Time 0.5x"));
+                InputManager.MoveMouseTo(this.ChildrenOfType<ModPresetPanel<ModPreset>>().Single(preset => preset.Preset.Value.Name == "Half Time 0.5x"));
                 InputManager.Click(MouseButton.Left);
             });
             AddAssert("difficulty multiplier display shows correct value",
@@ -862,8 +862,8 @@ namespace osu.Game.Tests.Visual.UserInterface
         private void waitForColumnLoad() => AddUntilStep("all column content loaded", () =>
             modSelectOverlay.ChildrenOfType<ModColumn>().Any()
             && modSelectOverlay.ChildrenOfType<ModColumn>().All(column => column.IsLoaded && column.ItemsLoaded)
-            && modSelectOverlay.ChildrenOfType<ModPresetColumn>().Any()
-            && modSelectOverlay.ChildrenOfType<ModPresetColumn>().All(column => column.IsLoaded));
+            && modSelectOverlay.ChildrenOfType<ModPresetColumn<ModPreset>>().Any()
+            && modSelectOverlay.ChildrenOfType<ModPresetColumn<ModPreset>>().All(column => column.IsLoaded));
 
         private void changeRuleset(int id)
         {

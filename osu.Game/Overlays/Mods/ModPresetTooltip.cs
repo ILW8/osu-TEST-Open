@@ -11,7 +11,7 @@ using osuTK;
 
 namespace osu.Game.Overlays.Mods
 {
-    public partial class ModPresetTooltip : VisibilityContainer, ITooltip<ModPreset>
+    public partial class ModPresetTooltip : VisibilityContainer, ITooltip<IModPreset>
     {
         protected override Container<Drawable> Content { get; }
 
@@ -42,9 +42,9 @@ namespace osu.Game.Overlays.Mods
             };
         }
 
-        private ModPreset? lastPreset;
+        private IModPreset? lastPreset;
 
-        public void SetContent(ModPreset preset)
+        public void SetContent(IModPreset preset)
         {
             if (ReferenceEquals(preset, lastPreset))
                 return;
