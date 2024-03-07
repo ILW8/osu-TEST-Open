@@ -9,7 +9,9 @@ using osu.Framework.Audio;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
+using osu.Framework.Screens;
 using osu.Game.Graphics;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
@@ -26,6 +28,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
     /// </summary>
     public partial class MultiSpectatorScreen : SpectatorScreen
     {
+        [Resolved]
+        private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
+
+        private MultiplayerRoomStateBroadcaster mpRoomStateBroadcaster = null!;
+
         // Isolates beatmap/ruleset to this screen.
         public override bool DisallowExternalBeatmapRulesetChanges => true;
 
@@ -150,6 +157,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                         Team2Score = { BindTarget = leaderboard.TeamScores.Last().Value },
                     }, scoreDisplayContainer.Add);
                 }
+
+                broadcastServer.Add(mpRoomStateBroadcaster = new MultiplayerRoomStateBroadcaster(leaderboard.UserScores.Select(trackedUser => trackedUser.Value.ScoreProcessor)));
             });
 
             LoadComponentAsync(new GameplayChatDisplay(room)
@@ -166,6 +175,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // Start with adjustments from the first player to keep a sane state.
             bindAudioAdjustments(instances.First());
+        }
+
+        public override void OnSuspending(ScreenTransitionEvent e)
+        {
+            broadcastServer.Remove(mpRoomStateBroadcaster);
+            base.OnSuspending(e);
         }
 
         protected override void Update()

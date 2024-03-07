@@ -114,6 +114,8 @@ namespace osu.Game.Screens.Play
         [Resolved]
         private OsuGameBase game { get; set; }
 
+        protected virtual bool BroadcastPlayerState => true;
+
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; }
 
@@ -1111,7 +1113,9 @@ namespace osu.Game.Screens.Play
 
             StartGameplay();
             OnGameplayStarted?.Invoke();
-            broadcastServer.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
+
+            if (BroadcastPlayerState)
+                broadcastServer.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
         }
 
         /// <summary>
@@ -1134,7 +1138,8 @@ namespace osu.Game.Screens.Play
             screenSuspension?.RemoveAndDisposeImmediately();
 
             fadeOut();
-            broadcastServer.Remove(playerStateBroadcaster);
+            if (BroadcastPlayerState)
+                broadcastServer.Remove(playerStateBroadcaster);
             base.OnSuspending(e);
         }
 

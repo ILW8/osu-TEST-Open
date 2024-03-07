@@ -16,6 +16,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
     /// </summary>
     public partial class MultiSpectatorPlayer : SpectatorPlayer
     {
+        protected override bool BroadcastPlayerState => false;
+
         /// <summary>
         /// All adjustments applied to the clock of this <see cref="MultiSpectatorPlayer"/> which come from mods.
         /// </summary>

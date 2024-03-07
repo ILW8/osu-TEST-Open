@@ -27,7 +27,7 @@ namespace osu.Desktop.WebSockets
         /// <summary>
         /// Gets the address to listen on.
         /// </summary>
-        public virtual string Address => @"localhost";
+        public virtual string Address => @"0.0.0.0";
 
         /// <summary>
         /// Gets the endpoint to listen on.
