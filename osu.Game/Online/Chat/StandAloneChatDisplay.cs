@@ -41,6 +41,20 @@ namespace osu.Game.Online.Chat
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
 
+        private BeatmapModelDownloader beatmapsDownloader = null!;
+
+        private BeatmapLookupCache beatmapLookupCache = null!;
+
+        private BeatmapDownloadTracker beatmapDownloadTracker = null!;
+
+        private IDisposable selectionOperation;
+
+        [Resolved]
+        private OngoingOperationTracker operationTracker { get; set; } = null!;
+
+        [Resolved(typeof(Room), nameof(Room.Playlist))]
+        private BindableList<PlaylistItem> roomPlaylist { get; set; }
+
         protected readonly ChatTextBox TextBox;
 
         private ChannelManager channelManager;
@@ -95,14 +109,6 @@ namespace osu.Game.Online.Chat
             Channel.BindValueChanged(channelChanged);
         }
 
-        private BeatmapModelDownloader beatmapsDownloader = null!;
-        private BeatmapLookupCache beatmapLookupCache = null!;
-        private BeatmapDownloadTracker beatmapDownloadTracker = null!;
-        private IDisposable selectionOperation;
-
-        [Resolved]
-        private OngoingOperationTracker operationTracker { get; set; } = null!;
-
         [BackgroundDependencyLoader(true)]
         private void load(ChannelManager manager, BeatmapModelDownloader beatmaps, BeatmapLookupCache beatmapsCache)
         {
@@ -129,42 +135,33 @@ namespace osu.Game.Online.Chat
             {
                 channelManager?.PostMessage(text, target: Channel.Value);
 
-                if (text[..3] == @"!mp")
+                string[] parts = text.Split();
+
+                if (parts.Length == 3 && parts[0] == @"!mp" && parts[1] == @"map" && int.TryParse(parts[2], out int onlineID))
                 {
-                    string[] parts = text.Split();
-
-                    if (parts.Length == 3 && parts[1] == @"map" && int.TryParse(parts[2], out int onlineID))
+                    beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
                     {
-                        Schedule(() =>
+                        APIBeatmap beatmapInfo = task.GetResultSafely();
+
+                        if (beatmapInfo?.BeatmapSet == null) return;
+
+                        RemoveInternal(beatmapDownloadTracker, true);
+                        AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
+
+                        beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
                         {
-                            beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
+                            switch (changeEvent.NewValue)
                             {
-                                APIBeatmap beatmapInfo = task.GetResultSafely();
+                                case DownloadState.LocallyAvailable:
+                                    addPlaylistItem(beatmapInfo);
+                                    return;
 
-                                if (beatmapInfo?.BeatmapSet == null) return;
-
-                                RemoveInternal(beatmapDownloadTracker, true);
-                                AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
-
-                                beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
-                                {
-                                    Logger.Log($"tracker state changed: {changeEvent.NewValue}", LoggingTarget.Runtime, LogLevel.Debug);
-
-                                    switch (beatmapDownloadTracker.State.Value)
-                                    {
-                                        case DownloadState.LocallyAvailable:
-                                            Logger.Log($"{beatmapInfo} is locally available", LoggingTarget.Runtime, LogLevel.Debug);
-                                            addPlaylistItem(beatmapInfo);
-                                            return;
-
-                                        case DownloadState.NotDownloaded:
-                                            beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
-                                            break;
-                                    }
-                                });
-                            }));
+                                case DownloadState.NotDownloaded:
+                                    beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
+                                    break;
+                            }
                         });
-                    }
+                    }));
                 }
             }
 
