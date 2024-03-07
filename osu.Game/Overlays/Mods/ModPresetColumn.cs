@@ -82,13 +82,13 @@ namespace osu.Game.Overlays.Mods
             }
 
             latestLoadTask = LoadComponentsAsync(presets.Select(p => new ModPresetPanel<T>(p.ToLive(realm))
-                {
-                    Shear = Vector2.Zero
-                }), loaded =>
-                {
-                    removeAndDisposePresetPanels();
-                    ItemsFlow.AddRange(loaded);
-                }, (cancellationTokenSource = new CancellationTokenSource()).Token);
+            {
+                Shear = Vector2.Zero
+            }), loaded =>
+            {
+                removeAndDisposePresetPanels();
+                ItemsFlow.AddRange(loaded);
+            }, (cancellationTokenSource = new CancellationTokenSource()).Token);
 
             void removeAndDisposePresetPanels()
             {
