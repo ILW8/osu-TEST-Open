@@ -52,7 +52,7 @@ namespace osu.Game.Online.Chat
         [Resolved]
         private OngoingOperationTracker operationTracker { get; set; } = null!;
 
-        [Resolved(typeof(Room), nameof(Room.Playlist))]
+        [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
         private BindableList<PlaylistItem> roomPlaylist { get; set; }
 
         protected readonly ChatTextBox TextBox;
@@ -194,7 +194,7 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
-            var itemsToRemove = roomPlaylist.ToArray();
+            var itemsToRemove = roomPlaylist?.ToArray() ?? Array.Empty<PlaylistItem>();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
