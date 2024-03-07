@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -13,7 +14,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
-using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Graphics;
@@ -197,11 +197,15 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
+            var itemsToRemove = roomPlaylist.ToArray();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
             {
                 selectionOperation?.Dispose();
+
+                foreach (var playlistItem in itemsToRemove)
+                    Client.RemovePlaylistItem(playlistItem.ID).FireAndForget();
             }, onError: _ =>
             {
                 selectionOperation?.Dispose();
