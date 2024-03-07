@@ -11,6 +11,8 @@ using osu.Framework.Screens;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Overlays;
+using osu.Game.Overlays.Mods;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Select;
 
@@ -124,5 +126,20 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         protected override bool IsValidMod(Mod mod) => base.IsValidMod(mod) && mod.ValidForMultiplayer;
 
         protected override bool IsValidFreeMod(Mod mod) => base.IsValidFreeMod(mod) && mod.ValidForMultiplayerAsFreeMod;
+
+        protected override ModSelectOverlay CreateModSelectOverlay() => new MultiplayerMatchModSelectOverlay(OverlayColourScheme.Plum)
+        {
+            IsValidMod = IsValidMod
+        };
+
+        internal partial class MultiplayerMatchModSelectOverlay : UserModSelectOverlay
+        {
+            public MultiplayerMatchModSelectOverlay(OverlayColourScheme colourScheme = OverlayColourScheme.Green)
+                : base(colourScheme)
+            {
+            }
+
+            protected override bool ShowPresets => true;
+        }
     }
 }

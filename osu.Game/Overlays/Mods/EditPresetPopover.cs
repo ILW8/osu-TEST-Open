@@ -21,7 +21,8 @@ using osuTK;
 
 namespace osu.Game.Overlays.Mods
 {
-    internal partial class EditPresetPopover : OsuPopover
+    internal partial class EditPresetPopover<T> : OsuPopover
+    where T : class, IModPreset
     {
         private LabelledTextBox nameTextBox = null!;
         private LabelledTextBox descriptionTextBox = null!;
@@ -29,7 +30,7 @@ namespace osu.Game.Overlays.Mods
         private ShearedButton saveButton = null!;
         private FillFlowContainer scrollContent = null!;
 
-        private readonly Live<ModPreset> preset;
+        private readonly Live<T> preset;
 
         private HashSet<Mod> saveableMods;
 
@@ -42,7 +43,7 @@ namespace osu.Game.Overlays.Mods
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
 
-        public EditPresetPopover(Live<ModPreset> preset)
+        public EditPresetPopover(Live<T> preset)
         {
             this.preset = preset;
             saveableMods = preset.PerformRead(p => p.Mods).ToHashSet();

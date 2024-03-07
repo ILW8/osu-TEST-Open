@@ -13,10 +13,12 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Rulesets.Mods;
 using osuTK;
+using Realms;
 
 namespace osu.Game.Overlays.Mods
 {
-    public partial class AddPresetButton : ShearedToggleButton, IHasPopover
+    public partial class AddPresetButton<T> : ShearedToggleButton, IHasPopover
+        where T : IModPreset, IRealmObject, new()
     {
         protected override bool PlayToggleSamples => false;
 
@@ -64,6 +66,6 @@ namespace osu.Game.Overlays.Mods
                 this.HidePopover();
         }
 
-        public Popover GetPopover() => new AddPresetPopover(this);
+        public Popover GetPopover() => new AddPresetPopover<T>(this);
     }
 }

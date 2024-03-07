@@ -29,6 +29,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Utils;
 using osuTK;
 using osuTK.Input;
+using Realms;
 
 namespace osu.Game.Overlays.Mods
 {
@@ -223,7 +224,7 @@ namespace osu.Game.Overlays.Mods
                                     AutoSizeAxes = Axes.X,
                                     Margin = new MarginPadding { Horizontal = 70 },
                                     Padding = new MarginPadding { Bottom = 10 },
-                                    ChildrenEnumerable = createColumns()
+                                    ChildrenEnumerable = GetColumns()
                                 }
                             }
                         }
@@ -393,11 +394,11 @@ namespace osu.Game.Overlays.Mods
                 column.DeselectAll();
         }
 
-        private IEnumerable<ColumnDimContainer> createColumns()
+        internal IEnumerable<ColumnDimContainer> CreateColumns<T>() where T : RealmObject, IModPreset, new()
         {
             if (ShowPresets)
             {
-                yield return new ColumnDimContainer(new ModPresetColumn
+                yield return new ColumnDimContainer(new ModPresetColumn<T>
                 {
                     Margin = new MarginPadding { Right = 10 }
                 });
@@ -409,6 +410,8 @@ namespace osu.Game.Overlays.Mods
             yield return createModColumnContent(ModType.Conversion);
             yield return createModColumnContent(ModType.Fun);
         }
+
+        internal virtual IEnumerable<ColumnDimContainer> GetColumns() => CreateColumns<ModPreset>();
 
         private ColumnDimContainer createModColumnContent(ModType modType)
         {
