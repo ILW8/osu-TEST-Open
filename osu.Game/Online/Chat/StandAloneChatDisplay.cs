@@ -4,17 +4,27 @@
 #nullable disable
 
 using System;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
+using osu.Game.Beatmaps;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Game.Overlays.Chat;
 using osu.Game.Resources.Localisation.Web;
+using osu.Game.Screens.OnlinePlay;
 using osuTK.Graphics;
 using osuTK.Input;
 
@@ -27,6 +37,9 @@ namespace osu.Game.Online.Chat
     {
         [Cached]
         public readonly Bindable<Channel> Channel = new Bindable<Channel>();
+
+        [Resolved]
+        protected MultiplayerClient Client { get; private set; }
 
         protected readonly ChatTextBox TextBox;
 
@@ -82,10 +95,22 @@ namespace osu.Game.Online.Chat
             Channel.BindValueChanged(channelChanged);
         }
 
+        private BeatmapModelDownloader beatmapsDownloader = null!;
+        private BeatmapLookupCache beatmapLookupCache = null!;
+        private BeatmapDownloadTracker beatmapDownloadTracker = null!;
+        private IDisposable selectionOperation;
+
+        [Resolved]
+        private OngoingOperationTracker operationTracker { get; set; } = null!;
+
         [BackgroundDependencyLoader(true)]
-        private void load(ChannelManager manager)
+        private void load(ChannelManager manager, BeatmapModelDownloader beatmaps, BeatmapLookupCache beatmapsCache)
         {
             channelManager ??= manager;
+            beatmapsDownloader = beatmaps;
+            beatmapLookupCache = beatmapsCache;
+
+            AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(new BeatmapSetInfo()));
         }
 
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
@@ -101,9 +126,82 @@ namespace osu.Game.Online.Chat
             if (text[0] == '/')
                 channelManager?.PostCommand(text.Substring(1), Channel.Value);
             else
+            {
                 channelManager?.PostMessage(text, target: Channel.Value);
 
+                if (text[..3] == @"!mp")
+                {
+                    string[] parts = text.Split();
+
+                    if (parts.Length == 3 && parts[1] == @"map" && int.TryParse(parts[2], out int onlineID))
+                    {
+                        Schedule(() =>
+                        {
+                            beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
+                            {
+                                APIBeatmap beatmapInfo = task.GetResultSafely();
+
+                                if (beatmapInfo?.BeatmapSet == null) return;
+
+                                RemoveInternal(beatmapDownloadTracker, true);
+                                AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
+
+                                beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
+                                {
+                                    Logger.Log($"tracker state changed: {changeEvent.NewValue}", LoggingTarget.Runtime, LogLevel.Debug);
+
+                                    switch (beatmapDownloadTracker.State.Value)
+                                    {
+                                        case DownloadState.LocallyAvailable:
+                                            Logger.Log($"{beatmapInfo} is locally available", LoggingTarget.Runtime, LogLevel.Debug);
+                                            addPlaylistItem(beatmapInfo);
+                                            return;
+
+                                        case DownloadState.NotDownloaded:
+                                            beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
+                                            break;
+                                    }
+                                });
+                            }));
+                        });
+                    }
+                }
+            }
+
             TextBox.Text = string.Empty;
+        }
+
+        private void addPlaylistItem(APIBeatmap beatmapInfo)
+        {
+            selectionOperation = operationTracker.BeginOperation();
+
+            var item = new PlaylistItem(beatmapInfo)
+            {
+                RulesetID = beatmapInfo.Ruleset.OnlineID,
+                RequiredMods = Array.Empty<APIMod>(),
+                AllowedMods = Array.Empty<APIMod>()
+            };
+
+            // PlaylistItem item
+            var multiplayerItem = new MultiplayerPlaylistItem
+            {
+                ID = 0,
+                BeatmapID = item.Beatmap.OnlineID,
+                BeatmapChecksum = item.Beatmap.MD5Hash,
+                RulesetID = item.RulesetID,
+                RequiredMods = item.RequiredMods,
+                AllowedMods = item.AllowedMods
+            };
+
+            Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
+
+            addPlaylistItemTask.FireAndForget(onSuccess: () =>
+            {
+                selectionOperation?.Dispose();
+            }, onError: _ =>
+            {
+                selectionOperation?.Dispose();
+            });
         }
 
         protected virtual ChatLine CreateMessage(Message message) => new StandAloneMessage(message);
