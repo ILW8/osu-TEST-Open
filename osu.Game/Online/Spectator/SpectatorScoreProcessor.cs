@@ -51,6 +51,9 @@ namespace osu.Game.Online.Spectator
         /// </summary>
         public IReadOnlyList<Mod> Mods => scoreInfo?.Mods ?? Array.Empty<Mod>();
 
+        private readonly Bindable<IEnumerable<Mod>> modsBindable = new Bindable<IEnumerable<Mod>>(Array.Empty<Mod>());
+        public IBindable<IEnumerable<Mod>> ModsBindable = new Bindable<IEnumerable<Mod>>();
+
         public Func<ScoringMode, long> GetDisplayScore => mode => scoreInfo?.GetDisplayScore(mode) ?? 0;
 
         private IClock? referenceClock;
@@ -87,6 +90,7 @@ namespace osu.Game.Online.Spectator
             base.LoadComplete();
 
             Mode.BindValueChanged(_ => UpdateScore());
+            ModsBindable.BindTo(modsBindable);
 
             spectatorStates.BindTo(spectatorClient.WatchedUserStates);
             spectatorStates.BindCollectionChanged(onSpectatorStatesChanged, true);
@@ -119,6 +123,7 @@ namespace osu.Game.Online.Spectator
                 Ruleset = rulesetInfo,
                 Mods = userState.Mods.Select(m => m.ToMod(ruleset)).ToArray()
             };
+            modsBindable.Value = scoreInfo.Mods;
         }
 
         private void onNewFrames(int incomingUserId, FrameDataBundle bundle)

@@ -3,10 +3,8 @@
 
 using System.Collections.Generic;
 using osu.Framework.Bindables;
-// using osu.Framework.Logging;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Mods;
-using osu.Game.Scoring;
 
 namespace osu.Game.Online.Broadcasts
 {
@@ -29,24 +27,6 @@ namespace osu.Game.Online.Broadcasts
         {
             base.LoadComplete();
 
-            // Message.TotalScore.BindTo(scoreProcessors.HighestCombo);
-            // Message.TotalScore.ValueChanged += _ => Broadcast();
-            //
-            // Message.Accuracy.BindTo(scoreProcessors.Accuracy);
-            // Message.Accuracy.ValueChanged += _ => Broadcast();
-            //
-            // Message.Combo.BindTo(scoreProcessors.Combo);
-            // Message.Combo.ValueChanged += _ => Broadcast();
-            //
-            // Message.Mods.BindTo(scoreProcessors.Mods);
-            // Message.Mods.ValueChanged += _ => Broadcast();
-            //
-            // Message.HighestCombo.BindTo(scoreProcessors.HighestCombo);
-            // Message.HighestCombo.ValueChanged += _ => Broadcast();
-            //
-            // Message.Rank.BindTo(scoreProcessors.Rank);
-            // Message.Rank.ValueChanged += _ => Broadcast();
-
             foreach (var scoreProcessor in scoreProcessors)
             {
                 var yes = Message.PlayerStates[scoreProcessor.Value.UserId] = new TheOtherMultiplayerRoomState();
@@ -60,7 +40,11 @@ namespace osu.Game.Online.Broadcasts
                 yes.Combo.BindTo(scoreProcessor.Value.Combo);
                 yes.Combo.ValueChanged += _ => Broadcast();
 
-                yes.Mods.BindTo(new Bindable<IReadOnlyList<Mod>>(scoreProcessor.Value.Mods));
+                scoreProcessor.Value.ModsBindable.BindValueChanged(valueChangedEvent =>
+                {
+                    yes.Mods.Clear();
+                    yes.Mods.AddRange(valueChangedEvent.NewValue);
+                }, true);
 
                 yes.HighestCombo.BindTo(scoreProcessor.Value.HighestCombo);
                 yes.HighestCombo.ValueChanged += _ => Broadcast();
@@ -78,7 +62,7 @@ namespace osu.Game.Online.Broadcasts
         public readonly BindableLong TotalScore = new BindableLong();
         public readonly BindableDouble Accuracy = new BindableDouble();
         public readonly BindableInt Combo = new BindableInt();
-        public readonly Bindable<IReadOnlyList<Mod>> Mods = new Bindable<IReadOnlyList<Mod>>();
+        public readonly List<Mod> Mods = new List<Mod>();
         public readonly BindableInt HighestCombo = new BindableInt();
     }
 }
