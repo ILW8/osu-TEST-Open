@@ -158,7 +158,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     }, scoreDisplayContainer.Add);
                 }
 
-                broadcastServer.Add(mpRoomStateBroadcaster = new MultiplayerRoomStateBroadcaster(leaderboard.UserScores.Select(trackedUser => trackedUser.Value.ScoreProcessor)));
+                broadcastServer.Add(mpRoomStateBroadcaster = new MultiplayerRoomStateBroadcaster(leaderboard.UserScores));
             });
 
             LoadComponentAsync(new GameplayChatDisplay(room)

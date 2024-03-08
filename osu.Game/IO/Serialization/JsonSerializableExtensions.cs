@@ -17,7 +17,7 @@ namespace osu.Game.IO.Serialization
 
         public static void DeserializeInto<T>(this string objString, T target) => JsonConvert.PopulateObject(objString, target, jsonSerializerSettings);
 
-        private static JsonSerializerSettings createGlobalSettings() => new JsonSerializerSettings
+        public static JsonSerializerSettings CreateGlobalSettings() => new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
             Formatting = Formatting.Indented,
@@ -27,6 +27,6 @@ namespace osu.Game.IO.Serialization
             ContractResolver = new SnakeCaseKeyContractResolver()
         };
 
-        private static JsonSerializerSettings jsonSerializerSettings => createGlobalSettings();
+        private static JsonSerializerSettings jsonSerializerSettings => CreateGlobalSettings();
     }
 }
