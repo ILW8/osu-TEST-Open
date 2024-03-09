@@ -12,6 +12,7 @@ using osu.Game.Users;
 
 namespace osu.Game.Online.Broadcasts
 {
+    // todo: multiplayerGAMEPLAYstatebroadcaster instead? or MultiplayerSpectatorStateBroadcaster?
     public partial class MultiplayerRoomStateBroadcaster : GameStateBroadcaster<TheRealMultiplayerRoomState>
     {
         public override string Type => @"MultiplayerRoomState";
