@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -14,6 +15,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Graphics;
@@ -67,6 +69,13 @@ namespace osu.Game.Online.Chat
 
         private const float text_box_height = 30;
 
+        [CanBeNull]
+        private ScheduledDelegate countdownUpdateDelegate;
+
+        protected readonly MultiplayerCountdown Countdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
+
+        private double countdownChangeTime;
+
         /// <summary>
         /// Construct a new instance.
         /// </summary>
@@ -117,6 +126,14 @@ namespace osu.Game.Online.Chat
             beatmapLookupCache = beatmapsCache;
 
             AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(new BeatmapSetInfo()));
+
+            Client.RoomUpdated += () =>
+            {
+                if (Client.Room?.State == MultiplayerRoomState.Open) return; // only allow timer if room is idle
+
+                countdownUpdateDelegate?.Cancel();
+                countdownUpdateDelegate = null;
+            };
         }
 
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
@@ -137,35 +154,109 @@ namespace osu.Game.Online.Chat
 
                 string[] parts = text.Split();
 
-                if (parts.Length == 3 && parts[0] == @"!mp" && parts[1] == @"map" && int.TryParse(parts[2], out int onlineID))
+                for (;;)
                 {
-                    beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
+                    if (!(parts.Length == 3 && parts[0] == @"!mp"))
+                        break;
+
+                    // commands with numerical parameter
+                    if (int.TryParse(parts[2], out int onlineID))
                     {
-                        APIBeatmap beatmapInfo = task.GetResultSafely();
-
-                        if (beatmapInfo?.BeatmapSet == null) return;
-
-                        RemoveInternal(beatmapDownloadTracker, true);
-                        AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
-
-                        beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
+                        switch (parts[1])
                         {
-                            switch (changeEvent.NewValue)
-                            {
-                                case DownloadState.LocallyAvailable:
-                                    addPlaylistItem(beatmapInfo);
-                                    return;
+                            case @"map":
+                                beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
+                                {
+                                    APIBeatmap beatmapInfo = task.GetResultSafely();
 
-                                case DownloadState.NotDownloaded:
-                                    beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
-                                    break;
-                            }
-                        });
-                    }));
+                                    if (beatmapInfo?.BeatmapSet == null) return;
+
+                                    RemoveInternal(beatmapDownloadTracker, true);
+                                    AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
+
+                                    beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
+                                    {
+                                        switch (changeEvent.NewValue)
+                                        {
+                                            case DownloadState.LocallyAvailable:
+                                                addPlaylistItem(beatmapInfo);
+                                                return;
+
+                                            case DownloadState.NotDownloaded:
+                                                beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
+                                                break;
+                                        }
+                                    });
+                                }));
+                                break;
+
+                            case @"timer":
+                                Scheduler.AddDelayed(() =>
+                                {
+                                    Countdown.TimeRemaining = TimeSpan.FromSeconds(onlineID);
+                                    countdownChangeTime = Time.Current;
+
+                                    sendTimerMessage();
+                                }, 1250);
+
+                                break;
+                        }
+                    }
+                    else if (parts[1] == @"timer" && parts[2] == @"abort") // ugh mmmmmmmmmkay
+                    {
+                        countdownUpdateDelegate?.Cancel();
+                        countdownUpdateDelegate = null;
+
+                        Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                    }
+
+                    break;
                 }
             }
 
             TextBox.Text = string.Empty;
+        }
+
+        private TimeSpan countdownTimeRemaining
+        {
+            get
+            {
+                double timeElapsed = Time.Current - countdownChangeTime;
+                TimeSpan remaining;
+
+                if (timeElapsed > Countdown.TimeRemaining.TotalMilliseconds)
+                    remaining = TimeSpan.Zero;
+                else
+                    remaining = Countdown.TimeRemaining - TimeSpan.FromMilliseconds(timeElapsed);
+
+                return remaining;
+            }
+        }
+
+        private void processTimerEvent()
+        {
+            countdownUpdateDelegate?.Cancel();
+
+            double timeToNextMessage = countdownTimeRemaining.TotalSeconds switch
+            {
+                > 60 => countdownTimeRemaining.TotalMilliseconds % 60_000,
+                > 30 => countdownTimeRemaining.TotalMilliseconds % 30_000,
+                > 10 => countdownTimeRemaining.TotalMilliseconds % 10_000,
+                // > 5 => countdownTimeRemaining.TotalMilliseconds % 5_000,
+                _ => countdownTimeRemaining.TotalMilliseconds % 5_000
+            };
+
+            countdownUpdateDelegate = Scheduler.AddDelayed(sendTimerMessage, timeToNextMessage);
+        }
+
+        private void sendTimerMessage()
+        {
+            int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
+
+            channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
+
+            if (secondsRemaining > 0)
+                Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
         }
 
         private void addPlaylistItem(APIBeatmap beatmapInfo)
