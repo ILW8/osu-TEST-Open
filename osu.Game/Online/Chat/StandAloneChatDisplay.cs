@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -15,6 +16,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
@@ -26,6 +28,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays.Chat;
 using osu.Game.Resources.Localisation.Web;
+using osu.Game.Rulesets;
 using osu.Game.Screens.OnlinePlay;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -42,6 +45,9 @@ namespace osu.Game.Online.Chat
 
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
+
+        [Resolved]
+        protected RulesetStore RulesetStore { get; private set; }
 
         private BeatmapModelDownloader beatmapsDownloader = null!;
 
@@ -156,6 +162,7 @@ namespace osu.Game.Online.Chat
 
                 for (;;)
                 {
+                    // 3 part commands
                     if (!(parts.Length == 3 && parts[0] == @"!mp"))
                         break;
 
@@ -202,12 +209,78 @@ namespace osu.Game.Online.Chat
                                 break;
                         }
                     }
-                    else if (parts[1] == @"timer" && parts[2] == @"abort") // ugh mmmmmmmmmkay
+                    else
                     {
-                        countdownUpdateDelegate?.Cancel();
-                        countdownUpdateDelegate = null;
+                        switch (parts[1])
+                        {
+                            case @"timer":
+                                if (parts[2] == @"abort")
+                                {
+                                    countdownUpdateDelegate?.Cancel();
+                                    countdownUpdateDelegate = null;
 
-                        Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                                    Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                                }
+
+                                break;
+
+                            case @"mods":
+                                // abort if room playlist is somehow null:
+                                if (roomPlaylist == null)
+                                    break;
+
+                                var itemToEdit = roomPlaylist.First();
+
+                                string[] mods = parts[2].Split("+");
+                                Logger.Log($@"Mods string: {string.Join(',', mods)}");
+
+                                List<APIMod> apiMods = new List<APIMod>();
+
+                                foreach (string mod in mods)
+                                {
+                                    if (mod.Length > 2)
+                                    {
+                                        // todo: handle mod parameters
+                                        Logger.Log($@"Mod {mod[..2]} has parameters {mod[2..]}");
+                                    }
+
+                                    string modAcronym = mod[..2];
+                                    var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
+                                    var modInstance = rulesetInstance?.CreateModFromAcronym(modAcronym);
+                                    if (modInstance == null)
+                                        break;
+
+                                    apiMods.Add(new APIMod(modInstance));
+                                }
+
+                                // get playlist item to edit:
+                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.Beatmap.OnlineID).ContinueWith(task => Schedule(() =>
+                                {
+                                    APIBeatmap beatmapInfo = task.GetResultSafely();
+
+                                    var multiplayerItem = new MultiplayerPlaylistItem
+                                    {
+                                        ID = itemToEdit.ID,
+                                        BeatmapID = beatmapInfo.OnlineID,
+                                        BeatmapChecksum = beatmapInfo.MD5Hash,
+                                        RulesetID = itemToEdit.RulesetID,
+                                        RequiredMods = apiMods.ToArray(),
+                                        AllowedMods = Array.Empty<APIMod>()
+                                    };
+
+                                    selectionOperation = operationTracker.BeginOperation();
+                                    Task editPlaylistTask = Client.EditPlaylistItem(multiplayerItem);
+
+                                    editPlaylistTask.FireAndForget(onSuccess: () =>
+                                    {
+                                        selectionOperation?.Dispose();
+                                    }, onError: _ =>
+                                    {
+                                        selectionOperation?.Dispose();
+                                    });
+                                }));
+                                break;
+                        }
                     }
 
                     break;
