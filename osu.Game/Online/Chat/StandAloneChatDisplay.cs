@@ -284,7 +284,7 @@ namespace osu.Game.Online.Chat
 
                                         if (modParams.Count > sourceProperties.Length)
                                         {
-                                            Logger.Log($@"[!mp mods] Expected at most {sourceProperties.Length} parameters, got {modParams.Count} parameters. Ignoring extra parameters", LoggingTarget.Runtime, LogLevel.Important);
+                                            Logger.Log($@"[!mp mods] Expected at most {sourceProperties.Length} parameter(s) for mod {modAcronym}, got {modParams.Count} parameter(s). Ignoring extra parameter(s)", LoggingTarget.Runtime, LogLevel.Important);
                                             break;
                                         }
 
