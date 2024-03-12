@@ -247,131 +247,138 @@ namespace osu.Game.Online.Chat
                                 Logger.Log($@"Mods string: {string.Join(',', mods)}");
 
                                 List<Mod> modInstances = new List<Mod>();
-                                bool parseSuccess = true;
 
                                 foreach (string mod in mods)
                                 {
+                                    if (mod.Length < 2)
+                                    {
+                                        Logger.Log($@"Unknown mod '{mod}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                        continue;
+                                    }
+
                                     string modAcronym = mod[..2];
                                     var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
                                     var modInstance = rulesetInstance?.CreateModFromAcronym(modAcronym);
                                     if (modInstance == null)
                                         break;
 
-                                    if (mod.Length > 2)
+                                    if (mod.Length == 2)
                                     {
-                                        JsonNode modParamsNode;
+                                        modInstances.Add(modInstance);
+                                        continue;
+                                    }
 
-                                        try
+                                    // mod has parameters
+                                    JsonNode modParamsNode;
+
+                                    try
+                                    {
+                                        modParamsNode = JsonNode.Parse(mod[2..]);
+                                    }
+                                    catch (JsonReaderException)
+                                    {
+                                        Logger.Log($@"Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                        continue;
+                                    }
+
+                                    if (modParamsNode is JsonArray modParams)
+                                    {
+                                        var sourceProperties = modInstance.GetOrderedSettingsSourceProperties().ToArray();
+
+                                        if (modParams.Count > sourceProperties.Length)
                                         {
-                                            modParamsNode = JsonNode.Parse(mod[2..]);
+                                            Logger.Log($@"[!mp mods] Expected at most {sourceProperties.Length} parameters, got {modParams.Count} parameters. Ignoring extra parameters", LoggingTarget.Runtime, LogLevel.Important);
+                                            break;
                                         }
-                                        catch (JsonReaderException)
+
+                                        for (int i = 0; i < sourceProperties.Length; i++)
                                         {
-                                            Logger.Log($@"Couldn't parse mod parameters '{mod[2..]}'", LoggingTarget.Runtime, LogLevel.Important);
-                                            continue;
-                                        }
+                                            var node = modParams[i];
+                                            Logger.Log($@"aaa: {node!}({node!.GetType()})", LoggingTarget.Runtime, LogLevel.Debug);
 
-                                        if (modParamsNode is JsonArray modParams)
-                                        {
-                                            var sourceProperties = modInstance.GetOrderedSettingsSourceProperties().ToArray();
+                                            if (node.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
+                                                continue;
 
-                                            if (modParams.Count > sourceProperties.Length)
+                                            object paramValue = sourceProperties[i].Item2.GetValue(modInstance);
+                                            var paramAttr = sourceProperties[i].Item1;
+
+                                            if (node.AsValue().TryGetValue(out int intData))
                                             {
-                                                parseSuccess = false;
-                                                Logger.Log($@"[!mp mods] Expected at most {sourceProperties.Length} parameters, got {modParams.Count} parameters", LoggingTarget.Runtime,
-                                                    LogLevel.Important);
-                                                break;
-                                            }
-
-                                            for (int i = 0; i < modParams.Count; i++)
-                                            {
-                                                var node = modParams[i];
-                                                Logger.Log($@"aaa: {node!}({node!.GetType()})", LoggingTarget.Runtime, LogLevel.Debug);
-
-                                                if (node.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
-                                                    continue;
-
-                                                object paramValue = sourceProperties[i].Item2.GetValue(modInstance);
-                                                var paramAttr = sourceProperties[i].Item1;
-
-                                                if (node.AsValue().TryGetValue(out int intData))
+                                                switch (paramValue)
                                                 {
-                                                    switch (paramValue)
-                                                    {
-                                                        case BindableNumber<int> bParamValue:
-                                                            bParamValue.Value = intData;
-                                                            continue;
+                                                    case BindableNumber<int> bParamValue:
+                                                        bParamValue.Value = intData;
+                                                        continue;
 
-                                                        case Bindable<int?> bParamValue:
-                                                            bParamValue.Value = intData;
-                                                            continue;
+                                                    case Bindable<int?> bParamValue:
+                                                        bParamValue.Value = intData;
+                                                        continue;
 
-                                                        case BindableNumber<double> bParamValueDouble:
-                                                            bParamValueDouble.Value = intData;
-                                                            continue;
+                                                    case BindableNumber<double> bParamValueDouble:
+                                                        bParamValueDouble.Value = intData;
+                                                        continue;
 
-                                                        case IBindable bindable:
-                                                            var enumType = bindable.GetType().GetGenericArguments()[0];
+                                                    case IBindable bindable:
+                                                        var enumType = bindable.GetType().GetGenericArguments()[0];
 
-                                                            if (enumType.IsEnum)
+                                                        if (enumType.IsEnum)
+                                                        {
+                                                            if (Enum.GetValues(enumType).Cast<int>().Contains(intData))
                                                             {
-                                                                if (Enum.GetValues(enumType).Cast<int>().Contains(intData))
-                                                                {
-                                                                    typeof(Bindable<>).MakeGenericType(enumType).GetProperty(nameof(Bindable<object>.Value))?.SetValue(bindable, intData);
-                                                                    continue;
-                                                                }
-
-                                                                Logger.Log($@"{modAcronym}'s {paramAttr.Label} not assignable to value {intData} (out of range)", LoggingTarget.Runtime, LogLevel.Important);
+                                                                typeof(Bindable<>).MakeGenericType(enumType).GetProperty(nameof(Bindable<object>.Value))?.SetValue(bindable, intData);
                                                                 continue;
                                                             }
 
-                                                            Logger.Log(
-                                                                $@"{modAcronym}'s {paramAttr.Label} (of type {bindable.GetType().GetRealTypeName()}) not assignable to value {intData} ({intData.GetType().Name})",
-                                                                LoggingTarget.Runtime, LogLevel.Important);
+                                                            Logger.Log($@"{modAcronym}'s {paramAttr.Label} not assignable to value {intData} (out of range)", LoggingTarget.Runtime,
+                                                                LogLevel.Important);
                                                             continue;
+                                                        }
 
-                                                        default:
-                                                            Logger.Log(
-                                                                $@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {intData.GetType().Name}",
-                                                                LoggingTarget.Runtime, LogLevel.Important);
-                                                            continue;
-                                                    }
-                                                }
-
-                                                if (node.AsValue().TryGetValue(out double doubleData))
-                                                {
-                                                    if (paramValue is BindableNumber<double> bParamValue)
-                                                    {
-                                                        bParamValue.Value = doubleData;
+                                                        Logger.Log(
+                                                            $@"{modAcronym}'s {paramAttr.Label} (of type {bindable.GetType().GetRealTypeName()}) not assignable to value {intData} ({intData.GetType().Name})",
+                                                            LoggingTarget.Runtime, LogLevel.Important);
                                                         continue;
-                                                    }
 
-                                                    Logger.Log(
-                                                        $@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {doubleData.GetType().Name}",
-                                                        LoggingTarget.Runtime, LogLevel.Important);
+                                                    default:
+                                                        Logger.Log(
+                                                            $@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {intData.GetType().Name}",
+                                                            LoggingTarget.Runtime, LogLevel.Important);
+                                                        continue;
+                                                }
+                                            }
+
+                                            if (node.AsValue().TryGetValue(out double doubleData))
+                                            {
+                                                if (paramValue is BindableNumber<double> bParamValue)
+                                                {
+                                                    bParamValue.Value = doubleData;
                                                     continue;
                                                 }
 
-                                                if (node.AsValue().TryGetValue(out bool boolData))
-                                                {
-                                                    if (paramValue is BindableBool bParamValue)
-                                                    {
-                                                        bParamValue.Value = boolData;
-                                                        continue;
-                                                    }
+                                                Logger.Log(
+                                                    $@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {doubleData.GetType().Name}",
+                                                    LoggingTarget.Runtime, LogLevel.Important);
+                                                continue;
+                                            }
 
-                                                    Logger.Log($@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {boolData.GetType().Name}",
-                                                        LoggingTarget.Runtime, LogLevel.Important);
+                                            if (node.AsValue().TryGetValue(out bool boolData))
+                                            {
+                                                if (paramValue is BindableBool bParamValue)
+                                                {
+                                                    bParamValue.Value = boolData;
+                                                    continue;
                                                 }
+
+                                                Logger.Log($@"Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {boolData.GetType().Name}",
+                                                    LoggingTarget.Runtime, LogLevel.Important);
                                             }
                                         }
                                     }
-
-                                    modInstances.Add(modInstance);
+                                    else
+                                    {
+                                        Logger.Log(@$"Couldn't parse mod parameter(s) {modAcronym}, ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                    }
                                 }
-
-                                if (!parseSuccess)
-                                    break;
 
                                 if (!ModUtils.CheckCompatibleSet(modInstances))
                                 {
