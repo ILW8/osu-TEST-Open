@@ -45,7 +45,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
-        private MultiplayerRoomStateBroadcasterReal mpRoomStateBroadcasterReal = null!;
+        private MultiplayerRoomStateBroadcaster mpRoomStateBroadcaster = null!;
 
         public override bool? ApplyModTrackAdjustments => true;
 
@@ -255,7 +255,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
             Scheduler.AddOnce(() =>
             {
-                broadcastServer.Add(mpRoomStateBroadcasterReal = new MultiplayerRoomStateBroadcasterReal(Room));
+                broadcastServer.Add(mpRoomStateBroadcaster = new MultiplayerRoomStateBroadcaster(Room));
             });
         }
 
@@ -337,7 +337,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
-            broadcastServer.Remove(mpRoomStateBroadcasterReal);
+            broadcastServer.Remove(mpRoomStateBroadcaster);
 
             // Should be a noop in most cases, but let's ensure beyond doubt that the beatmap is in a correct state.
             updateWorkingBeatmap();

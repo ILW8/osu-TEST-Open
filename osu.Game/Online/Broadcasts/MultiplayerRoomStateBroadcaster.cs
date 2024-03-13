@@ -1,90 +1,64 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
-using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Game.Online.API.Requests.Responses;
-using osu.Game.Online.Spectator;
-using osu.Game.Rulesets.Mods;
-using osu.Game.Screens.Play.HUD;
-using osu.Game.Users;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace osu.Game.Online.Broadcasts
 {
-    // todo: multiplayerGAMEPLAYstatebroadcaster instead? or MultiplayerSpectatorStateBroadcaster?
-    public partial class MultiplayerRoomStateBroadcaster : GameStateBroadcaster<TheRealMultiplayerRoomState>
+    public partial class MultiplayerRoomStateBroadcaster : GameStateBroadcaster<MultiplayerRoomWsState>
     {
-        public override string Type => @"MultiplayerSpectatedPlayersState";
-        public sealed override TheRealMultiplayerRoomState Message { get; } = new TheRealMultiplayerRoomState();
+        public override string Type => @"MultiplayerRoomState";
+        public sealed override MultiplayerRoomWsState Message { get; } = new MultiplayerRoomWsState();
 
-        private readonly Dictionary<int, SpectatorScoreProcessor> scoreProcessors = new Dictionary<int, SpectatorScoreProcessor>();
-        private readonly Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers;
+        [Resolved]
+        private MultiplayerClient multiplayerClient { get; set; } = null!;
 
-        public MultiplayerRoomStateBroadcaster(Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers)
+        public MultiplayerRoomStateBroadcaster(Room room)
         {
-            this.trackedUsers = trackedUsers;
+            Message.RoomName.BindTo(room.Name);
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
+            multiplayerClient.RoomUpdated += onRoomUpdated;
 
-            foreach (var item in trackedUsers.Select((value, i) => new { i, value }))
+            Message.RoomName.BindValueChanged(valueChangedEvent =>
             {
-                var trackedUser = item.value;
-                var yes = Message.PlayerStates[trackedUser.Value.ScoreProcessor.UserId] = new RoomPlayerState(trackedUser.Value.User.User ?? new APIUser
-                              {
-                                  Id = 0,
-                                  Username = @"??Unknown User??"
-                              },
-                              item.i,
-                              trackedUser.Value.Team);
+                if (valueChangedEvent.OldValue == valueChangedEvent.NewValue)
+                    return;
 
-                yes.TotalScore.BindTo(trackedUser.Value.ScoreProcessor.TotalScore);
-                yes.TotalScore.ValueChanged += _ => Broadcast();
+                Broadcast();
+            });
 
-                yes.Accuracy.BindTo(trackedUser.Value.ScoreProcessor.Accuracy);
-                yes.Accuracy.ValueChanged += _ => Broadcast();
-
-                yes.Combo.BindTo(trackedUser.Value.ScoreProcessor.Combo);
-                yes.Combo.ValueChanged += _ => Broadcast();
-
-                trackedUser.Value.ScoreProcessor.ModsBindable.BindValueChanged(valueChangedEvent =>
-                {
-                    yes.Mods.Clear();
-                    yes.Mods.AddRange(valueChangedEvent.NewValue);
-                }, true);
-
-                yes.HighestCombo.BindTo(trackedUser.Value.ScoreProcessor.HighestCombo);
-                yes.HighestCombo.ValueChanged += _ => Broadcast();
-            }
+            Broadcast();
         }
-    }
 
-    public class TheRealMultiplayerRoomState
-    {
-        public readonly Dictionary<int, RoomPlayerState> PlayerStates = new Dictionary<int, RoomPlayerState>();
-    }
-
-    public class RoomPlayerState
-    {
-        public RoomPlayerState(IUser user, int slotIndex, int? teamID)
+        protected override void Dispose(bool isDisposing)
         {
-            Username = user.Username;
-            UserID.Value = user.OnlineID;
-            SlotIndex.Value = slotIndex;
-            TeamID = teamID;
+            multiplayerClient.RoomUpdated -= onRoomUpdated;
+
+            base.Dispose(isDisposing);
         }
 
-        public readonly string Username;
-        public readonly BindableInt UserID = new BindableInt(); // using BindableInt instead of int because int doesn't appear when value == 0 in output json...
-        public readonly int? TeamID;
-        public readonly BindableInt SlotIndex = new BindableInt();
-        public readonly BindableLong TotalScore = new BindableLong();
-        public readonly BindableDouble Accuracy = new BindableDouble();
-        public readonly BindableInt Combo = new BindableInt();
-        public readonly List<Mod> Mods = new List<Mod>();
-        public readonly BindableInt HighestCombo = new BindableInt();
+        private void onRoomUpdated()
+        {
+            var newState = multiplayerClient.Room?.State ?? MultiplayerRoomState.Closed;
+            if (newState == Message.RoomState)
+                return;
+
+            Message.RoomState = newState;
+
+            Broadcast();
+        }
+    }
+
+    public class MultiplayerRoomWsState
+    {
+        public readonly Bindable<string> RoomName = new Bindable<string>();
+        public MultiplayerRoomState RoomState = MultiplayerRoomState.Open;
     }
 }

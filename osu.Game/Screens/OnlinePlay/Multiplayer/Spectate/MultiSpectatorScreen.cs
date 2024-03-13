@@ -31,7 +31,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
-        private MultiplayerRoomStateBroadcaster mpRoomStateBroadcaster = null!;
+        private MultiplayerGameplayStateBroadcaster mpGameplayStateBroadcaster = null!;
 
         // Isolates beatmap/ruleset to this screen.
         public override bool DisallowExternalBeatmapRulesetChanges => true;
@@ -158,7 +158,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     }, scoreDisplayContainer.Add);
                 }
 
-                broadcastServer.Add(mpRoomStateBroadcaster = new MultiplayerRoomStateBroadcaster(leaderboard.UserScores));
+                broadcastServer.Add(mpGameplayStateBroadcaster = new MultiplayerGameplayStateBroadcaster(leaderboard.UserScores));
             });
 
             LoadComponentAsync(new GameplayChatDisplay(room)
@@ -179,7 +179,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
-            broadcastServer.Remove(mpRoomStateBroadcaster);
+            broadcastServer.Remove(mpGameplayStateBroadcaster);
             base.OnSuspending(e);
         }
 
