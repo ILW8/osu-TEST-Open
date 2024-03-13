@@ -3,6 +3,7 @@
 
 using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Game.IO.Serialization;
@@ -28,6 +29,7 @@ namespace osu.Game.Online.Broadcasts
 
                 serializationSettings = JsonSerializableExtensions.CreateGlobalSettings();
                 serializationSettings.DefaultValueHandling = DefaultValueHandling.Include;
+                serializationSettings.Converters.Add(new StringEnumConverter());
                 return serializationSettings;
             }
         }
