@@ -59,7 +59,7 @@ namespace osu.Game.Online.Chat
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
-        private MultiplayerChatBroadcaster chatBroadcaster = null!;
+        private readonly MultiplayerChatBroadcaster chatBroadcaster;
 
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
@@ -245,7 +245,10 @@ namespace osu.Game.Online.Chat
                             case @"timer":
                                 if (parts[2] == @"abort")
                                 {
-                                    countdownUpdateDelegate?.Cancel();
+                                    if (countdownUpdateDelegate == null)
+                                        break;
+
+                                    countdownUpdateDelegate.Cancel();
                                     countdownUpdateDelegate = null;
 
                                     Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
@@ -477,7 +480,7 @@ namespace osu.Game.Online.Chat
             channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
 
             if (secondsRemaining > 0)
-                Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
+                countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
         }
 
         private void addPlaylistItem(APIBeatmap beatmapInfo)
