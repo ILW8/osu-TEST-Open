@@ -3,8 +3,10 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Play.HUD;
@@ -19,6 +21,9 @@ namespace osu.Game.Online.Broadcasts
 
         private readonly Dictionary<int, SpectatorScoreProcessor> scoreProcessors = new Dictionary<int, SpectatorScoreProcessor>();
         private readonly Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers;
+
+        [Resolved]
+        private MultiplayerClient multiplayerClient { get; set; } = null!;
 
         public MultiplayerGameplayStateBroadcaster(Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers)
         {
@@ -58,6 +63,28 @@ namespace osu.Game.Online.Broadcasts
                 yes.HighestCombo.BindTo(trackedUser.Value.ScoreProcessor.HighestCombo);
                 yes.HighestCombo.ValueChanged += _ => Broadcast();
             }
+
+            multiplayerClient.RoomUpdated += onRoomUpdated;
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            multiplayerClient.RoomUpdated -= onRoomUpdated;
+
+            base.Dispose(isDisposing);
+        }
+
+        private void onRoomUpdated()
+        {
+            foreach (MultiplayerRoomUser roomUser in multiplayerClient.Room?.Users ?? System.Array.Empty<MultiplayerRoomUser>())
+            {
+                if (Message.PlayerStates.TryGetValue(roomUser.UserID, out var roomPlayerState))
+                {
+                    roomPlayerState.UserState = roomUser.State;
+                }
+            }
+
+            Broadcast();
         }
     }
 
@@ -80,6 +107,7 @@ namespace osu.Game.Online.Broadcasts
         public readonly BindableInt UserID = new BindableInt(); // using BindableInt instead of int because int doesn't appear when value == 0 in output json...
         public readonly int? TeamID;
         public readonly BindableInt SlotIndex = new BindableInt();
+        public MultiplayerUserState UserState;
         public readonly BindableLong TotalScore = new BindableLong();
         public readonly BindableDouble Accuracy = new BindableDouble();
         public readonly BindableInt Combo = new BindableInt();
