@@ -386,6 +386,8 @@ namespace osu.Game.Online.Chat
                                                     LoggingTarget.Runtime, LogLevel.Important);
                                             }
                                         }
+
+                                        modInstances.Add(modInstance);
                                     }
                                     else
                                     {
