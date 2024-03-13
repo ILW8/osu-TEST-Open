@@ -19,6 +19,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.IO.Stores;
+using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Testing;
 using osu.Framework.Timing;
@@ -27,6 +28,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -38,6 +40,27 @@ using osu.Game.Tests.Rulesets;
 
 namespace osu.Game.Tests.Visual
 {
+    public partial class DummyGameStateBroadcastServer : CompositeDrawable, IGameStateBroadcastServer
+    {
+        public void Add(GameStateBroadcaster broadcaster)
+            => AddInternal(broadcaster);
+
+        public void AddRange(IEnumerable<GameStateBroadcaster> broadcasters)
+            => AddRangeInternal(broadcasters);
+
+        public void Remove(GameStateBroadcaster broadcaster)
+            => RemoveInternal(broadcaster, true);
+
+        public void Broadcast(string message)
+        {
+            Logger.Log($"[TestGameStateBroadcaster] {message}", LoggingTarget.Runtime, LogLevel.Debug);
+        }
+
+        public void Broadcast(ReadOnlyMemory<byte> message)
+        {
+        }
+    }
+
     public abstract partial class OsuTestScene : TestScene
     {
         [Cached]
@@ -180,6 +203,20 @@ namespace osu.Game.Tests.Visual
             var parentMods = Parent!.Dependencies.Get<Bindable<IReadOnlyList<Mod>>>();
             parentMods.Value = SelectedMods.Value;
             SelectedMods.BindTo(parentMods);
+
+            LoadComponentAsync(new DummyGameStateBroadcastServer(), loaded =>
+            {
+                Dependencies.CacheAs<IGameStateBroadcastServer>(loaded);
+
+                loaded.AddRange(new GameStateBroadcaster[]
+                {
+                    new RulesetStateBroadcaster(),
+                    new BeatmapStateBroadcaster(),
+                    new UserActivityStateBroadcaster(),
+                });
+
+                Add(loaded);
+            });
         }
 
         protected override Container<Drawable> Content => content ?? base.Content;

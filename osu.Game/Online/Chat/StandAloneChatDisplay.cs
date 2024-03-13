@@ -27,6 +27,7 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
@@ -54,6 +55,11 @@ namespace osu.Game.Online.Chat
 
         [Cached]
         public readonly Bindable<Channel> Channel = new Bindable<Channel>();
+
+        [Resolved]
+        private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
+
+        private MultiplayerChatBroadcaster chatBroadcaster = null!;
 
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
@@ -133,6 +139,7 @@ namespace osu.Game.Online.Chat
                 TextBox.OnCommit += postMessage;
             }
 
+            chatBroadcaster = new MultiplayerChatBroadcaster();
             Channel.BindValueChanged(channelChanged);
         }
 
@@ -152,6 +159,16 @@ namespace osu.Game.Online.Chat
                 countdownUpdateDelegate?.Cancel();
                 countdownUpdateDelegate = null;
             };
+            Scheduler.Add(() => broadcastServer.Add(chatBroadcaster));
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (IsDisposed)
+                return;
+
+            Scheduler.Add(() => broadcastServer.Remove(chatBroadcaster));
+            base.Dispose(isDisposing);
         }
 
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
@@ -502,7 +519,11 @@ namespace osu.Game.Online.Chat
             });
         }
 
-        protected virtual ChatLine CreateMessage(Message message) => new StandAloneMessage(message);
+        protected virtual ChatLine CreateMessage(Message message)
+        {
+            chatBroadcaster.AddNewMessage(message);
+            return new StandAloneMessage(message);
+        }
 
         private void channelChanged(ValueChangedEvent<Channel> e)
         {
@@ -519,6 +540,7 @@ namespace osu.Game.Online.Chat
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
 
+            chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);
         }
 

@@ -27,6 +27,7 @@ using osu.Game.Extensions;
 using osu.Game.Graphics.Containers;
 using osu.Game.IO.Archives;
 using osu.Game.Online.API;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -112,6 +113,13 @@ namespace osu.Game.Screens.Play
 
         [Resolved]
         private OsuGameBase game { get; set; }
+
+        protected virtual bool BroadcastPlayerState => true;
+
+        [Resolved]
+        private IGameStateBroadcastServer broadcastServer { get; set; }
+
+        private PlayerStateBroadcaster playerStateBroadcaster;
 
         public GameplayState GameplayState { get; private set; }
 
@@ -1105,6 +1113,9 @@ namespace osu.Game.Screens.Play
 
             StartGameplay();
             OnGameplayStarted?.Invoke();
+
+            if (BroadcastPlayerState)
+                broadcastServer.Add(playerStateBroadcaster = new PlayerStateBroadcaster(ScoreProcessor, HealthProcessor));
         }
 
         /// <summary>
@@ -1127,6 +1138,8 @@ namespace osu.Game.Screens.Play
             screenSuspension?.RemoveAndDisposeImmediately();
 
             fadeOut();
+            if (BroadcastPlayerState)
+                broadcastServer.Remove(playerStateBroadcaster);
             base.OnSuspending(e);
         }
 
@@ -1156,7 +1169,6 @@ namespace osu.Game.Screens.Play
             musicController.ResetTrackAdjustments();
 
             fadeOut();
-
             return base.OnExiting(e);
         }
 

@@ -206,6 +206,9 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.ComboColourNormalisationAmount, 0.2f, 0f, 1f, 0.01f);
             SetDefault<UserStatus?>(OsuSetting.UserOnlineStatus, null);
+            SetDefault(OsuSetting.EditorWaveformOpacity, 0.25f);
+
+            SetDefault(OsuSetting.BroadcastGameState, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -435,6 +438,7 @@ namespace osu.Game.Configuration
         TouchDisableGameplayTaps,
         ModSelectTextSearchStartsActive,
         UserOnlineStatus,
-        MultiplayerRoomFilter
+        MultiplayerRoomFilter,
+        BroadcastGameState,
     }
 }

@@ -39,6 +39,8 @@ namespace osu.Game.Online.Spectator
         /// </summary>
         public readonly BindableInt Combo = new BindableInt();
 
+        public readonly BindableInt HighestCombo = new BindableInt();
+
         /// <summary>
         /// The <see cref="ScoringMode"/> used to calculate scores.
         /// </summary>
@@ -48,6 +50,9 @@ namespace osu.Game.Online.Spectator
         /// The applied <see cref="Mod"/>s.
         /// </summary>
         public IReadOnlyList<Mod> Mods => scoreInfo?.Mods ?? Array.Empty<Mod>();
+
+        private readonly Bindable<IEnumerable<Mod>> modsBindable = new Bindable<IEnumerable<Mod>>(Array.Empty<Mod>());
+        public IBindable<IEnumerable<Mod>> ModsBindable = new Bindable<IEnumerable<Mod>>();
 
         public Func<ScoringMode, long> GetDisplayScore => mode => scoreInfo?.GetDisplayScore(mode) ?? 0;
 
@@ -70,14 +75,14 @@ namespace osu.Game.Online.Spectator
 
         private readonly IBindableDictionary<int, SpectatorState> spectatorStates = new BindableDictionary<int, SpectatorState>();
         private readonly List<TimedFrame> replayFrames = new List<TimedFrame>();
-        private readonly int userId;
+        public readonly int UserId;
 
         private SpectatorState? spectatorState;
         private ScoreInfo? scoreInfo;
 
         public SpectatorScoreProcessor(int userId)
         {
-            this.userId = userId;
+            UserId = userId;
         }
 
         protected override void LoadComplete()
@@ -85,6 +90,7 @@ namespace osu.Game.Online.Spectator
             base.LoadComplete();
 
             Mode.BindValueChanged(_ => UpdateScore());
+            ModsBindable.BindTo(modsBindable);
 
             spectatorStates.BindTo(spectatorClient.WatchedUserStates);
             spectatorStates.BindCollectionChanged(onSpectatorStatesChanged, true);
@@ -94,7 +100,7 @@ namespace osu.Game.Online.Spectator
 
         private void onSpectatorStatesChanged(object? sender, NotifyDictionaryChangedEventArgs<int, SpectatorState> e)
         {
-            if (!spectatorStates.TryGetValue(userId, out var userState) || userState.BeatmapID == null || userState.RulesetID == null)
+            if (!spectatorStates.TryGetValue(UserId, out var userState) || userState.BeatmapID == null || userState.RulesetID == null)
             {
                 scoreInfo = null;
                 spectatorState = null;
@@ -117,11 +123,12 @@ namespace osu.Game.Online.Spectator
                 Ruleset = rulesetInfo,
                 Mods = userState.Mods.Select(m => m.ToMod(ruleset)).ToArray()
             };
+            modsBindable.Value = scoreInfo.Mods;
         }
 
         private void onNewFrames(int incomingUserId, FrameDataBundle bundle)
         {
-            if (incomingUserId != userId)
+            if (incomingUserId != UserId)
                 return;
 
             Schedule(() =>
@@ -156,6 +163,7 @@ namespace osu.Game.Online.Spectator
             scoreInfo.TotalScore = frame.Header.TotalScore;
 
             Accuracy.Value = frame.Header.Accuracy;
+            HighestCombo.Value = frame.Header.MaxCombo;
             Combo.Value = frame.Header.Combo;
             TotalScore.Value = frame.Header.TotalScore;
         }
