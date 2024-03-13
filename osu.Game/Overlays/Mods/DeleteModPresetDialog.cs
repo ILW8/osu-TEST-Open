@@ -7,9 +7,10 @@ using osu.Game.Rulesets.Mods;
 
 namespace osu.Game.Overlays.Mods
 {
-    public partial class DeleteModPresetDialog : DangerousActionDialog
+    public partial class DeleteModPresetDialog<T> : DangerousActionDialog
+        where T : class, IModPreset
     {
-        public DeleteModPresetDialog(Live<ModPreset> modPreset)
+        public DeleteModPresetDialog(Live<T> modPreset)
         {
             BodyText = modPreset.PerformRead(preset => preset.Name);
             DangerousAction = () => modPreset.PerformWrite(preset => preset.DeletePending = true);

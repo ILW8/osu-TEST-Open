@@ -42,16 +42,16 @@ namespace osu.Game.Tests.Visual.UserInterface
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Spacing = new Vector2(0, 5),
-                ChildrenEnumerable = createTestPresets().Select(preset => new ModPresetPanel(preset.ToLiveUnmanaged()))
+                ChildrenEnumerable = createTestPresets().Select(preset => new ModPresetPanel<ModPreset>(preset.ToLiveUnmanaged()))
             });
         }
 
         [Test]
         public void TestPresetSelectionStateAfterExternalModChanges()
         {
-            ModPresetPanel? panel = null;
+            ModPresetPanel<ModPreset>? panel = null;
 
-            AddStep("create panel", () => Child = panel = new ModPresetPanel(createTestPresets().First().ToLiveUnmanaged())
+            AddStep("create panel", () => Child = panel = new ModPresetPanel<ModPreset>(createTestPresets().First().ToLiveUnmanaged())
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
@@ -95,9 +95,9 @@ namespace osu.Game.Tests.Visual.UserInterface
         [Test]
         public void TestActivatingPresetTogglesIncludedMods()
         {
-            ModPresetPanel? panel = null;
+            ModPresetPanel<ModPreset>? panel = null;
 
-            AddStep("create panel", () => Child = panel = new ModPresetPanel(createTestPresets().First().ToLiveUnmanaged())
+            AddStep("create panel", () => Child = panel = new ModPresetPanel<ModPreset>(createTestPresets().First().ToLiveUnmanaged())
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,

@@ -18,7 +18,8 @@ using Realms;
 
 namespace osu.Game.Overlays.Mods
 {
-    public partial class ModPresetColumn : ModSelectColumn
+    public partial class ModPresetColumn<T> : ModSelectColumn
+        where T : RealmObject, IModPreset, new()
     {
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
@@ -34,8 +35,8 @@ namespace osu.Game.Overlays.Mods
             AccentColour = colours.Orange1;
             HeaderText = ModSelectOverlayStrings.PersonalPresets;
 
-            AddPresetButton addPresetButton;
-            ItemsFlow.Add(addPresetButton = new AddPresetButton());
+            AddPresetButton<T> addPresetButton;
+            ItemsFlow.Add(addPresetButton = new AddPresetButton<T>());
             ItemsFlow.SetLayoutPosition(addPresetButton, float.PositiveInfinity);
         }
 
@@ -50,13 +51,14 @@ namespace osu.Game.Overlays.Mods
 
         private IDisposable? presetSubscription;
 
+        // actually just a real entrypoit to modpresetcolumn
         private void rulesetChanged()
         {
             presetSubscription?.Dispose();
             presetSubscription = realm.RegisterForNotifications(r =>
-                r.All<ModPreset>()
-                 .Filter($"{nameof(ModPreset.Ruleset)}.{nameof(RulesetInfo.ShortName)} == $0"
-                         + $" && {nameof(ModPreset.DeletePending)} == false", ruleset.Value.ShortName)
+                r.All<T>()
+                 .Filter($"{nameof(IModPreset.Ruleset)}.{nameof(RulesetInfo.ShortName)} == $0"
+                         + $" && {nameof(IModPreset.DeletePending)} == false", ruleset.Value.ShortName)
                  .OrderBy(preset => preset.Name), asyncLoadPanels);
         }
 
@@ -65,7 +67,7 @@ namespace osu.Game.Overlays.Mods
         private Task? latestLoadTask;
         internal bool ItemsLoaded => latestLoadTask?.IsCompleted == true;
 
-        private void asyncLoadPanels(IRealmCollection<ModPreset> presets, ChangeSet? changes)
+        private void asyncLoadPanels(IRealmCollection<T> presets, ChangeSet? changes)
         {
             cancellationTokenSource?.Cancel();
 
@@ -79,7 +81,7 @@ namespace osu.Game.Overlays.Mods
                 return;
             }
 
-            latestLoadTask = LoadComponentsAsync(presets.Select(p => new ModPresetPanel(p.ToLive(realm))
+            latestLoadTask = LoadComponentsAsync(presets.Select(p => new ModPresetPanel<T>(p.ToLive(realm))
             {
                 Shear = Vector2.Zero
             }), loaded =>
@@ -90,7 +92,7 @@ namespace osu.Game.Overlays.Mods
 
             void removeAndDisposePresetPanels()
             {
-                foreach (var panel in ItemsFlow.OfType<ModPresetPanel>().ToArray())
+                foreach (var panel in ItemsFlow.OfType<ModPresetPanel<T>>().ToArray())
                     panel.RemoveAndDisposeImmediately();
             }
         }

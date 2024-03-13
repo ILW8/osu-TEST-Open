@@ -18,9 +18,10 @@ using osu.Game.Rulesets.Mods;
 
 namespace osu.Game.Overlays.Mods
 {
-    public partial class ModPresetPanel : ModSelectPanel, IHasCustomTooltip<ModPreset>, IHasContextMenu, IHasPopover
+    public partial class ModPresetPanel<T> : ModSelectPanel, IHasCustomTooltip<IModPreset>, IHasContextMenu, IHasPopover
+        where T : class, IModPreset
     {
-        public readonly Live<ModPreset> Preset;
+        public readonly Live<T> Preset;
 
         public override BindableBool Active { get; } = new BindableBool();
 
@@ -32,7 +33,7 @@ namespace osu.Game.Overlays.Mods
 
         private ModSettingChangeTracker? settingChangeTracker;
 
-        public ModPresetPanel(Live<ModPreset> preset)
+        public ModPresetPanel(Live<T> preset)
         {
             Preset = preset;
 
@@ -101,8 +102,8 @@ namespace osu.Game.Overlays.Mods
 
         #region IHasCustomTooltip
 
-        public ModPreset TooltipContent => Preset.Value;
-        public ITooltip<ModPreset> GetCustomTooltip() => new ModPresetTooltip(ColourProvider);
+        public IModPreset TooltipContent => Preset.Value;
+        public ITooltip<IModPreset> GetCustomTooltip() => new ModPresetTooltip(ColourProvider);
 
         #endregion
 
@@ -111,7 +112,7 @@ namespace osu.Game.Overlays.Mods
         public MenuItem[] ContextMenuItems => new MenuItem[]
         {
             new OsuMenuItem(CommonStrings.ButtonsEdit, MenuItemType.Highlighted, this.ShowPopover),
-            new OsuMenuItem(CommonStrings.ButtonsDelete, MenuItemType.Destructive, () => dialogOverlay?.Push(new DeleteModPresetDialog(Preset))),
+            new OsuMenuItem(CommonStrings.ButtonsDelete, MenuItemType.Destructive, () => dialogOverlay?.Push(new DeleteModPresetDialog<T>(Preset))),
         };
 
         #endregion
@@ -123,6 +124,6 @@ namespace osu.Game.Overlays.Mods
             settingChangeTracker?.Dispose();
         }
 
-        public Popover GetPopover() => new EditPresetPopover(Preset);
+        public Popover GetPopover() => new EditPresetPopover<T>(Preset);
     }
 }
