@@ -305,7 +305,7 @@ namespace osu.Game.Online.Chat
                                             break;
                                         }
 
-                                        for (int i = 0; i < sourceProperties.Length; i++)
+                                        for (int i = 0; i < Math.Min(sourceProperties.Length, modParams.Count); i++)
                                         {
                                             var node = modParams[i];
 
