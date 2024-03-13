@@ -15,8 +15,8 @@ namespace osu.Game.Online.Broadcasts
     // todo: multiplayerGAMEPLAYstatebroadcaster instead? or MultiplayerSpectatorStateBroadcaster?
     public partial class MultiplayerRoomStateBroadcaster : GameStateBroadcaster<TheRealMultiplayerRoomState>
     {
-        public override string Type => @"MultiplayerRoomState";
-        public override TheRealMultiplayerRoomState Message { get; } = new TheRealMultiplayerRoomState();
+        public override string Type => @"MultiplayerSpectatedPlayersState";
+        public sealed override TheRealMultiplayerRoomState Message { get; } = new TheRealMultiplayerRoomState();
 
         private readonly Dictionary<int, SpectatorScoreProcessor> scoreProcessors = new Dictionary<int, SpectatorScoreProcessor>();
         private readonly Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers;

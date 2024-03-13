@@ -24,6 +24,7 @@ using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Input.Bindings;
 using osu.Game.Online.API;
+using osu.Game.Online.Broadcasts;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
@@ -40,6 +41,11 @@ namespace osu.Game.Screens.OnlinePlay.Match
     {
         [Cached(typeof(IBindable<PlaylistItem>))]
         public readonly Bindable<PlaylistItem> SelectedItem = new Bindable<PlaylistItem>();
+
+        [Resolved]
+        private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
+
+        private MultiplayerRoomStateBroadcasterReal mpRoomStateBroadcasterReal = null!;
 
         public override bool? ApplyModTrackAdjustments => true;
 
@@ -246,6 +252,11 @@ namespace osu.Game.Screens.OnlinePlay.Match
                 SelectedMods = { BindTarget = UserMods },
                 IsValidMod = _ => false
             });
+
+            Scheduler.AddOnce(() =>
+            {
+                broadcastServer.Add(mpRoomStateBroadcasterReal = new MultiplayerRoomStateBroadcasterReal(Room));
+            });
         }
 
         protected override void LoadComplete()
@@ -326,6 +337,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
+            broadcastServer.Remove(mpRoomStateBroadcasterReal);
+
             // Should be a noop in most cases, but let's ensure beyond doubt that the beatmap is in a correct state.
             updateWorkingBeatmap();
 
