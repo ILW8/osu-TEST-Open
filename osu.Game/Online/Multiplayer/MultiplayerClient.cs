@@ -400,7 +400,6 @@ namespace osu.Game.Online.Multiplayer
                 Debug.Assert(APIRoom != null);
 
                 Room.State = state;
-                Logger.Log($@"Room state: {state}", LoggingTarget.Runtime, LogLevel.Important);
 
                 switch (state)
                 {
