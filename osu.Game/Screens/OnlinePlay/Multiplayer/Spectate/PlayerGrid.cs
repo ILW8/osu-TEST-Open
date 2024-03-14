@@ -22,7 +22,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// A temporary limitation on the number of players, because only layouts up to 16 players are supported for a single screen.
         /// Todo: Can be removed in the future with scrolling support + performance improvements.
         /// </summary>
-        public const int MAX_PLAYERS = 16;
+        public const int MAX_PLAYERS = 6;
 
         private const float player_spacing = 6;
 

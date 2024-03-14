@@ -77,7 +77,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             this.room = room;
             this.users = users;
 
-            instances = new PlayerArea[Users.Count];
+            instances = new PlayerArea[6];
         }
 
         [BackgroundDependencyLoader]
@@ -136,8 +136,18 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 }
             };
 
-            for (int i = 0; i < Users.Count; i++)
-                grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock()));
+            for (int i = 0; i < 6; i++)
+                grid.Add(instances[i] = new PlayerArea(i < Users.Count ? Users[i] : 0, syncManager.CreateManagedClock()));
+
+            Scheduler.AddDelayed(() =>
+            {
+                // hack...
+                for (int i = Users.Count; i < 6; i++)
+                {
+                    syncManager.RemoveManagedClock(instances[i].SpectatorPlayerClock);
+                    instances[i].MarkInactive();
+                }
+            }, 1_000);
 
             LoadComponentAsync(leaderboard = new MultiSpectatorLeaderboard(users)
             {
@@ -145,7 +155,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             }, _ =>
             {
                 foreach (var instance in instances)
+                {
+                    if (instance.UserId == 0)
+                        continue;
+
                     leaderboard.AddClock(instance.UserId, instance.SpectatorPlayerClock);
+                }
 
                 leaderboardFlow.Insert(0, leaderboard);
 
@@ -224,6 +239,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             foreach (var instance in instances)
             {
                 if (instance.Score == null)
+                    continue;
+
+                if (instance.UserId == 0)
                     continue;
 
                 minFrameTimes.Add(instance.Score.Replay.Frames.MinBy(f => f.Time)?.Time ?? 0);
