@@ -12,7 +12,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Development;
 using osu.Framework.Graphics;
-using osu.Framework.Logging;
 using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -29,7 +28,7 @@ namespace osu.Game.Online.Multiplayer
 {
     public abstract partial class MultiplayerClient : Component, IMultiplayerClient, IMultiplayerRoomServer
     {
-        public bool ManualExitRequested = false;
+        public bool ManualExitRequested;
         public Action<Notification>? PostNotification { protected get; set; }
 
         public Action<Room, string>? PresentMatch { protected get; set; }
