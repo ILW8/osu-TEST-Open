@@ -25,6 +25,7 @@ using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -213,6 +214,46 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             if (Room == null || Client.LocalUser == null)
                 return;
 
+            if (Room.MatchState is TeamVersusRoomState)
+            {
+                var teamRedUsers = Room.Users.Where(u =>
+                {
+                    if (u.MatchState is TeamVersusUserState teamVersusUserState)
+                        return teamVersusUserState.TeamID == 0;
+
+                    return false;
+                });
+
+                var teamBlueUsers = Room.Users.Where(u =>
+                {
+                    if (u.MatchState is TeamVersusUserState teamVersusUserState)
+                        return teamVersusUserState.TeamID == 1;
+
+                    return false;
+                });
+
+                var multiplayerRoomUsers = teamRedUsers as MultiplayerRoomUser[] ?? teamRedUsers.ToArray();
+                foreach (var user in multiplayerRoomUsers)
+                    Room.Users.Remove(user);
+                Room.Users.AddRange(multiplayerRoomUsers);
+
+                var blueUsers = teamBlueUsers as MultiplayerRoomUser[] ?? teamBlueUsers.ToArray();
+                foreach (var user in blueUsers)
+                    Room.Users.Remove(user);
+                Room.Users.AddRange(blueUsers);
+            }
+
+            // move spectators to very bottom
+            for (int i = Room.Users.Count - 1; i >= 0; i--)
+            {
+                if (Room.Users[i].State != MultiplayerUserState.Spectating)
+                    continue;
+
+                var user = Room.Users[i];
+                Room.Users.RemoveAt(i);
+                Room.Users.Add(user);
+            }
+
             const double fade_time = 50;
 
             var currentItem = Playlist.GetCurrentItem();
@@ -366,11 +407,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
             private void performMove()
             {
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
                 Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
 
                 int newSlot;

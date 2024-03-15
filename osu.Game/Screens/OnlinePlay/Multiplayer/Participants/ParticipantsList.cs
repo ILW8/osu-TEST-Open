@@ -9,6 +9,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics.Containers;
+using osu.Game.Online.Multiplayer;
 using osuTK;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
@@ -41,48 +42,51 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
         {
             base.OnRoomUpdated();
 
-            if (Room == null)
-                panels.Clear();
-            else
+            Scheduler.AddDelayed(() =>
             {
-                // Remove panels for users no longer in the room.
-                foreach (ParticipantPanel p in panels.Where(p => Room.Users.All(u => !ReferenceEquals(p.User, u))))
+                if (Room == null)
+                    panels.Clear();
+                else
                 {
-                    p.Expire();
-                }
-
-                // Add panels for all users new to the room.
-                foreach (var user in Room.Users.Where(u => panels.SingleOrDefault(panel => panel.User.Equals(u)) == null))
-                    panels.Add(new ParticipantPanel(user));
-
-                // sort users
-                foreach ((var roomUser, int listPosition) in Room.Users.Select((value, i) => (value, i)))
-                {
-                    var panel = panels.SingleOrDefault(u => u.User.Equals(roomUser));
-
-                    if (panel != null)
-                        panels.SetLayoutPosition(panel, listPosition);
-                }
-
-                if (currentHostPanel != null && currentHostPanel.User.Equals(Room.Host)) return;
-
-                {
-                    // // Reset position of previous host back to normal, if one existing.
-                    // if (currentHostPanel != null && panels.Contains(currentHostPanel))
-                    //     panels.SetLayoutPosition(currentHostPanel, 0);
-
-                    currentHostPanel = null;
-
-                    // Change position of new host to display above all participants.
-                    if (Room.Host != null)
+                    // Remove panels for users no longer in the room or spectators
+                    foreach (ParticipantPanel p in panels.Where(p => Room.Users.All(u => !ReferenceEquals(p.User, u) || p.User.State == MultiplayerUserState.Spectating)))
                     {
-                        currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(Room.Host));
+                        p.Expire();
+                    }
 
-                        // if (currentHostPanel != null)
-                        //     panels.SetLayoutPosition(currentHostPanel, -1);
+                    // Add panels for all users new to the room except spectators
+                    foreach (var user in Room.Users.Where(u => panels.SingleOrDefault(panel => panel.User.Equals(u)) == null && u.State != MultiplayerUserState.Spectating))
+                        panels.Add(new ParticipantPanel(user));
+
+                    // sort users
+                    foreach ((var roomUser, int listPosition) in Room.Users.Select((value, i) => (value, i)))
+                    {
+                        var panel = panels.SingleOrDefault(u => u.User.Equals(roomUser));
+
+                        if (panel != null)
+                            panels.SetLayoutPosition(panel, listPosition);
+                    }
+
+                    if (currentHostPanel != null && currentHostPanel.User.Equals(Room.Host)) return;
+
+                    {
+                        // // Reset position of previous host back to normal, if one existing.
+                        // if (currentHostPanel != null && panels.Contains(currentHostPanel))
+                        //     panels.SetLayoutPosition(currentHostPanel, 0);
+
+                        currentHostPanel = null;
+
+                        // Change position of new host to display above all participants.
+                        if (Room.Host != null)
+                        {
+                            currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(Room.Host));
+
+                            // if (currentHostPanel != null)
+                            //     panels.SetLayoutPosition(currentHostPanel, -1);
+                        }
                     }
                 }
-            }
+            }, 100);
         }
     }
 }
