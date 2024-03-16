@@ -208,14 +208,8 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
             windowModeDropdown.Current.BindValueChanged(_ =>
             {
-                if (windowModeDropdown.Current.Value == WindowMode.Windowed)
-                {
+                if (windowModeDropdown.Current.Value == WindowMode.Windowed && windowedResolutions[0] != sizeWindowed.Value)
                     windowedResolutions[0] = sizeWindowed.Value;
-                }
-                // else
-                // {
-                //     resolutions[0] = new Size(1, 1);
-                // }
 
                 updateDisplaySettingsVisibility();
                 updateScreenModeWarning();
@@ -311,7 +305,6 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         {
             fullscreenResolutionDropdown.CanBeShown.Value = resolutions.Count > 1 && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
             windowedResolutionDropdown.CanBeShown.Value = resolutions.Count > 1 && windowModeDropdown.Current.Value == WindowMode.Windowed;
-            // fullscreenResolutionDropdown.Current = windowModeDropdown.Current.Value == WindowMode.Windowed ? sizeWindowed : sizeFullscreen;
             displayDropdown.CanBeShown.Value = displayDropdown.Items.Count() > 1;
             minimiseOnFocusLossCheckbox.CanBeShown.Value = RuntimeInfo.IsDesktop && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
             safeAreaConsiderationsCheckbox.CanBeShown.Value = host.Window?.SafeAreaPadding.Value.Total != Vector2.Zero;
