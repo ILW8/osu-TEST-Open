@@ -14,7 +14,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
-using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Platform.Windows;
 using osu.Framework.Threading;
@@ -235,25 +234,34 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                                       .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
                                       .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
                                       .Select(m => m.Size)
-                                      .Except(resolutions)
-                                      .Distinct().ToArray();
+                                      .Distinct()
+                                      .ToList();
 
-                resolutions.ReplaceRange(1, resolutions.Count - 1, newItems);
-                windowedResolutions.ReplaceRange(1, windowedResolutions.Count - 1, newItems);
+                resolutions.ReplaceRange(1, resolutions.Count - 1, newItems.Where(item => item != resolutions[0]));
+                windowedResolutions.ReplaceRange(1, windowedResolutions.Count - 1, newItems.Where(item => item != windowedResolutions[0]));
 
                 updateDisplaySettingsVisibility();
             }), true);
 
             sizeWindowed.BindValueChanged(changeEvent =>
             {
-                Logger.Log($@"sizeWindowed changed: {changeEvent.OldValue} -> {changeEvent.NewValue}");
+                customWindowedResolutionUpdateDelegate?.Cancel();
+
                 if (resolutions.Contains(changeEvent.NewValue))
                     return;
 
-                // windowedResolutionDropdown.Current.
-
-                customWindowedResolutionUpdateDelegate?.Cancel();
-                customWindowedResolutionUpdateDelegate = Scheduler.AddDelayed(() => windowedResolutions[0] = changeEvent.NewValue, 100);
+                customWindowedResolutionUpdateDelegate = Scheduler.AddDelayed(() =>
+                {
+                    var newValues = currentDisplay.Value.DisplayModes
+                                                  .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
+                                                  .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
+                                                  .Select(m => m.Size)
+                                                  .Where(item => item != changeEvent.NewValue)
+                                                  .Prepend(changeEvent.NewValue)
+                                                  .Distinct()
+                                                  .ToList();
+                    windowedResolutions.ReplaceRange(0, windowedResolutions.Count, newValues);
+                }, 250);
             });
 
             scalingMode.BindValueChanged(_ =>
