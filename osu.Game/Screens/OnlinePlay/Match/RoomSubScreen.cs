@@ -337,8 +337,6 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
-            broadcastServer.Remove(mpRoomStateBroadcaster);
-
             // Should be a noop in most cases, but let's ensure beyond doubt that the beatmap is in a correct state.
             updateWorkingBeatmap();
 
@@ -562,6 +560,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         protected override void Dispose(bool isDisposing)
         {
+            broadcastServer.Remove(mpRoomStateBroadcaster);
+
             base.Dispose(isDisposing);
 
             userModsSelectOverlayRegistration?.Dispose();
