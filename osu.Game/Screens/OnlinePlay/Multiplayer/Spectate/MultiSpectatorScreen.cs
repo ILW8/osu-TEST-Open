@@ -180,6 +180,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             {
                 Expanded = { Value = true },
             }, chat => leaderboardFlow.Insert(1, chat));
+
+            multiplayerClient.RoomUpdated += onRoomUpdated;
         }
 
         protected override void LoadComplete()
@@ -190,6 +192,30 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // Start with adjustments from the first player to keep a sane state.
             bindAudioAdjustments(instances.First());
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            multiplayerClient.RoomUpdated -= onRoomUpdated;
+
+            base.Dispose(isDisposing);
+        }
+
+        private void onRoomUpdated()
+        {
+            if (multiplayerClient.LocalUser?.State != MultiplayerUserState.Spectating)
+                return;
+
+            var userInResultsState = multiplayerClient.Room?.Users.FirstOrDefault(u => u.State == MultiplayerUserState.Results);
+            if (userInResultsState == null)
+                return;
+
+            // if we reach this state, means server has set all users to Results state. Schedule screen stack exit
+            Scheduler.AddDelayed(() =>
+            {
+                if (this.IsCurrentScreen())
+                    this.Exit();
+            }, 10_000);
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
