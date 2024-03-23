@@ -398,6 +398,11 @@ namespace osu.Game.Online.Multiplayer
 
                 Debug.Assert(APIRoom != null);
 
+                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open)
+                {
+                    state = MultiplayerRoomState.Results;
+                }
+
                 Room.State = state;
 
                 switch (state)

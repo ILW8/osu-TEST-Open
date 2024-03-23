@@ -24,6 +24,11 @@ namespace osu.Game.Online.Multiplayer
         Playing,
 
         /// <summary>
+        /// Gameplay has completed, but players are showing results.
+        /// </summary>
+        Results,
+
+        /// <summary>
         /// The room has been disbanded and closed.
         /// </summary>
         Closed
