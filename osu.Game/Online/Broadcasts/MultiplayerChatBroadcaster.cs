@@ -2,9 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Logging;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Users;
 
 namespace osu.Game.Online.Broadcasts
@@ -14,9 +18,13 @@ namespace osu.Game.Online.Broadcasts
         public override string Type => @"MultiplayerChatState";
         public override MultiplayerChatState Message { get; } = new MultiplayerChatState();
 
+        [Resolved]
+        protected MultiplayerClient Client { get; private set; } = null!;
+
         public void AddNewMessage(Message message)
         {
-            Message.ChatMessages.Add(new ChatMessage(message.Timestamp, message.Sender, message.Content));
+            var user = Client.Room?.Users.FirstOrDefault(u => u.UserID == message.Sender.Id) ?? null;
+            Message.ChatMessages.Add(new ChatMessage(message.Timestamp, message.Sender, message.Content, (user?.MatchState as TeamVersusUserState)?.TeamID));
         }
 
         protected override void LoadComplete()
@@ -44,13 +52,15 @@ namespace osu.Game.Online.Broadcasts
 
     public class ChatMessage
     {
-        public ChatMessage(DateTimeOffset messageTime, IUser user, string messageContent)
+        public ChatMessage(DateTimeOffset messageTime, IUser user, string messageContent, int? teamId = null)
         {
             MessageTime = messageTime;
             SenderName = user.Username;
             MessageContent = messageContent;
+            TeamId = teamId;
         }
 
+        public readonly int? TeamId;
         public readonly DateTimeOffset MessageTime;
         public readonly string SenderName;
         public readonly string MessageContent;
