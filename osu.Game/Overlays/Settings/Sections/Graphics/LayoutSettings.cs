@@ -39,7 +39,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         private Bindable<Size> sizeFullscreen = null!;
         private Bindable<Size> sizeWindowed = null!;
 
-        private readonly BindableList<Size> resolutions = new BindableList<Size>(new[] { new Size(1, 1) });
+        private readonly BindableList<Size> resolutions = new BindableList<Size>(new[] { new Size(9999, 9999) });
         private readonly BindableList<Size> windowedResolutions = new BindableList<Size>(new[] { new Size(800, 600) });
         private readonly IBindable<FullscreenCapability> fullscreenCapability = new Bindable<FullscreenCapability>(FullscreenCapability.Capable);
 
@@ -208,7 +208,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
             windowModeDropdown.Current.BindValueChanged(_ =>
             {
-                if (windowModeDropdown.Current.Value == WindowMode.Windowed && windowedResolutions[0] != sizeWindowed.Value)
+                if (windowModeDropdown.Current.Value == WindowMode.Windowed && windowedResolutions[0] != sizeWindowed.Value && !windowedResolutions.Contains(sizeWindowed.Value))
                     windowedResolutions[0] = sizeWindowed.Value;
 
                 updateDisplaySettingsVisibility();
@@ -423,7 +423,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
             {
                 protected override LocalisableString GenerateItemText(Size item)
                 {
-                    if (item == new Size(1, 1))
+                    if (item == new Size(9999, 9999))
                         return CommonStrings.Default;
 
                     if (ItemSource.Count > 0 && ItemSource[0] == item)
