@@ -15,6 +15,7 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Ranking;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 {
@@ -32,6 +33,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Whether a <see cref="Player"/> is loaded in the area.
         /// </summary>
         public bool PlayerLoaded => (stack?.CurrentScreen as Player)?.IsLoaded == true;
+
+        public bool InResultScreen => stack?.CurrentScreen is ResultsScreen;
+
+        public bool HasQuit { get; set; }
 
         /// <summary>
         /// The user id this <see cref="PlayerArea"/> corresponds to.

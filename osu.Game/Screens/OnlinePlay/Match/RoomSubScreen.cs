@@ -25,6 +25,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Input.Bindings;
 using osu.Game.Online.API;
 using osu.Game.Online.Broadcasts;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
@@ -85,6 +86,9 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
+
+        [Resolved]
+        private MultiplayerClient multiplayerClient { get; set; } = null!;
 
         [Resolved(canBeNull: true)]
         protected OnlinePlayScreen ParentScreen { get; private set; }
@@ -346,6 +350,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         public override void OnResuming(ScreenTransitionEvent e)
         {
+            (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
             base.OnResuming(e);
             updateWorkingBeatmap();
             beginHandlingTrack();
@@ -362,6 +367,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
             RoomManager?.PartRoom();
             Mods.Value = Array.Empty<Mod>();
+
+            broadcastServer.Remove(mpRoomStateBroadcaster);
 
             onLeaving();
 
@@ -560,8 +567,6 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         protected override void Dispose(bool isDisposing)
         {
-            broadcastServer.Remove(mpRoomStateBroadcaster);
-
             base.Dispose(isDisposing);
 
             userModsSelectOverlayRegistration?.Dispose();

@@ -46,6 +46,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         public bool AllPlayersLoaded => instances.All(p => p.PlayerLoaded);
 
+        /// <summary>
+        /// Whether all spectating players are showing results.
+        /// </summary>
+        public bool AllPlayersInResults => instances.Where(p => p.PlayerLoaded && !p.HasQuit).All(p => p.InResultScreen);
+
         protected override UserActivity InitialActivity => new UserActivity.SpectatingMultiplayerGame(Beatmap.Value.BeatmapInfo, Ruleset.Value);
 
         [Resolved]
@@ -206,16 +211,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             if (multiplayerClient.LocalUser?.State != MultiplayerUserState.Spectating)
                 return;
 
-            var userInResultsState = multiplayerClient.Room?.Users.FirstOrDefault(u => u.State == MultiplayerUserState.Results);
-            if (userInResultsState == null)
+            if (!AllPlayersInResults)
+            {
+                Scheduler.AddDelayed(onResultsReady, 200);
                 return;
+            }
 
-            // if we reach this state, means server has set all users to Results state. Schedule screen stack exit
+            // add conditional to wait for spectator players to all finish playing first
             Scheduler.AddDelayed(() =>
             {
                 if (!this.IsCurrentScreen()) return;
 
-                (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
                 this.Exit();
             }, 10_000);
         }
@@ -317,6 +323,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             var instance = instances.Single(i => i.UserId == userId);
 
             instance.FadeColour(colours.Gray4, 400, Easing.OutQuint);
+            instance.HasQuit = true;
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
 
