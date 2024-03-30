@@ -48,11 +48,6 @@ namespace osu.Game.Online.Chat
     /// </summary>
     public partial class StandAloneChatDisplay : CompositeDrawable
     {
-        // private class ModParameters
-        // {
-        //     public int[] Parameters { get; set; }
-        // }
-
         [Cached]
         public readonly Bindable<Channel> Channel = new Bindable<Channel>();
 
@@ -185,7 +180,7 @@ namespace osu.Game.Online.Chat
                 if (botMessageQueue.Count > 0)
                 {
                     (string text, Channel target) = botMessageQueue.Dequeue();
-                    channelManager?.PostMessage(text, target: target);
+                    channelManager?.PostMessage($@"[TESTOpenBot]: {text}", target: target);
                     Scheduler.AddDelayed(processMessageQueue, 1000);
                     return;
                 }
@@ -500,7 +495,6 @@ namespace osu.Game.Online.Chat
                 > 60 => countdownTimeRemaining.TotalMilliseconds % 60_000,
                 > 30 => countdownTimeRemaining.TotalMilliseconds % 30_000,
                 > 10 => countdownTimeRemaining.TotalMilliseconds % 10_000,
-                // > 5 => countdownTimeRemaining.TotalMilliseconds % 5_000,
                 _ => countdownTimeRemaining.TotalMilliseconds % 5_000
             };
 
