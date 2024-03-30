@@ -34,6 +34,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         private SettingsSlider<float> dimSlider = null!;
 
         private readonly Bindable<Display> currentDisplay = new Bindable<Display>();
+        private readonly BindableList<Size> currentDisplayModes = new BindableList<Size>();
 
         private Bindable<ScalingMode> scalingMode = null!;
         private Bindable<Size> sizeFullscreen = null!;
@@ -231,31 +232,15 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                                       .Distinct()
                                       .ToList();
 
-                resolutions.ReplaceRange(1, resolutions.Count - 1, newItems.Where(item => item != resolutions[0]));
-                windowedResolutions.ReplaceRange(1, windowedResolutions.Count - 1, newItems.Where(item => item != windowedResolutions[0]));
-
-                updateDisplaySettingsVisibility();
+                currentDisplayModes.ReplaceRange(0, currentDisplayModes.Count, newItems);
             }), true);
+
+            currentDisplayModes.BindCollectionChanged((_, _) => Schedule(updateResolutionsDelegate), true);
 
             sizeWindowed.BindValueChanged(changeEvent =>
             {
                 customWindowedResolutionUpdateDelegate?.Cancel();
-
-                if (resolutions.Contains(changeEvent.NewValue))
-                    return;
-
-                customWindowedResolutionUpdateDelegate = Scheduler.AddDelayed(() =>
-                {
-                    var newValues = currentDisplay.Value.DisplayModes
-                                                  .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
-                                                  .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
-                                                  .Select(m => m.Size)
-                                                  .Where(item => item != changeEvent.NewValue)
-                                                  .Prepend(changeEvent.NewValue)
-                                                  .Distinct()
-                                                  .ToList();
-                    windowedResolutions.ReplaceRange(0, windowedResolutions.Count, newValues);
-                }, 250);
+                customWindowedResolutionUpdateDelegate = Scheduler.AddDelayed(updateResolutionsDelegate, 250);
             });
 
             scalingMode.BindValueChanged(_ =>
@@ -308,6 +293,20 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
             displayDropdown.CanBeShown.Value = displayDropdown.Items.Count() > 1;
             minimiseOnFocusLossCheckbox.CanBeShown.Value = RuntimeInfo.IsDesktop && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
             safeAreaConsiderationsCheckbox.CanBeShown.Value = host.Window?.SafeAreaPadding.Value.Total != Vector2.Zero;
+        }
+
+        private void updateResolutionsDelegate()
+        {
+            resolutions.ReplaceRange(1, resolutions.Count - 1, currentDisplayModes);
+
+            var windowedDisplayModes = currentDisplayModes.ToList();
+            int indexCurrentResolution = windowedDisplayModes.IndexOf(sizeWindowed.Value);
+            if (indexCurrentResolution != -1)
+                windowedDisplayModes.RemoveAt(indexCurrentResolution);
+            windowedDisplayModes.Insert(0, sizeWindowed.Value);
+            windowedResolutions.ReplaceRange(0, windowedResolutions.Count, windowedDisplayModes);
+
+            updateDisplaySettingsVisibility();
         }
 
         private void updateScreenModeWarning()
@@ -428,7 +427,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
                     if (ItemSource.Count > 0 && ItemSource[0] == item)
                     {
-                        return (LocalisableString)$"Custom: {item.Width}x{item.Height}";
+                        return (LocalisableString)$"Current: {item.Width}x{item.Height}";
                     }
 
                     return $"{item.Width}x{item.Height}";
