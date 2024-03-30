@@ -36,6 +36,13 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         private readonly Bindable<Display> currentDisplay = new Bindable<Display>();
         private readonly BindableList<Size> currentDisplayModes = new BindableList<Size>();
 
+        private readonly List<Size> commonResolutions = new List<Size>
+        {
+            new Size(1280, 720),
+            new Size(1600, 900),
+            new Size(1920, 1080)
+        };
+
         private Bindable<ScalingMode> scalingMode = null!;
         private Bindable<Size> sizeFullscreen = null!;
         private Bindable<Size> sizeWindowed = null!;
@@ -299,7 +306,16 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         {
             resolutions.ReplaceRange(1, resolutions.Count - 1, currentDisplayModes);
 
+            // add common resolutions
             var windowedDisplayModes = currentDisplayModes.ToList();
+
+            foreach (Size resolution in commonResolutions.Where(resolution => !windowedDisplayModes.Contains(resolution) &&
+                                                                              resolution.Height < currentDisplayModes.Select(displayMode => displayMode.Height).Max() &&
+                                                                              resolution.Width < currentDisplayModes.Select(displayMode => displayMode.Width).Max()))
+                windowedDisplayModes.Add(resolution);
+            windowedDisplayModes = windowedDisplayModes.OrderByDescending(s => Math.Max(s.Height, s.Width)).ToList();
+
+            // add current window size as first element
             int indexCurrentResolution = windowedDisplayModes.IndexOf(sizeWindowed.Value);
             if (indexCurrentResolution != -1)
                 windowedDisplayModes.RemoveAt(indexCurrentResolution);
