@@ -40,6 +40,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
         {
             new Size(1280, 720),
             new Size(1600, 900),
+            new Size(1890, 989),
             new Size(1920, 1080)
         };
 
