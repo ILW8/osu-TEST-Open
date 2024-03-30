@@ -169,31 +169,30 @@ namespace osu.Game.Online.Chat
 
         private void processMessageQueue()
         {
-            for (;;)
+            lock (messageQueue)
             {
-                lock (messageQueue)
+                if (messageQueue.Count > 0)
                 {
-                    if (messageQueue.Count > 0)
-                    {
-                        (string text, var target) = messageQueue.Dequeue();
-                        channelManager?.PostMessage(text, target: target);
-                        break;
-                    }
+                    (string text, var target) = messageQueue.Dequeue();
+                    channelManager?.PostMessage(text, target: target);
+                    Scheduler.AddDelayed(processMessageQueue, 1000);
+                    return;
                 }
-
-                lock (botMessageQueue)
-                {
-                    if (botMessageQueue.Count > 0)
-                    {
-                        (string text, Channel target) = botMessageQueue.Dequeue();
-                        channelManager?.PostMessage(text, target: target);
-                    }
-                }
-
-                break;
             }
 
-            Scheduler.AddDelayed(processMessageQueue, 1000);
+            lock (botMessageQueue)
+            {
+                if (botMessageQueue.Count > 0)
+                {
+                    (string text, Channel target) = botMessageQueue.Dequeue();
+                    channelManager?.PostMessage(text, target: target);
+                    Scheduler.AddDelayed(processMessageQueue, 1000);
+                    return;
+                }
+            }
+
+            // no message has been posted
+            Scheduler.AddDelayed(processMessageQueue, 50);
         }
 
         protected override void Dispose(bool isDisposing)
@@ -336,7 +335,9 @@ namespace osu.Game.Online.Chat
 
                                         if (modParams.Count > sourceProperties.Length)
                                         {
-                                            Logger.Log($@"[!mp mods] Expected at most {sourceProperties.Length} parameter(s) for mod {modAcronym}, got {modParams.Count} parameter(s). Ignoring extra parameter(s)", LoggingTarget.Runtime, LogLevel.Important);
+                                            Logger.Log(
+                                                $@"[!mp mods] Expected at most {sourceProperties.Length} parameter(s) for mod {modAcronym}, got {modParams.Count} parameter(s). Ignoring extra parameter(s)",
+                                                LoggingTarget.Runtime, LogLevel.Important);
                                             break;
                                         }
 
@@ -417,7 +418,8 @@ namespace osu.Game.Online.Chat
                                                     continue;
                                                 }
 
-                                                Logger.Log($@"[!mp mods] Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {boolData.GetType().Name}",
+                                                Logger.Log(
+                                                    $@"[!mp mods] Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {boolData.GetType().Name}",
                                                     LoggingTarget.Runtime, LogLevel.Important);
                                             }
                                         }
