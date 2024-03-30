@@ -75,6 +75,10 @@ namespace osu.Game.Online.Chat
 
         private IDisposable selectionOperation;
 
+        private readonly Queue<Tuple<string, Channel>> messageQueue = new Queue<Tuple<string, Channel>>();
+
+        private readonly Queue<Tuple<string, Channel>> botMessageQueue = new Queue<Tuple<string, Channel>>();
+
         [Resolved]
         private OngoingOperationTracker operationTracker { get; set; } = null!;
 
@@ -160,6 +164,36 @@ namespace osu.Game.Online.Chat
                 countdownUpdateDelegate = null;
             };
             Scheduler.Add(() => broadcastServer.Add(chatBroadcaster));
+            Scheduler.Add(processMessageQueue);
+        }
+
+        private void processMessageQueue()
+        {
+            for (;;)
+            {
+                lock (messageQueue)
+                {
+                    if (messageQueue.Count > 0)
+                    {
+                        (string text, var target) = messageQueue.Dequeue();
+                        channelManager?.PostMessage(text, target: target);
+                        break;
+                    }
+                }
+
+                lock (botMessageQueue)
+                {
+                    if (botMessageQueue.Count > 0)
+                    {
+                        (string text, Channel target) = botMessageQueue.Dequeue();
+                        channelManager?.PostMessage(text, target: target);
+                    }
+                }
+
+                break;
+            }
+
+            Scheduler.AddDelayed(processMessageQueue, 1000);
         }
 
         protected override void Dispose(bool isDisposing)
@@ -185,7 +219,8 @@ namespace osu.Game.Online.Chat
                 channelManager?.PostCommand(text.Substring(1), Channel.Value);
             else
             {
-                channelManager?.PostMessage(text, target: Channel.Value);
+                // channelManager?.PostMessage(text, target: Channel.Value);
+                messageQueue.Enqueue(new Tuple<string, Channel>(text, Channel.Value));
 
                 string[] parts = text.Split();
 
@@ -227,13 +262,9 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"timer":
-                                Scheduler.AddDelayed(() =>
-                                {
-                                    Countdown.TimeRemaining = TimeSpan.FromSeconds(onlineID);
-                                    countdownChangeTime = Time.Current;
-
-                                    sendTimerMessage();
-                                }, 1250);
+                                Countdown.TimeRemaining = TimeSpan.FromSeconds(onlineID);
+                                countdownChangeTime = Time.Current;
+                                sendTimerMessage();
 
                                 break;
                         }
@@ -251,7 +282,8 @@ namespace osu.Game.Online.Chat
                                     countdownUpdateDelegate.Cancel();
                                     countdownUpdateDelegate = null;
 
-                                    Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                                    // Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                                    botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
                                 }
 
                                 break;
@@ -477,7 +509,8 @@ namespace osu.Game.Online.Chat
         {
             int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
 
-            channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
+            // channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
+            botMessageQueue.Enqueue(new Tuple<string, Channel>(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", Channel.Value));
 
             if (secondsRemaining > 0)
                 countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
@@ -526,6 +559,34 @@ namespace osu.Game.Online.Chat
 
         protected virtual ChatLine CreateMessage(Message message)
         {
+            string[] parts = message.Content.Split();
+
+            if (parts.Length > 0 && parts[0] == @"!roll" && Client.IsHost)
+            {
+                long limit = 100;
+
+                if (parts.Length > 1)
+                {
+                    try
+                    {
+                        limit = long.Parse(parts[1]);
+                    }
+                    catch (OverflowException)
+                    {
+                        limit = long.MaxValue;
+                    }
+                    catch (Exception)
+                    {
+                        limit = 100;
+                    }
+                }
+
+                var rnd = new Random();
+                long randomNumber = rnd.NextInt64(1, limit);
+                // channelManager?.PostMessage($@"{message.Sender} rolls ${randomNumber}", target: Channel.Value);
+                botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
+            }
+
             chatBroadcaster.AddNewMessage(message);
             return new StandAloneMessage(message);
         }
