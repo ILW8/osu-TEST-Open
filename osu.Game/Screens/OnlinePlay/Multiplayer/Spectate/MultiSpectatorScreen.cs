@@ -28,6 +28,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
     /// </summary>
     public partial class MultiSpectatorScreen : SpectatorScreen
     {
+        private bool isExiting;
+
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
@@ -223,7 +225,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 if (!this.IsCurrentScreen()) return;
 
                 this.Exit();
-            }, 10_000);
+            }, 12_000);
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
@@ -327,6 +329,21 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
 
+        public override bool OnExiting(ScreenExitEvent e)
+        {
+            if (isExiting)
+                return base.OnExiting(e);
+
+            (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+            Scheduler.AddDelayed(() =>
+            {
+                isExiting = true;
+                this.Exit();
+            }, 250);
+
+            return true;
+        }
+
         public override bool OnBackButton()
         {
             if (multiplayerClient.Room == null)
@@ -334,7 +351,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // // On a manual exit, set the player back to idle unless gameplay has finished.
             // // Of note, this doesn't cover exiting using alt-f4 or menu home option.
-            if (multiplayerClient.Room.State == MultiplayerRoomState.Open) return base.OnBackButton();
+            if (multiplayerClient.Room.State == MultiplayerRoomState.Open)
+                return base.OnBackButton();
 
             multiplayerClient.ManualExitRequested = true;
             multiplayerClient.ChangeState(MultiplayerUserState.Idle);
