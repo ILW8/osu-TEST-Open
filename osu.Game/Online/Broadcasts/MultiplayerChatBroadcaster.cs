@@ -24,7 +24,8 @@ namespace osu.Game.Online.Broadcasts
         public void AddNewMessage(Message message)
         {
             var user = Client.Room?.Users.FirstOrDefault(u => u.UserID == message.Sender.Id) ?? null;
-            Message.ChatMessages.Add(new ChatMessage(message.Timestamp, message.Sender, message.Content, (user?.MatchState as TeamVersusUserState)?.TeamID));
+            int? teamId = user?.State == MultiplayerUserState.Spectating ? 2 : (user?.MatchState as TeamVersusUserState)?.TeamID;
+            Message.ChatMessages.Add(new ChatMessage(message.Timestamp, message.Sender, message.Content, teamId));
         }
 
         protected override void LoadComplete()
