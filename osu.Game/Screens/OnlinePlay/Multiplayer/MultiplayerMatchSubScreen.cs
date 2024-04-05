@@ -3,9 +3,12 @@
 
 #nullable disable
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -17,6 +20,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Online;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
@@ -39,6 +43,22 @@ using ParticipantsList = osu.Game.Screens.OnlinePlay.Multiplayer.Participants.Pa
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer
 {
+    public class PoolMap
+    {
+        [JsonProperty("beatmapID")]
+        public int? BeatmapID;
+
+        [JsonProperty("mods")]
+        public Dictionary<string, List<object>> Mods;
+    }
+
+    [Serializable]
+    public class Pool
+    {
+        [JsonProperty]
+        public readonly BindableList<PoolMap> Beatmaps = new BindableList<PoolMap>();
+    }
+
     [Cached]
     public partial class MultiplayerMatchSubScreen : RoomSubScreen, IHandlePresentBeatmap
     {
@@ -54,6 +74,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private OsuGame game { get; set; }
 
         private AddItemButton addItemButton;
+
+        private OsuTextBox poolInputTextBox;
 
         public MultiplayerMatchSubScreen(Room room)
             : base(room)
@@ -139,7 +161,53 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             Action = () => OpenSongSelection()
                                         },
                                     },
-                                    null,
+                                    new Drawable[]
+                                    {
+                                        new FillFlowContainer
+                                        {
+                                            RelativeSizeAxes = Axes.X,
+                                            AutoSizeAxes = Axes.Y,
+                                            Direction = FillDirection.Horizontal,
+                                            Children = new Drawable[]
+                                            {
+                                                poolInputTextBox = new OsuTextBox
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    Height = 40,
+                                                    Width = 0.6f,
+                                                    LengthLimit = 262144
+                                                },
+                                                new PurpleRoundedButton
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    Height = 40,
+                                                    Width = 0.4f,
+                                                    Text = "Load pool",
+                                                    Action = () =>
+                                                    {
+                                                        Logger.Log($"hey, I got {poolInputTextBox.Current.Value}");
+                                                        Pool pool = JsonConvert.DeserializeObject<Pool>(poolInputTextBox.Current.Value,
+                                                            new JsonSerializerSettings { Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; } });
+
+                                                        foreach (var map in pool.Beatmaps)
+                                                        {
+                                                            var mods = map.Mods;
+
+                                                            foreach ((string modKey, var modParams) in mods)
+                                                            {
+                                                                if (modParams.Count == 0)
+                                                                    continue;
+
+                                                                Logger.Log($"!!! {modKey} (!!!)");
+                                                            }
+
+                                                            Logger.Log($"hey, I got {map.BeatmapID} with {mods}");
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
                                     new Drawable[]
                                     {
                                         new MultiplayerPlaylist
@@ -191,7 +259,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 {
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.Absolute, 5),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
                                 }
