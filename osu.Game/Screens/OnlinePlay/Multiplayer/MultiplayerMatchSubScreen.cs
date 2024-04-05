@@ -73,6 +73,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
 
+        [Resolved]
+        protected RulesetStore RulesetStore { get; private set; }
+
         private AddItemButton addItemButton;
 
         private OsuTextBox poolInputTextBox;
@@ -185,7 +188,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                     Text = "Load pool",
                                                     Action = () =>
                                                     {
-                                                        Logger.Log($"hey, I got {poolInputTextBox.Current.Value}");
                                                         Pool pool = JsonConvert.DeserializeObject<Pool>(poolInputTextBox.Current.Value,
                                                             new JsonSerializerSettings { Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; } });
 
@@ -193,15 +195,24 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                         {
                                                             var mods = map.Mods;
 
+                                                            List<Mod> modInstances = new List<Mod>();
+
                                                             foreach ((string modKey, var modParams) in mods)
                                                             {
-                                                                if (modParams.Count == 0)
-                                                                    continue;
+                                                                var osuRuleset = RulesetStore.GetRuleset(0)?.CreateInstance();
+                                                                if (osuRuleset == null) continue;
 
-                                                                Logger.Log($"!!! {modKey} (!!!)");
+                                                                Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
+                                                                if (modInstance != null)
+                                                                    modInstances.Add(modInstance);
                                                             }
 
-                                                            Logger.Log($"hey, I got {map.BeatmapID} with {mods}");
+                                                            Logger.Log($"hey, I got {map.BeatmapID} " + (mods.Count > 0 ? @"with: " : ""));
+
+                                                            foreach (var modInstance in modInstances)
+                                                            {
+                                                                Logger.Log($@"    {modInstance.Acronym}" + (modInstance.ExtendedIconInformation != "" ? $"[{modInstance.ExtendedIconInformation}]" : ""));
+                                                            }
                                                         }
                                                     }
                                                 }
