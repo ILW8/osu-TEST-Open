@@ -6,14 +6,19 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.Drawables;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
@@ -25,16 +30,16 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Menu;
 using osu.Game.Screens.OnlinePlay.Components;
 using osu.Game.Screens.OnlinePlay.Match;
 using osu.Game.Screens.OnlinePlay.Match.Components;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Match;
-using osu.Game.Screens.OnlinePlay.Multiplayer.Match.Playlist;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Participants;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
-using osu.Game.Screens.Play.HUD;
 using osu.Game.Users;
 using osuTK;
+using osuTK.Graphics;
 using ParticipantsList = osu.Game.Screens.OnlinePlay.Multiplayer.Participants.ParticipantsList;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer
@@ -53,13 +58,46 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
 
-        private AddItemButton addItemButton;
+        private Container osuCookieBackgroundContainer = null!;
+
+        [CanBeNull]
+        private OsuCookieBackground osuCookieBackground;
 
         public MultiplayerMatchSubScreen(Room room)
             : base(room)
         {
             Title = room.RoomID.Value == null ? "New room" : room.Name.Value;
             Activity.Value = new UserActivity.InLobby(room);
+        }
+
+        private OsuCookieBackground getOsuCookieBackground(IWorkingBeatmap workingBeatmap) => new OsuCookieBackground(workingBeatmap)
+        {
+            // Scale = new Vector2(4f),
+            Anchor = Anchor.Centre,
+            Origin = Anchor.Centre,
+            FillMode = FillMode.Fill,
+        };
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            Beatmap.BindValueChanged(vce =>
+            {
+                Scheduler.Add(() =>
+                {
+                    Logger.Log($@"updating cookie background to map {vce.NewValue}");
+
+                    LoadComponentAsync(getOsuCookieBackground(vce.NewValue), loaded =>
+                    {
+                        osuCookieBackground?.FadeOut(300, Easing.OutCubic);
+                        osuCookieBackground?.Expire();
+
+                        loaded.Depth = osuCookieBackground?.Depth + 1 ?? 0;
+                        osuCookieBackground = loaded;
+                        osuCookieBackgroundContainer.Add(loaded);
+                    });
+                });
+            });
         }
 
         protected override void LoadComplete()
@@ -122,78 +160,32 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                             },
                             // Spacer
                             null,
-                            // Beatmap column
-                            new GridContainer
+                            // osu! cookie
+                            new Container
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Content = new[]
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Size = new Vector2(512f),
+                                Children = new Drawable[]
                                 {
-                                    new Drawable[] { new OverlinedHeader("Beatmap") },
-                                    new Drawable[]
+                                    osuCookieBackgroundContainer = new Container
                                     {
-                                        addItemButton = new AddItemButton
+                                        AutoSizeAxes = Axes.None,
+                                        RelativeSizeAxes = Axes.Both,
+                                        Size = new Vector2(1f),
+                                        Child = osuCookieBackground = getOsuCookieBackground(Beatmap.Value)
+                                    },
+                                    new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Child = new OsuLogo
                                         {
-                                            RelativeSizeAxes = Axes.X,
-                                            Height = 40,
-                                            Text = "Add item",
-                                            Action = () => OpenSongSelection()
+                                            Anchor = Anchor.Centre,
+                                            Origin = Anchor.Centre,
+                                            Scale = new Vector2(0.5f),
+                                            Margin = new MarginPadding(32.0f),
                                         },
-                                    },
-                                    null,
-                                    new Drawable[]
-                                    {
-                                        new MultiplayerPlaylist
-                                        {
-                                            RelativeSizeAxes = Axes.Both,
-                                            RequestEdit = OpenSongSelection
-                                        }
-                                    },
-                                    new[]
-                                    {
-                                        UserModsSection = new FillFlowContainer
-                                        {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Margin = new MarginPadding { Top = 10 },
-                                            Alpha = 0,
-                                            Children = new Drawable[]
-                                            {
-                                                new OverlinedHeader("Extra mods"),
-                                                new FillFlowContainer
-                                                {
-                                                    AutoSizeAxes = Axes.Both,
-                                                    Direction = FillDirection.Horizontal,
-                                                    Spacing = new Vector2(10, 0),
-                                                    Children = new Drawable[]
-                                                    {
-                                                        new UserModSelectButton
-                                                        {
-                                                            Anchor = Anchor.CentreLeft,
-                                                            Origin = Anchor.CentreLeft,
-                                                            Width = 90,
-                                                            Text = "Select",
-                                                            Action = ShowUserModSelect,
-                                                        },
-                                                        new ModDisplay
-                                                        {
-                                                            Anchor = Anchor.CentreLeft,
-                                                            Origin = Anchor.CentreLeft,
-                                                            Current = UserMods,
-                                                            Scale = new Vector2(0.8f),
-                                                        },
-                                                    }
-                                                },
-                                            }
-                                        },
-                                    },
-                                },
-                                RowDimensions = new[]
-                                {
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.Absolute, 5),
-                                    new Dimension(),
-                                    new Dimension(GridSizeMode.AutoSize),
+                                    }
                                 }
                             },
                             // Spacer
@@ -352,8 +344,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
             updateCurrentItem();
 
-            addItemButton.Alpha = localUserCanAddItem ? 1 : 0;
-
             Scheduler.AddOnce(UpdateMods);
             Scheduler.AddOnce(() =>
             {
@@ -460,6 +450,56 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public partial class AddItemButton : PurpleRoundedButton
         {
+        }
+    }
+
+    internal partial class OsuCookieBackground : CompositeDrawable
+    {
+        private readonly IWorkingBeatmap beatmap;
+
+        public OsuCookieBackground(IWorkingBeatmap beatmap)
+        {
+            this.beatmap = beatmap;
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            RelativeSizeAxes = Axes.Both;
+
+            InternalChild = new BufferedContainer(cachedFrameBuffer: true)
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    // We will create the white-to-black gradient by modulating transparency and having
+                    // a black backdrop. This results in an sRGB-space gradient and not linear space,
+                    // transitioning from white to black more perceptually uniformly.
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black,
+                    },
+                    // We use a container, such that we can set the colour gradient to go across the
+                    // vertices of the masked container instead of the vertices of the (larger) sprite.
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = ColourInfo.GradientVertical(Color4.White, Color4.White.Opacity(0.3f)),
+                        Children = new[]
+                        {
+                            // Zoomed-in and cropped beatmap background
+                            new BeatmapBackgroundSprite(beatmap)
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                FillMode = FillMode.Fill,
+                            },
+                        },
+                    },
+                }
+            };
         }
     }
 }
