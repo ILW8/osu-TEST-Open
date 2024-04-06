@@ -470,6 +470,24 @@ namespace osu.Game.Online.Chat
 
                     break;
                 }
+
+                for (;;)
+                {
+                    if (!(parts.Length == 2 && parts[0] == @"!mp"))
+                        break;
+
+                    switch (parts[1])
+                    {
+                        case @"abort":
+                            if (!Client.IsHost)
+                                return;
+
+                            Client.AbortMatch().FireAndForget();
+                            break;
+                    }
+
+                    break;
+                }
             }
 
             TextBox.Text = string.Empty;
