@@ -408,7 +408,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                         };
                                     });
 
-                var multiplayerPlaylistItems = playlistItems as MultiplayerPlaylistItem[] ?? playlistItems.ToArray();
+                var multiplayerPlaylistItems = playlistItems.ToArray();
 
                 if (multiplayerPlaylistItems.Length != pool.Beatmaps.Count)
                 {
@@ -449,7 +449,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 if (playlistItemsToAdd.Count == multiplayerPlaylistItems.Length) // all maps in playlist are downloaded and ready
                                 {
                                     // ReSharper disable once AsyncVoidLambda
-                                    Scheduler.Add(async () => await replacePlaylistItems(playlistItemsToAdd.ToArray()).ConfigureAwait(false));
+                                    Scheduler.Add(async () => await replacePlaylistItems(
+                                                                      playlistItemsToAdd
+                                                                          .OrderBy(mpPlaylistItem => pool.Beatmaps.Select(map => map.BeatmapID).ToList().IndexOf(mpPlaylistItem.BeatmapID))
+                                                                          .ToArray())
+                                                                  .ConfigureAwait(false));
                                 }
 
                                 return;
