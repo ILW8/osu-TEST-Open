@@ -3,11 +3,16 @@
 
 #nullable disable
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
@@ -15,9 +20,13 @@ using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Online;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -39,6 +48,25 @@ using ParticipantsList = osu.Game.Screens.OnlinePlay.Multiplayer.Participants.Pa
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer
 {
+    public class PoolMap
+    {
+        [JsonProperty("beatmapID")]
+        public int BeatmapID;
+
+        [JsonProperty("mods")]
+        public Dictionary<string, List<object>> Mods;
+
+        [JsonIgnore]
+        public List<Mod> ParsedMods;
+    }
+
+    [Serializable]
+    public class Pool
+    {
+        [JsonProperty]
+        public readonly BindableList<PoolMap> Beatmaps = new BindableList<PoolMap>();
+    }
+
     [Cached]
     public partial class MultiplayerMatchSubScreen : RoomSubScreen, IHandlePresentBeatmap
     {
@@ -50,10 +78,30 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved]
         private MultiplayerClient client { get; set; }
 
+        [Resolved]
+        private OngoingOperationTracker operationTracker { get; set; } = null!;
+
+        private IDisposable selectionOperation;
+
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
 
+        [Resolved]
+        private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
+
+        [Resolved]
+        private BeatmapModelDownloader beatmapsDownloader { get; set; } = null!;
+
+        // private BeatmapDownloadTracker beatmapDownloadTracker = null!;
+        private readonly List<BeatmapDownloadTracker> beatmapDownloadTrackers = new List<BeatmapDownloadTracker>();
+
+        private readonly List<MultiplayerPlaylistItem> playlistItemsToAdd = new List<MultiplayerPlaylistItem>();
+
+        private readonly Queue<APIBeatmapSet> downloadQueue = new Queue<APIBeatmapSet>();
+
         private AddItemButton addItemButton;
+
+        private OsuTextBox poolInputTextBox;
 
         public MultiplayerMatchSubScreen(Room room)
             : base(room)
@@ -74,9 +122,52 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
             if (!client.IsConnected.Value)
                 handleRoomLost();
+
+            Scheduler.Add(processDownloadQueue);
         }
 
         protected override bool IsConnected => base.IsConnected && client.IsConnected.Value;
+
+        private async Task replacePlaylistItems(IEnumerable<MultiplayerPlaylistItem> items)
+        {
+            // ensure user is host
+            if (!client.IsHost)
+                return;
+
+            selectionOperation = operationTracker.BeginOperation();
+
+            var itemsToRemove = Room.Playlist?.ToArray() ?? Array.Empty<PlaylistItem>();
+
+            foreach (var playlistItem in items)
+            {
+                await client.AddPlaylistItem(playlistItem).ConfigureAwait(true);
+            }
+
+            foreach (var playlistItem in itemsToRemove)
+            {
+                await client.RemovePlaylistItem(playlistItem.ID).ConfigureAwait(false);
+            }
+
+            selectionOperation?.Dispose();
+        }
+
+        private void processDownloadQueue()
+        {
+            lock (downloadQueue)
+            {
+                if (downloadQueue.Count > 0)
+                {
+                    var beatmapSet = downloadQueue.Dequeue();
+                    beatmapsDownloader.Download(beatmapSet);
+
+                    Scheduler.AddDelayed(processDownloadQueue, 2500);
+                    return;
+                }
+            }
+
+            // no message has been posted
+            Scheduler.AddDelayed(processDownloadQueue, 50);
+        }
 
         protected override Drawable CreateMainContent() => new Container
         {
@@ -139,7 +230,33 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             Action = () => OpenSongSelection()
                                         },
                                     },
-                                    null,
+                                    new Drawable[]
+                                    {
+                                        new FillFlowContainer
+                                        {
+                                            RelativeSizeAxes = Axes.X,
+                                            AutoSizeAxes = Axes.Y,
+                                            Direction = FillDirection.Horizontal,
+                                            Children = new Drawable[]
+                                            {
+                                                poolInputTextBox = new OsuTextBox
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    Height = 40,
+                                                    Width = 0.6f,
+                                                    LengthLimit = 262144
+                                                },
+                                                new PurpleRoundedButton
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    Height = 40,
+                                                    Width = 0.4f,
+                                                    Text = @"Load pool",
+                                                    Action = loadPoolFromJson
+                                                }
+                                            }
+                                        }
+                                    },
                                     new Drawable[]
                                     {
                                         new MultiplayerPlaylist
@@ -191,7 +308,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 {
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.Absolute, 5),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
                                 }
@@ -222,6 +339,143 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 }
             }
         };
+
+        private void loadPoolFromJson()
+        {
+            Pool pool = JsonConvert.DeserializeObject<Pool>(
+                poolInputTextBox.Current.Value,
+                new JsonSerializerSettings
+                {
+                    Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; }
+                }
+            );
+
+            if (pool.Beatmaps == null)
+                return;
+
+            foreach (var map in pool.Beatmaps)
+            {
+                var mods = map.Mods;
+
+                List<Mod> modInstances = new List<Mod>();
+
+                foreach ((string modKey, var modParams) in mods)
+                {
+                    var osuRuleset = Rulesets.GetRuleset(0)?.CreateInstance();
+                    if (osuRuleset == null) continue;
+
+                    Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
+                    if (modInstance != null)
+                        modInstances.Add(modInstance);
+                }
+
+                map.ParsedMods = new List<Mod>();
+                map.ParsedMods.AddRange(modInstances);
+            }
+
+            // download map and set playlist
+            beatmapLookupCache.GetBeatmapsAsync(pool.Beatmaps.Select(map => map.BeatmapID).ToArray()).ContinueWith(task => Schedule(() =>
+            {
+                APIBeatmap[] beatmaps = task.GetResultSafely();
+
+                playlistItemsToAdd.Clear();
+
+                var playlistItems = beatmaps
+                                    .Where(beatmap => beatmap != null && pool.Beatmaps.Select(b => b.BeatmapID).Contains(beatmap.OnlineID))
+                                    .Select(beatmap =>
+                                    {
+                                        var mods = pool.Beatmaps
+                                                       .FirstOrDefault(poolMap => poolMap.BeatmapID == beatmap.OnlineID)?
+                                                       .ParsedMods
+                                                       .Select(mod => new APIMod(mod))
+                                                       .ToArray();
+
+                                        var item = new PlaylistItem(beatmap)
+                                        {
+                                            RulesetID = beatmap.Ruleset.OnlineID,
+                                            RequiredMods = mods ?? Array.Empty<APIMod>(),
+                                            AllowedMods = Array.Empty<APIMod>()
+                                        };
+
+                                        return new MultiplayerPlaylistItem
+                                        {
+                                            ID = 0,
+                                            BeatmapID = item.Beatmap.OnlineID,
+                                            BeatmapChecksum = item.Beatmap.MD5Hash,
+                                            RulesetID = item.RulesetID,
+                                            RequiredMods = item.RequiredMods,
+                                            AllowedMods = item.AllowedMods
+                                        };
+                                    });
+
+                var multiplayerPlaylistItems = playlistItems as MultiplayerPlaylistItem[] ?? playlistItems.ToArray();
+
+                if (multiplayerPlaylistItems.Length != pool.Beatmaps.Count)
+                {
+                    Logger.Log($@"Expected {pool.Beatmaps.Count} maps, beatmap lookup returned {multiplayerPlaylistItems.Length} maps, aborting!",
+                        LoggingTarget.Runtime, LogLevel.Important);
+                    return;
+                }
+
+                foreach (var beatmap in beatmaps)
+                {
+                    if (beatmap?.BeatmapSet == null) continue;
+
+                    BeatmapDownloadTracker tracker = new BeatmapDownloadTracker(beatmap.BeatmapSet);
+                    AddInternal(tracker); // a leak, but I can't be bothered figuring out why BeatmapDownloadTracker doesn't work inside another container
+                    beatmapDownloadTrackers.Add(tracker);
+
+                    tracker.State.BindValueChanged(changeEvent =>
+                    {
+                        // download failed, abort.
+                        if (changeEvent.OldValue == DownloadState.Downloading && changeEvent.NewValue == DownloadState.NotDownloaded)
+                        {
+                            tracker.State.UnbindAll();
+                            beatmapDownloadTrackers.Remove(tracker);
+                            RemoveInternal(tracker, true);
+                            return;
+                        }
+
+                        switch (changeEvent.NewValue)
+                        {
+                            case DownloadState.LocallyAvailable:
+                                tracker.State.UnbindAll();
+                                beatmapDownloadTrackers.Remove(tracker);
+                                RemoveInternal(tracker, true);
+
+                                // what the fuck is this shit...
+                                playlistItemsToAdd.Add(multiplayerPlaylistItems.FirstOrDefault(item => item.BeatmapID == beatmap.OnlineID));
+
+                                if (playlistItemsToAdd.Count == multiplayerPlaylistItems.Length) // all maps in playlist are downloaded and ready
+                                {
+                                    // ReSharper disable once AsyncVoidLambda
+                                    Scheduler.Add(async () => await replacePlaylistItems(playlistItemsToAdd.ToArray()).ConfigureAwait(false));
+                                }
+
+                                return;
+
+                            case DownloadState.NotDownloaded:
+                                Logger.Log($@"Downloading beatmapset {beatmap.BeatmapSet.OnlineID}");
+                                lock (downloadQueue)
+                                    downloadQueue.Enqueue(beatmap.BeatmapSet);
+                                break;
+
+                            case DownloadState.Unknown:
+                                break;
+
+                            case DownloadState.Downloading:
+                                break;
+
+                            case DownloadState.Importing:
+                                break;
+
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }, true);
+                }
+            }));
+        }
 
         /// <summary>
         /// Opens the song selection screen to add or edit an item.
