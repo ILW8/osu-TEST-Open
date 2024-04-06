@@ -398,7 +398,7 @@ namespace osu.Game.Online.Multiplayer
 
                 Debug.Assert(APIRoom != null);
 
-                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open)
+                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open && !ManualExitRequested)
                 {
                     state = MultiplayerRoomState.Results;
                 }
