@@ -252,148 +252,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                     Height = 40,
                                                     Width = 0.4f,
                                                     Text = @"Load pool",
-                                                    Action = () =>
-                                                    {
-                                                        Pool pool = JsonConvert.DeserializeObject<Pool>(
-                                                            poolInputTextBox.Current.Value,
-                                                            new JsonSerializerSettings
-                                                            {
-                                                                Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; }
-                                                            }
-                                                        );
-
-                                                        if (pool.Beatmaps == null)
-                                                            return;
-
-                                                        foreach (var map in pool.Beatmaps)
-                                                        {
-                                                            var mods = map.Mods;
-
-                                                            List<Mod> modInstances = new List<Mod>();
-
-                                                            foreach ((string modKey, var modParams) in mods)
-                                                            {
-                                                                var osuRuleset = Rulesets.GetRuleset(0)?.CreateInstance();
-                                                                if (osuRuleset == null) continue;
-
-                                                                Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
-                                                                if (modInstance != null)
-                                                                    modInstances.Add(modInstance);
-                                                            }
-
-                                                            // Logger.Log($"hey, I got {map.BeatmapID} " + (mods.Count > 0 ? @"with: " : ""));
-                                                            //
-                                                            // foreach (var modInstance in modInstances)
-                                                            // {
-                                                            //     Logger.Log($@"    {modInstance.Acronym}" + (modInstance.ExtendedIconInformation != "" ? $"[{modInstance.ExtendedIconInformation}]" : ""));
-                                                            // }
-                                                            map.ParsedMods = new List<Mod>();
-                                                            map.ParsedMods.AddRange(modInstances);
-                                                        }
-
-                                                        // download map and set playlist
-                                                        beatmapLookupCache.GetBeatmapsAsync(pool.Beatmaps.Select(map => map.BeatmapID).ToArray()).ContinueWith(task => Schedule(() =>
-                                                        {
-                                                            APIBeatmap[] beatmaps = task.GetResultSafely();
-
-                                                            playlistItemsToAdd.Clear();
-
-                                                            var playlistItems = beatmaps
-                                                                                .Where(beatmap => beatmap != null && pool.Beatmaps.Select(b => b.BeatmapID).Contains(beatmap.OnlineID))
-                                                                                .Select(beatmap =>
-                                                                                {
-                                                                                    var mods = pool.Beatmaps
-                                                                                                   .FirstOrDefault(poolMap => poolMap.BeatmapID == beatmap.OnlineID)?
-                                                                                                   .ParsedMods
-                                                                                                   .Select(mod => new APIMod(mod))
-                                                                                                   .ToArray();
-
-                                                                                    var item = new PlaylistItem(beatmap)
-                                                                                    {
-                                                                                        RulesetID = beatmap.Ruleset.OnlineID,
-                                                                                        RequiredMods = mods ?? Array.Empty<APIMod>(),
-                                                                                        AllowedMods = Array.Empty<APIMod>()
-                                                                                    };
-
-                                                                                    return new MultiplayerPlaylistItem
-                                                                                    {
-                                                                                        ID = 0,
-                                                                                        BeatmapID = item.Beatmap.OnlineID,
-                                                                                        BeatmapChecksum = item.Beatmap.MD5Hash,
-                                                                                        RulesetID = item.RulesetID,
-                                                                                        RequiredMods = item.RequiredMods,
-                                                                                        AllowedMods = item.AllowedMods
-                                                                                    };
-                                                                                });
-
-                                                            var multiplayerPlaylistItems = playlistItems as MultiplayerPlaylistItem[] ?? playlistItems.ToArray();
-
-                                                            if (multiplayerPlaylistItems.Length != pool.Beatmaps.Count)
-                                                            {
-                                                                Logger.Log($@"Expected {pool.Beatmaps.Count} maps, beatmap lookup returned {multiplayerPlaylistItems.Length} maps, aborting!",
-                                                                    LoggingTarget.Runtime, LogLevel.Important);
-                                                                return;
-                                                            }
-
-                                                            foreach (var beatmap in beatmaps)
-                                                            {
-                                                                if (beatmap?.BeatmapSet == null) continue;
-
-                                                                BeatmapDownloadTracker tracker = new BeatmapDownloadTracker(beatmap.BeatmapSet);
-                                                                AddInternal(tracker); // a leak, but I can't be bothered figuring out why BeatmapDownloadTracker doesn't work inside another container
-                                                                beatmapDownloadTrackers.Add(tracker);
-
-                                                                tracker.State.BindValueChanged(changeEvent =>
-                                                                {
-                                                                    // download failed, abort.
-                                                                    if (changeEvent.OldValue == DownloadState.Downloading && changeEvent.NewValue == DownloadState.NotDownloaded)
-                                                                    {
-                                                                        tracker.State.UnbindAll();
-                                                                        beatmapDownloadTrackers.Remove(tracker);
-                                                                        RemoveInternal(tracker, true);
-                                                                        return;
-                                                                    }
-
-                                                                    switch (changeEvent.NewValue)
-                                                                    {
-                                                                        case DownloadState.LocallyAvailable:
-                                                                            tracker.State.UnbindAll();
-                                                                            beatmapDownloadTrackers.Remove(tracker);
-                                                                            RemoveInternal(tracker, true);
-
-                                                                            // what the fuck is this shit...
-                                                                            playlistItemsToAdd.Add(multiplayerPlaylistItems.FirstOrDefault(item => item.BeatmapID == beatmap.OnlineID));
-
-                                                                            if (playlistItemsToAdd.Count == multiplayerPlaylistItems.Length) // all maps in playlist are downloaded and ready
-                                                                            {
-                                                                                // ReSharper disable once AsyncVoidLambda
-                                                                                Scheduler.Add(async () => await replacePlaylistItems(playlistItemsToAdd.ToArray()).ConfigureAwait(false));
-                                                                            }
-
-                                                                            return;
-
-                                                                        case DownloadState.NotDownloaded:
-                                                                            Logger.Log($@"Downloading beatmapset {beatmap.BeatmapSet.OnlineID}");
-                                                                            lock (downloadQueue)
-                                                                                downloadQueue.Enqueue(beatmap.BeatmapSet);
-                                                                            break;
-
-                                                                        case DownloadState.Unknown:
-                                                                            break;
-
-                                                                        case DownloadState.Downloading:
-                                                                            break;
-
-                                                                        case DownloadState.Importing:
-                                                                            break;
-
-                                                                        default:
-                                                                            throw new ArgumentOutOfRangeException();
-                                                                    }
-                                                                }, true);
-                                                            }
-                                                        }));
-                                                    }
+                                                    Action = loadPoolFromJson
                                                 }
                                             }
                                         }
@@ -480,6 +339,143 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 }
             }
         };
+
+        private void loadPoolFromJson()
+        {
+            Pool pool = JsonConvert.DeserializeObject<Pool>(
+                poolInputTextBox.Current.Value,
+                new JsonSerializerSettings
+                {
+                    Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; }
+                }
+            );
+
+            if (pool.Beatmaps == null)
+                return;
+
+            foreach (var map in pool.Beatmaps)
+            {
+                var mods = map.Mods;
+
+                List<Mod> modInstances = new List<Mod>();
+
+                foreach ((string modKey, var modParams) in mods)
+                {
+                    var osuRuleset = Rulesets.GetRuleset(0)?.CreateInstance();
+                    if (osuRuleset == null) continue;
+
+                    Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
+                    if (modInstance != null)
+                        modInstances.Add(modInstance);
+                }
+
+                map.ParsedMods = new List<Mod>();
+                map.ParsedMods.AddRange(modInstances);
+            }
+
+            // download map and set playlist
+            beatmapLookupCache.GetBeatmapsAsync(pool.Beatmaps.Select(map => map.BeatmapID).ToArray()).ContinueWith(task => Schedule(() =>
+            {
+                APIBeatmap[] beatmaps = task.GetResultSafely();
+
+                playlistItemsToAdd.Clear();
+
+                var playlistItems = beatmaps
+                                    .Where(beatmap => beatmap != null && pool.Beatmaps.Select(b => b.BeatmapID).Contains(beatmap.OnlineID))
+                                    .Select(beatmap =>
+                                    {
+                                        var mods = pool.Beatmaps
+                                                       .FirstOrDefault(poolMap => poolMap.BeatmapID == beatmap.OnlineID)?
+                                                       .ParsedMods
+                                                       .Select(mod => new APIMod(mod))
+                                                       .ToArray();
+
+                                        var item = new PlaylistItem(beatmap)
+                                        {
+                                            RulesetID = beatmap.Ruleset.OnlineID,
+                                            RequiredMods = mods ?? Array.Empty<APIMod>(),
+                                            AllowedMods = Array.Empty<APIMod>()
+                                        };
+
+                                        return new MultiplayerPlaylistItem
+                                        {
+                                            ID = 0,
+                                            BeatmapID = item.Beatmap.OnlineID,
+                                            BeatmapChecksum = item.Beatmap.MD5Hash,
+                                            RulesetID = item.RulesetID,
+                                            RequiredMods = item.RequiredMods,
+                                            AllowedMods = item.AllowedMods
+                                        };
+                                    });
+
+                var multiplayerPlaylistItems = playlistItems as MultiplayerPlaylistItem[] ?? playlistItems.ToArray();
+
+                if (multiplayerPlaylistItems.Length != pool.Beatmaps.Count)
+                {
+                    Logger.Log($@"Expected {pool.Beatmaps.Count} maps, beatmap lookup returned {multiplayerPlaylistItems.Length} maps, aborting!",
+                        LoggingTarget.Runtime, LogLevel.Important);
+                    return;
+                }
+
+                foreach (var beatmap in beatmaps)
+                {
+                    if (beatmap?.BeatmapSet == null) continue;
+
+                    BeatmapDownloadTracker tracker = new BeatmapDownloadTracker(beatmap.BeatmapSet);
+                    AddInternal(tracker); // a leak, but I can't be bothered figuring out why BeatmapDownloadTracker doesn't work inside another container
+                    beatmapDownloadTrackers.Add(tracker);
+
+                    tracker.State.BindValueChanged(changeEvent =>
+                    {
+                        // download failed, abort.
+                        if (changeEvent.OldValue == DownloadState.Downloading && changeEvent.NewValue == DownloadState.NotDownloaded)
+                        {
+                            tracker.State.UnbindAll();
+                            beatmapDownloadTrackers.Remove(tracker);
+                            RemoveInternal(tracker, true);
+                            return;
+                        }
+
+                        switch (changeEvent.NewValue)
+                        {
+                            case DownloadState.LocallyAvailable:
+                                tracker.State.UnbindAll();
+                                beatmapDownloadTrackers.Remove(tracker);
+                                RemoveInternal(tracker, true);
+
+                                // what the fuck is this shit...
+                                playlistItemsToAdd.Add(multiplayerPlaylistItems.FirstOrDefault(item => item.BeatmapID == beatmap.OnlineID));
+
+                                if (playlistItemsToAdd.Count == multiplayerPlaylistItems.Length) // all maps in playlist are downloaded and ready
+                                {
+                                    // ReSharper disable once AsyncVoidLambda
+                                    Scheduler.Add(async () => await replacePlaylistItems(playlistItemsToAdd.ToArray()).ConfigureAwait(false));
+                                }
+
+                                return;
+
+                            case DownloadState.NotDownloaded:
+                                Logger.Log($@"Downloading beatmapset {beatmap.BeatmapSet.OnlineID}");
+                                lock (downloadQueue)
+                                    downloadQueue.Enqueue(beatmap.BeatmapSet);
+                                break;
+
+                            case DownloadState.Unknown:
+                                break;
+
+                            case DownloadState.Downloading:
+                                break;
+
+                            case DownloadState.Importing:
+                                break;
+
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }, true);
+                }
+            }));
+        }
 
         /// <summary>
         /// Opens the song selection screen to add or edit an item.

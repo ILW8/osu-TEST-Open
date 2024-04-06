@@ -374,7 +374,7 @@ namespace osu.Game.Online.Chat
 
                                     string modAcronym = mod[..2];
                                     var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
-                                    // var modInstance = rulesetInstance?.CreateModFromAcronym(modAcronym);
+
                                     Mod modInstance;
 
                                     if (mod.Length == 2)
@@ -384,12 +384,6 @@ namespace osu.Game.Online.Chat
                                             modInstances.Add(modInstance);
                                         continue;
                                     }
-
-                                    // // parse mod parameters
-                                    //
-                                    // modInstance = ParseMod(rulesetInstance, modAcronym, new object[] { });
-                                    // if (modInstance == null)
-                                    //     continue;
 
                                     // mod has parameters
                                     JsonNode modParamsNode;
@@ -515,8 +509,6 @@ namespace osu.Game.Online.Chat
         private void sendTimerMessage()
         {
             int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
-
-            // channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
             botMessageQueue.Enqueue(new Tuple<string, Channel>(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", Channel.Value));
 
             if (secondsRemaining > 0)
@@ -590,7 +582,6 @@ namespace osu.Game.Online.Chat
 
                 var rnd = new Random();
                 long randomNumber = rnd.NextInt64(1, limit);
-                // channelManager?.PostMessage($@"{message.Sender} rolls ${randomNumber}", target: Channel.Value);
                 botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
             }
 
