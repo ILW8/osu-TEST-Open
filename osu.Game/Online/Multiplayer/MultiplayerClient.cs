@@ -412,6 +412,7 @@ namespace osu.Game.Online.Multiplayer
                         break;
 
                     case MultiplayerRoomState.Playing:
+                        ManualExitRequested = false;
                         APIRoom.Status.Value = new RoomStatusPlaying();
                         break;
 
