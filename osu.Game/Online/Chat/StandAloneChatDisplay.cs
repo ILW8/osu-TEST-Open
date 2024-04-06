@@ -523,7 +523,7 @@ namespace osu.Game.Online.Chat
                 countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
         }
 
-        private void addPlaylistItem(APIBeatmap beatmapInfo)
+        private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[] requiredMods = null, APIMod[] allowedMods = null)
         {
             // ensure user is host
             if (!Client.IsHost)
@@ -534,8 +534,8 @@ namespace osu.Game.Online.Chat
             var item = new PlaylistItem(beatmapInfo)
             {
                 RulesetID = beatmapInfo.Ruleset.OnlineID,
-                RequiredMods = Array.Empty<APIMod>(),
-                AllowedMods = Array.Empty<APIMod>()
+                RequiredMods = requiredMods ?? Array.Empty<APIMod>(),
+                AllowedMods = allowedMods ?? Array.Empty<APIMod>()
             };
 
             // PlaylistItem item
