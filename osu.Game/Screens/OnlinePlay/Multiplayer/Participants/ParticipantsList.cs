@@ -50,9 +50,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 {
                     // Remove panels for users no longer in the room or spectators
                     foreach (ParticipantPanel p in panels.Where(p => Room.Users.All(u => !ReferenceEquals(p.User, u) || p.User.State == MultiplayerUserState.Spectating)))
-                    {
                         p.Expire();
-                    }
 
                     // Add panels for all users new to the room except spectators
                     foreach (var user in Room.Users.Where(u => panels.SingleOrDefault(panel => panel.User.Equals(u)) == null && u.State != MultiplayerUserState.Spectating))
@@ -70,20 +68,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     if (currentHostPanel != null && currentHostPanel.User.Equals(Room.Host)) return;
 
                     {
-                        // // Reset position of previous host back to normal, if one existing.
-                        // if (currentHostPanel != null && panels.Contains(currentHostPanel))
-                        //     panels.SetLayoutPosition(currentHostPanel, 0);
-
                         currentHostPanel = null;
 
                         // Change position of new host to display above all participants.
                         if (Room.Host != null)
-                        {
                             currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(Room.Host));
-
-                            // if (currentHostPanel != null)
-                            //     panels.SetLayoutPosition(currentHostPanel, -1);
-                        }
                     }
                 }
             }, 100);
