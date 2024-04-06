@@ -3,6 +3,7 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -21,6 +22,12 @@ namespace osu.Game.Online.Broadcasts
             Message.RoomName.BindTo(room.Name);
         }
 
+        private void broadcast()
+        {
+            Logger.Log($@"RoomState: {Message.RoomState}");
+            Broadcast();
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -31,10 +38,10 @@ namespace osu.Game.Online.Broadcasts
                 if (valueChangedEvent.OldValue == valueChangedEvent.NewValue)
                     return;
 
-                Broadcast();
+                broadcast();
             });
 
-            Broadcast();
+            broadcast();
         }
 
         protected override void Dispose(bool isDisposing)
@@ -52,7 +59,7 @@ namespace osu.Game.Online.Broadcasts
 
             Message.RoomState = newState;
 
-            Broadcast();
+            broadcast();
         }
     }
 
