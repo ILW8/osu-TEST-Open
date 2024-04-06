@@ -12,6 +12,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Development;
 using osu.Framework.Graphics;
+using osu.Framework.Logging;
 using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -398,7 +399,7 @@ namespace osu.Game.Online.Multiplayer
 
                 Debug.Assert(APIRoom != null);
 
-                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open)
+                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open && !ManualExitRequested)
                 {
                     state = MultiplayerRoomState.Results;
                 }
@@ -413,6 +414,11 @@ namespace osu.Game.Online.Multiplayer
 
                     case MultiplayerRoomState.Playing:
                         APIRoom.Status.Value = new RoomStatusPlaying();
+                        ManualExitRequested = false;
+                        break;
+
+                    case MultiplayerRoomState.WaitingForLoad:
+                        ManualExitRequested = false;
                         break;
 
                     case MultiplayerRoomState.Closed:
@@ -579,7 +585,6 @@ namespace osu.Game.Online.Multiplayer
                 else
                 {
                     user.State = state;
-                    ManualExitRequested = false;
                 }
 
                 RoomUpdated?.Invoke();
