@@ -5,19 +5,17 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Play.HUD;
-using osu.Game.Users;
 
 namespace osu.Game.Online.Broadcasts
 {
-    public partial class MultiplayerGameplayStateBroadcaster : GameStateBroadcaster<TheRealMultiplayerRoomState>
+    public partial class MultiplayerGameplayStateBroadcaster : GameStateBroadcaster<MultiplayerGameplayRoomState>
     {
         public override string Type => @"MultiplayerGameplay";
-        public sealed override TheRealMultiplayerRoomState Message { get; } = new TheRealMultiplayerRoomState();
+        public sealed override MultiplayerGameplayRoomState Message { get; } = new MultiplayerGameplayRoomState();
 
         private readonly Dictionary<int, SpectatorScoreProcessor> scoreProcessors = new Dictionary<int, SpectatorScoreProcessor>();
         private readonly Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> trackedUsers;
@@ -37,11 +35,7 @@ namespace osu.Game.Online.Broadcasts
             foreach (var item in trackedUsers.Select((value, i) => new { i, value }))
             {
                 var trackedUser = item.value;
-                var yes = Message.PlayerStates[trackedUser.Value.ScoreProcessor.UserId] = new RoomPlayerState(trackedUser.Value.User.User ?? new APIUser
-                              {
-                                  Id = 0,
-                                  Username = @"??Unknown User??"
-                              },
+                var yes = Message.PlayerStates[trackedUser.Value.ScoreProcessor.UserId] = new GameplayPlayerState(trackedUser.Value.User,
                               item.i,
                               trackedUser.Value.Team);
 
@@ -78,9 +72,9 @@ namespace osu.Game.Online.Broadcasts
         {
             foreach (MultiplayerRoomUser roomUser in multiplayerClient.Room?.Users ?? System.Array.Empty<MultiplayerRoomUser>())
             {
-                if (Message.PlayerStates.TryGetValue(roomUser.UserID, out var roomPlayerState))
+                if (Message.PlayerStates.TryGetValue(roomUser.UserID, out var gameplayPlayerState))
                 {
-                    roomPlayerState.UserState = roomUser.State;
+                    gameplayPlayerState.UserState = roomUser.State;
                 }
             }
 
@@ -88,26 +82,18 @@ namespace osu.Game.Online.Broadcasts
         }
     }
 
-    public class TheRealMultiplayerRoomState
+    public class MultiplayerGameplayRoomState
     {
-        public readonly Dictionary<int, RoomPlayerState> PlayerStates = new Dictionary<int, RoomPlayerState>();
+        public readonly Dictionary<int, GameplayPlayerState> PlayerStates = new Dictionary<int, GameplayPlayerState>();
     }
 
-    public class RoomPlayerState
+    public class GameplayPlayerState : RoomPlayerState
     {
-        public RoomPlayerState(IUser user, int slotIndex, int? teamID)
+        public GameplayPlayerState(MultiplayerRoomUser user, int slotIndex, int? teamID)
+            : base(user, slotIndex, teamID)
         {
-            Username = user.Username;
-            UserID.Value = user.OnlineID;
-            SlotIndex.Value = slotIndex;
-            TeamID = teamID;
         }
 
-        public readonly string Username;
-        public readonly BindableInt UserID = new BindableInt(); // using BindableInt instead of int because int doesn't appear when value == 0 in output json...
-        public readonly int? TeamID;
-        public readonly BindableInt SlotIndex = new BindableInt();
-        public MultiplayerUserState UserState;
         public readonly BindableLong TotalScore = new BindableLong();
         public readonly BindableDouble Accuracy = new BindableDouble();
         public readonly BindableInt Combo = new BindableInt();
