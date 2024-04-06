@@ -334,12 +334,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             if (isExiting)
                 return base.OnExiting(e);
 
-            (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+            if (multiplayerClient.Room?.State == MultiplayerRoomState.Results)
+                (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+
             Scheduler.AddDelayed(() =>
             {
                 isExiting = true;
                 this.Exit();
-            }, 250);
+            }, 500);
 
             return true;
         }
