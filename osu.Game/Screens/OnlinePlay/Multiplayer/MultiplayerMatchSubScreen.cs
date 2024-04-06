@@ -87,9 +87,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private OsuGame game { get; set; }
 
         [Resolved]
-        protected RulesetStore RulesetStore { get; private set; }
-
-        [Resolved]
         private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
 
         [Resolved]
@@ -276,7 +273,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
                                                             foreach ((string modKey, var modParams) in mods)
                                                             {
-                                                                var osuRuleset = RulesetStore.GetRuleset(0)?.CreateInstance();
+                                                                var osuRuleset = Rulesets.GetRuleset(0)?.CreateInstance();
                                                                 if (osuRuleset == null) continue;
 
                                                                 Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
