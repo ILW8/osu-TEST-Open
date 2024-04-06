@@ -12,7 +12,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Development;
 using osu.Framework.Graphics;
-using osu.Framework.Logging;
 using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -723,6 +722,12 @@ namespace osu.Game.Online.Multiplayer
             {
                 if (Room == null)
                     return;
+
+                if (Room.State is MultiplayerRoomState.Playing or MultiplayerRoomState.WaitingForLoad)
+                    Room.State = MultiplayerRoomState.Results;
+
+                if (Room.State == MultiplayerRoomState.Results)
+                    Room.State = MultiplayerRoomState.Open;
 
                 GameplayAborted?.Invoke(reason);
             }, false);
