@@ -33,6 +33,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
+        [Resolved]
+        private ChatTimerHandler chatTimerHandler { get; set; } = null!;
+
         private MultiplayerGameplayStateBroadcaster mpGameplayStateBroadcaster = null!;
 
         // Isolates beatmap/ruleset to this screen.
@@ -186,7 +189,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             LoadComponentAsync(new GameplayChatDisplay(room)
             {
                 Expanded = { Value = true },
-            }, chat => leaderboardFlow.Insert(1, chat));
+            }, chat =>
+            {
+                chatTimerHandler.OnChatMessageDue += chat.EnqueueBotMessage;
+                leaderboardFlow.Insert(1, chat);
+            });
 
             multiplayerClient.ResultsReady += onResultsReady;
         }

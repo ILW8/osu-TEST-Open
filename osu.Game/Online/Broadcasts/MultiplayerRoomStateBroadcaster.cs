@@ -4,10 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
@@ -29,7 +27,8 @@ namespace osu.Game.Online.Broadcasts
 
         private void broadcast()
         {
-            Logger.Log($@"RoomState: {Message.RoomState}, {JsonConvert.SerializeObject(this, SerializationSettings)}");
+            // use this method to inject logic before actually broadcasting
+
             Broadcast();
         }
 
