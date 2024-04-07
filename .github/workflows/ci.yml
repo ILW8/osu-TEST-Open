@@ -40,4 +40,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.os}}
-          path: osu.Desktop/bin/release/net8.0/${{matrix.os}}
+          path: osu.Desktop/bin/Release/net8.0/${{matrix.os}}
