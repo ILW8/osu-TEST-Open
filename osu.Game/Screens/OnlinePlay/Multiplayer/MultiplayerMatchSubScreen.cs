@@ -143,7 +143,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 _ => countdownTimeRemaining.TotalMilliseconds % 5_000
             };
 
-            Logger.Log($"Time until next timer message: {timeToNextMessage}");
+            Logger.Log($@"Time until next timer message: {timeToNextMessage}ms");
 
             countdownUpdateDelegate = Scheduler.AddDelayed(sendTimerMessage, timeToNextMessage);
         }
@@ -151,15 +151,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private void sendTimerMessage()
         {
             int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
-            // botMessageQueue.Enqueue(new Tuple<string, Channel>(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", Channel.Value));
             string message = secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds";
             OnChatMessageDue?.Invoke(message);
 
-            if (secondsRemaining > 0)
-            {
-                Logger.Log($"Sent timer message, {secondsRemaining} seconds remaining on timer. ");
-                countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 100);
-            }
+            if (secondsRemaining <= 0) return;
+
+            Logger.Log($@"Sent timer message, {secondsRemaining} seconds remaining on timer. ");
+            countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 100);
         }
 
         public void Abort()
@@ -176,16 +174,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public override string ShortTitle => "room";
         private LinkFlowContainer linkFlowContainer = null!;
-
-        // private DependencyContainer dependencies;
-
-        // protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
-        // {
-        //     dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
-        //     chatTimerHandler = new ChatTimerHandler();
-        //     dependencies.CacheAs(chatTimerHandler);
-        //     return dependencies;
-        // }
 
         [Resolved]
         private MultiplayerClient client { get; set; }
@@ -221,12 +209,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             Title = room.RoomID.Value == null ? "New room" : room.Name.Value;
             Activity.Value = new UserActivity.InLobby(room);
         }
-
-        // [BackgroundDependencyLoader]
-        // private void load()
-        // {
-        //
-        // }
 
         protected override void LoadComplete()
         {
@@ -638,25 +620,25 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         public override void OnResuming(ScreenTransitionEvent e)
         {
             // chatTimerHandler.SetMessageHandler(chatDisplay.EnqueueMessageBot);
-            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueMessageBot;
+            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueBotMessage;
             base.OnResuming(e);
         }
 
         public override void OnSuspending(ScreenTransitionEvent _)
         {
-            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueMessageBot;
+            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueBotMessage;
         }
 
         public override void OnEntering(ScreenTransitionEvent e)
         {
             // chatTimerHandler.SetMessageHandler(chatDisplay.EnqueueMessageBot);
-            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueMessageBot;
+            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueBotMessage;
             base.OnEntering(e);
         }
 
         public override bool OnExiting(ScreenExitEvent e)
         {
-            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueMessageBot;
+            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueBotMessage;
 
             // room has not been created yet or we're offline; exit immediately.
             if (client.Room == null || !IsConnected)

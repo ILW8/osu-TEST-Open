@@ -191,7 +191,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 Expanded = { Value = true },
             }, chat =>
             {
-                chatTimerHandler.OnChatMessageDue += chat.EnqueueMessageBot;
+                chatTimerHandler.OnChatMessageDue += chat.EnqueueBotMessage;
                 leaderboardFlow.Insert(1, chat);
             });
 

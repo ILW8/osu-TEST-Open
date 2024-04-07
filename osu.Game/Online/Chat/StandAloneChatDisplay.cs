@@ -264,10 +264,7 @@ namespace osu.Game.Online.Chat
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
             new StandAloneDrawableChannel(channel);
 
-        public void EnqueueMessageBot(string message)
-        {
-            botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
-        }
+        public void EnqueueBotMessage(string message) => botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
 
         private void postMessage(TextBox sender, bool newText)
         {
@@ -280,7 +277,6 @@ namespace osu.Game.Online.Chat
                 channelManager?.PostCommand(text.Substring(1), Channel.Value);
             else
             {
-                // channelManager?.PostMessage(text, target: Channel.Value);
                 messageQueue.Enqueue(new Tuple<string, Channel>(text, Channel.Value));
 
                 string[] parts = text.Split();
@@ -323,13 +319,7 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"timer":
-                                // Countdown.TimeRemaining = TimeSpan.FromSeconds(numericParam);
-                                // countdownChangeTime = Time.Current;
-                                Logger.Log($"is chattimerhandler null? {chatTimerHandler == null}");
-
                                 chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, Channel.Value);
-                                // sendTimerMessage();
-
                                 break;
                         }
                     }
@@ -340,14 +330,9 @@ namespace osu.Game.Online.Chat
                             case @"timer":
                                 if (parts[2] == @"abort")
                                 {
-                                    // if (countdownUpdateDelegate == null)
-                                    //     break;
-                                    //
-                                    // countdownUpdateDelegate.Cancel();
-                                    // countdownUpdateDelegate = null;
-
                                     chatTimerHandler.Abort();
 
+                                    // move this into ChatTimerHandler?
                                     botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
                                 }
 

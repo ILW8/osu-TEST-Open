@@ -27,7 +27,8 @@ namespace osu.Game.Online.Broadcasts
 
         private void broadcast()
         {
-            // Logger.Log($"room state: {JsonConvert.SerializeObject(this, SerializationSettings)}");
+            // use this method to inject logic before actually broadcasting
+
             Broadcast();
         }
 
