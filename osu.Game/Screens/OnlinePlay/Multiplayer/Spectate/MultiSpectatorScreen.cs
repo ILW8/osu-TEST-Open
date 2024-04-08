@@ -235,12 +235,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             }, 12_000);
         }
 
-        public override void OnSuspending(ScreenTransitionEvent e)
-        {
-            broadcastServer.Remove(mpGameplayStateBroadcaster);
-            base.OnSuspending(e);
-        }
-
         protected override void Update()
         {
             base.Update();
@@ -339,7 +333,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public override bool OnExiting(ScreenExitEvent e)
         {
             if (isExiting)
-                return base.OnExiting(e);
+            {
+                bool cancelExit = base.OnExiting(e);
+
+                if (!cancelExit)
+                    broadcastServer.Remove(mpGameplayStateBroadcaster);
+
+                return cancelExit;
+            }
 
             if (multiplayerClient.Room?.State == MultiplayerRoomState.Results)
                 (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
