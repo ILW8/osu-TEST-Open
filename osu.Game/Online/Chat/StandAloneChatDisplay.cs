@@ -214,11 +214,25 @@ namespace osu.Game.Online.Chat
                         bParamValueDouble.Value = Convert.ToDouble(parametersList[i]);
                         break;
 
+                    case BindableNumber<float> bParamValueFloat:
+                        bParamValueFloat.Value = Convert.ToSingle(parametersList[i]);
+                        break;
+
                     case BindableBool bParamValueBool:
                         bParamValueBool.Value = Convert.ToBoolean(parametersList[i]);
                         break;
 
                     case IBindable bindable:
+                        var bindableType = bindable.GetType();
+
+                        if (!bindableType.IsGenericType)
+                        {
+                            Logger.Log($@"{acronym}'s {paramAttr.Label} is not a generic type ({bindableType.Name}), expected generic type. Skipping.",
+                                LoggingTarget.Runtime,
+                                LogLevel.Important);
+                            break;
+                        }
+
                         var enumType = bindable.GetType().GetGenericArguments()[0];
 
                         if (enumType.IsEnum)
