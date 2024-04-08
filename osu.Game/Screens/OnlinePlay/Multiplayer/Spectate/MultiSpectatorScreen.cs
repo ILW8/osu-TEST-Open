@@ -360,7 +360,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // // On a manual exit, set the player back to idle unless gameplay has finished.
             // // Of note, this doesn't cover exiting using alt-f4 or menu home option.
-            if (multiplayerClient.Room.State == MultiplayerRoomState.Open)
+            if (multiplayerClient.Room.State is MultiplayerRoomState.Open or MultiplayerRoomState.Results)
                 return base.OnBackButton();
 
             multiplayerClient.ManualExitRequested = true;
