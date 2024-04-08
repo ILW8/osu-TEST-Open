@@ -519,10 +519,17 @@ namespace osu.Game.Online.Chat
 
         protected virtual ChatLine CreateMessage(Message message)
         {
-            string[] parts = message.Content.Split();
+            chatBroadcaster.AddNewMessage(message);
+            return new StandAloneMessage(message);
+        }
 
-            if (parts.Length > 0 && parts[0] == @"!roll" && Client.IsHost)
+        private void newCommandHandler(IEnumerable<Message> messages)
+        {
+            foreach (var message in messages)
             {
+                string[] parts = message.Content.Split();
+                if (parts.Length <= 0 || parts[0] != @"!roll" || !Client.IsHost) continue;
+
                 long limit = 100;
 
                 if (parts.Length > 1)
@@ -545,13 +552,12 @@ namespace osu.Game.Online.Chat
                 long randomNumber = rnd.NextInt64(1, limit);
                 botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
             }
-
-            chatBroadcaster.AddNewMessage(message);
-            return new StandAloneMessage(message);
         }
 
         private void channelChanged(ValueChangedEvent<Channel> e)
         {
+            if (drawableChannel != null)
+                drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
             drawableChannel?.Expire();
 
             if (e.OldValue != null)
@@ -564,6 +570,7 @@ namespace osu.Game.Online.Chat
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
+            drawableChannel.Channel.NewMessagesArrived += newCommandHandler;
 
             chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);
