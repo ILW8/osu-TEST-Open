@@ -80,9 +80,6 @@ namespace osu.Game.Online.Chat
         [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
         private BindableList<PlaylistItem> roomPlaylist { get; set; }
 
-        [Resolved]
-        private Room room { get; set; }
-
         protected readonly ChatTextBox TextBox;
 
         private ChannelManager channelManager;
@@ -342,7 +339,7 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"mods":
-                                var itemToEdit = room.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
+                                var itemToEdit = Client.Room?.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
 
                                 if (itemToEdit == null)
                                     break;
@@ -425,7 +422,7 @@ namespace osu.Game.Online.Chat
                                 }
 
                                 // get playlist item to edit:
-                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.Beatmap.OnlineID).ContinueWith(task => Schedule(() =>
+                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
                                 {
                                     APIBeatmap beatmapInfo = task.GetResultSafely();
 
