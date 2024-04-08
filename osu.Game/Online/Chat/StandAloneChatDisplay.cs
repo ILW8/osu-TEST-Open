@@ -80,6 +80,9 @@ namespace osu.Game.Online.Chat
         [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
         private BindableList<PlaylistItem> roomPlaylist { get; set; }
 
+        [Resolved]
+        private Room room { get; set; }
+
         protected readonly ChatTextBox TextBox;
 
         private ChannelManager channelManager;
@@ -339,11 +342,11 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"mods":
-                                // abort if room playlist is somehow null:
-                                if (roomPlaylist == null)
+                                var itemToEdit = room.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
+
+                                if (itemToEdit == null)
                                     break;
 
-                                var itemToEdit = roomPlaylist.First();
                                 string[] mods = parts[2].Split("+");
                                 List<Mod> modInstances = new List<Mod>();
 
@@ -502,7 +505,7 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
-            var itemsToRemove = roomPlaylist?.ToArray() ?? Array.Empty<PlaylistItem>();
+            var itemsToRemove = roomPlaylist?.Where(playlistItem => !playlistItem.Expired).ToArray() ?? Array.Empty<PlaylistItem>();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
