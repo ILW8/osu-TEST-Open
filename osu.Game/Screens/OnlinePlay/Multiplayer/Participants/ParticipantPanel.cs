@@ -397,8 +397,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
             private void performMove()
             {
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-
                 int newSlot;
 
                 try
@@ -408,7 +406,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 }
                 catch (FormatException)
                 {
-                    moveFailed($"couldn't parse {slotTextBox.Text} as integer");
+                    moveFailed($@"couldn't parse {slotTextBox.Text} as integer");
                     return;
                 }
 
@@ -416,7 +414,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                 if (room == null)
                 {
-                    moveFailed("room is null");
+                    moveFailed(@"room is null");
                     return;
                 }
 
