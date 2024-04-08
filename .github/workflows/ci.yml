@@ -47,6 +47,8 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: Ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: restore release .zip
         uses: actions/cache/restore@v4
