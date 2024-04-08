@@ -63,7 +63,7 @@ jobs:
         run: |
           for directory in */
           do
-            zip -r "$directory.zip" "$directory"
+            zip -r "${$directory::-1}.zip" "$directory"
           done
 
       - name: what are the files?
