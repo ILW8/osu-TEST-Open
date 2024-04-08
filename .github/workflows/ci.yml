@@ -47,10 +47,8 @@ jobs:
     runs-on: Ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         if: startsWith(github.ref, 'refs/tags/')
-        with:
-          name: my-artifact
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
