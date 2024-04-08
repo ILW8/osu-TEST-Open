@@ -288,27 +288,16 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             {
                 if (Room == null)
                     return null;
-                //
-                // // If the local user is targetted.
-                // if (User.UserID == api.LocalUser.Value.Id)
-                //     return null;
-                bool isLocalUserTargeted = User.UserID == api.LocalUser.Value.Id;
+
+                // always allow moving slots regardless of host status
+                List<MenuItem> menuItems = new List<MenuItem> { new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover) };
 
                 // If the local user is not the host of the room.
                 if (Room.Host?.UserID != api.LocalUser.Value.Id)
-                    return null;
+                    return menuItems.ToArray();
 
                 int targetUser = User.UserID;
-
-                if (isLocalUserTargeted)
-                {
-                    return new MenuItem[]
-                    {
-                        new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover)
-                    };
-                }
-
-                return new MenuItem[]
+                menuItems.AddRange(new MenuItem[]
                 {
                     new OsuMenuItem("Give host", MenuItemType.Standard, () =>
                     {
@@ -318,7 +307,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                         Client.TransferHost(targetUser).FireAndForget();
                     }),
-                    new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover),
                     new OsuMenuItem("Kick", MenuItemType.Destructive, () =>
                     {
                         // Ensure the local user is still host.
@@ -327,7 +315,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                         Client.KickUser(targetUser).FireAndForget();
                     })
-                };
+                });
+
+                return menuItems.ToArray();
             }
         }
 
@@ -407,8 +397,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
             private void performMove()
             {
-                Logger.Log("MOVING!!!!!!", LoggingTarget.Runtime, LogLevel.Debug);
-
                 int newSlot;
 
                 try
@@ -418,7 +406,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 }
                 catch (FormatException)
                 {
-                    moveFailed($"couldn't parse {slotTextBox.Text} as integer");
+                    moveFailed($@"couldn't parse {slotTextBox.Text} as integer");
                     return;
                 }
 
@@ -426,7 +414,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                 if (room == null)
                 {
-                    moveFailed("room is null");
+                    moveFailed(@"room is null");
                     return;
                 }
 

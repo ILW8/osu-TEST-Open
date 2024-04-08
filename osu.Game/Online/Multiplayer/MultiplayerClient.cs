@@ -569,6 +569,13 @@ namespace osu.Game.Online.Multiplayer
                 if (user == null)
                     return;
 
+                // ensure spectator is always sorted to the end of users list
+                if (state == MultiplayerUserState.Spectating)
+                {
+                    Room?.Users.Remove(user);
+                    Room?.Users.Add(user);
+                }
+
                 // if/else for the sake of not having to modify osu-spectator-server
                 if (!(state == MultiplayerUserState.Idle &&
                       user.UserID == LocalUser?.UserID &&
