@@ -80,6 +80,9 @@ namespace osu.Game.Online.Chat
         [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
         private BindableList<PlaylistItem> roomPlaylist { get; set; }
 
+        [Resolved]
+        private Room room { get; set; }
+
         protected readonly ChatTextBox TextBox;
 
         private ChannelManager channelManager;
@@ -339,11 +342,11 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"mods":
-                                // abort if room playlist is somehow null:
-                                if (roomPlaylist == null)
+                                var itemToEdit = room.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
+
+                                if (itemToEdit == null)
                                     break;
 
-                                var itemToEdit = roomPlaylist.First();
                                 string[] mods = parts[2].Split("+");
                                 List<Mod> modInstances = new List<Mod>();
 
@@ -502,7 +505,7 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
-            var itemsToRemove = roomPlaylist?.ToArray() ?? Array.Empty<PlaylistItem>();
+            var itemsToRemove = roomPlaylist?.Where(playlistItem => !playlistItem.Expired).ToArray() ?? Array.Empty<PlaylistItem>();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
@@ -519,10 +522,17 @@ namespace osu.Game.Online.Chat
 
         protected virtual ChatLine CreateMessage(Message message)
         {
-            string[] parts = message.Content.Split();
+            chatBroadcaster.AddNewMessage(message);
+            return new StandAloneMessage(message);
+        }
 
-            if (parts.Length > 0 && parts[0] == @"!roll" && Client.IsHost)
+        private void newCommandHandler(IEnumerable<Message> messages)
+        {
+            foreach (var message in messages)
             {
+                string[] parts = message.Content.Split();
+                if (parts.Length <= 0 || parts[0] != @"!roll" || !Client.IsHost) continue;
+
                 long limit = 100;
 
                 if (parts.Length > 1)
@@ -545,13 +555,12 @@ namespace osu.Game.Online.Chat
                 long randomNumber = rnd.NextInt64(1, limit);
                 botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
             }
-
-            chatBroadcaster.AddNewMessage(message);
-            return new StandAloneMessage(message);
         }
 
         private void channelChanged(ValueChangedEvent<Channel> e)
         {
+            if (drawableChannel != null)
+                drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
             drawableChannel?.Expire();
 
             if (e.OldValue != null)
@@ -564,6 +573,7 @@ namespace osu.Game.Online.Chat
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
+            drawableChannel.Channel.NewMessagesArrived += newCommandHandler;
 
             chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);
