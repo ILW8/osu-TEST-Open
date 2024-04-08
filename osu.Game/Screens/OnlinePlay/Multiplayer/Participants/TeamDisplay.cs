@@ -6,7 +6,6 @@
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
-using osu.Framework.Audio.Sample;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -25,8 +24,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
         private readonly MultiplayerRoomUser user;
 
         private Drawable box;
-
-        private Sample sampleTeamSwap;
 
         [Resolved]
         private OsuColour colours { get; set; }
@@ -76,8 +73,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 clickableContent.Action = changeTeam;
                 clickableContent.TooltipText = "Change team";
             }
-
-            sampleTeamSwap = audio.Samples.Get(@"Multiplayer/team-swap");
         }
 
         private void changeTeam()
@@ -104,11 +99,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
             if (newTeam == DisplayedTeam)
                 return;
-
-            // only play the sample if an already valid team changes to another valid team.
-            // this avoids playing a sound for each user if the match type is changed to/from a team mode.
-            if (newTeam != null && DisplayedTeam != null)
-                sampleTeamSwap?.Play();
 
             DisplayedTeam = newTeam;
 
