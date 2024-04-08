@@ -45,6 +45,7 @@ jobs:
   release:
     name: Release
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: Ubuntu-latest
     steps:
       - name: restore release .zip
@@ -57,7 +58,6 @@ jobs:
         uses: actions/download-artifact@v4
 #        with:
 #          merge-multiple: true
-        if: startsWith(github.ref, 'refs/tags/')
 
       - name: zip releases
         run: |
@@ -66,9 +66,10 @@ jobs:
             zip -r "$directory.zip" "$directory"
           done
 
+      - name: what are the files?
+        run: ls -la
+
       - name: Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            *.zip
+          files: *
