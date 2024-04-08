@@ -37,10 +37,13 @@ jobs:
       - name: Create publish package
         run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
 
+      - name: zip files
+        run: zip -r ${{matrix.os}}.zip osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.os}}
-          path: osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+          path: ${{matrix.os}}.zip
   release:
     name: Release
     needs: build
