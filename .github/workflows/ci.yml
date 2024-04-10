@@ -44,10 +44,23 @@ jobs:
           REF: ${{ github.ref }}
         run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${REF##*/}" --self-contained -warnaserror osu.Desktop.slnf
 
+      - name: tar releases (for *nix platforms)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        run: tar -cvzf ${{matrix.os}}.tar.gz osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
       - uses: actions/upload-artifact@v4
+        name: upload artifacts (windows)
+        if: ${{ startsWith(matrix.os, 'win') }}
         with:
           name: ${{matrix.os}}
           path: osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
+      - uses: actions/upload-artifact@v4
+        name: upload artifacts (*nix)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        with:
+          name: ${{matrix.os}}
+          path: ${{matrix.os}}.tar.gz
 
   release:
     name: Release
