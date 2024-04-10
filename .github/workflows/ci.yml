@@ -70,16 +70,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: restore release .zip
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{matrix.os}}.zip
-          key: ${{ matrix.os }}-${{ github.sha }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
-#        with:
-#          merge-multiple: true
 
       - name: zip releases
         run: |
@@ -88,8 +80,14 @@ jobs:
             zip -r "${directory::-1}.zip" "$directory"
           done
 
-      - name: what are the files?
-        run: ls -la
+      - name: delete artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            win-x64
+            linux-x64
+            osx-arm64
+            osx-x64
 
       - name: Release
         uses: softprops/action-gh-release@v2
