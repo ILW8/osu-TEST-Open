@@ -90,7 +90,7 @@ namespace osu.Game.Overlays
                         Origin = Anchor.TopCentre,
                         Font = OsuFont.Numeric.With(size: 12),
                         Colour = colours.Yellow,
-                        Text = @"TEST Open referee & streamer build"
+                        Text = @"Referee/Streamer build"
                     },
                     new Sprite
                     {
