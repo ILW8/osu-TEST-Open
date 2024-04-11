@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using osu.Desktop.Security;
-using osu.Desktop.Updater;
 using osu.Desktop.WebSockets;
 using osu.Desktop.Windows;
 using osu.Framework;
