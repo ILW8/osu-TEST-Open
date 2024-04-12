@@ -4,6 +4,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
@@ -13,7 +14,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.FileProviders.Physical;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Platform;
 
 namespace osu.Desktop.WebSockets
 {
@@ -43,6 +48,9 @@ namespace osu.Desktop.WebSockets
         /// Gets the number of connections this server currently has.
         /// </summary>
         public int Connected => connections.Count;
+
+        [Resolved]
+        private Storage storage { get; set; } = null!;
 
         private int nextClientId = -1;
         private IWebHost? webHost;
@@ -117,24 +125,28 @@ namespace osu.Desktop.WebSockets
             string basePath = Endpoint.StartsWith('/') ? Endpoint : '/' + Endpoint;
             app.UsePathBase(basePath);
             app.UseWebSockets();
+
+            const string request_path = "";
+            string staticRoot = storage.GetStorageForDirectory(@"static").GetFullPath(string.Empty);
+            Directory.CreateDirectory(staticRoot);
+            var fileProvider = new PhysicalFileProvider(staticRoot, ExclusionFilters.None);
+
+            app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider, RequestPath = request_path, ServeUnknownFileTypes = true });
             app.Run(handleRequest);
         }
 
         private async Task handleRequest(HttpContext context)
         {
             if (!context.WebSockets.IsWebSocketRequest)
-            {
-                context.Response.StatusCode = 400;
                 return;
-            }
 
             var webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
 
             var connection = new WebSocketConnection(Interlocked.Increment(ref nextClientId), webSocket);
-            connection.OnStart += onConnectionStart;
-            connection.OnClose += onConnectionClose;
-            connection.OnReady += onConnectionReady;
-            connection.OnMessage += onConnectionMessage;
+            connection.OnStart += onWsConnectionStart;
+            connection.OnClose += onWsConnectionClose;
+            connection.OnReady += onWsConnectionReady;
+            connection.OnMessage += onWsConnectionMessage;
 
             await connection.Start().ConfigureAwait(false);
         }
@@ -173,7 +185,7 @@ namespace osu.Desktop.WebSockets
         {
         }
 
-        private void onConnectionStart(object? sender, EventArgs args)
+        private void onWsConnectionStart(object? sender, EventArgs args)
         {
             if (sender == null)
                 return;
@@ -185,7 +197,7 @@ namespace osu.Desktop.WebSockets
             OnConnectionStart(connection);
         }
 
-        private void onConnectionClose(object? sender, bool requested)
+        private void onWsConnectionClose(object? sender, bool requested)
         {
             if (sender == null)
                 return;
@@ -200,7 +212,7 @@ namespace osu.Desktop.WebSockets
             OnConnectionClose(connection, requested);
         }
 
-        private void onConnectionMessage(object? sender, Message args)
+        private void onWsConnectionMessage(object? sender, Message args)
         {
             if (sender == null)
                 return;
@@ -208,7 +220,7 @@ namespace osu.Desktop.WebSockets
             OnConnectionMessage((WebSocketConnection)sender, args);
         }
 
-        private void onConnectionReady(object? sender, EventArgs args)
+        private void onWsConnectionReady(object? sender, EventArgs args)
         {
             if (sender == null)
                 return;
@@ -225,15 +237,15 @@ namespace osu.Desktop.WebSockets
         protected class WebSocketConnection : IAsyncDisposable
         {
             public readonly int ID;
-            public event EventHandler OnStart = null!;
-            public event EventHandler OnReady = null!;
-            public event EventHandler<bool> OnClose = null!;
-            public event EventHandler<Message> OnMessage = null!;
+            public event EventHandler? OnStart;
+            public event EventHandler? OnReady;
+            public event EventHandler<bool>? OnClose;
+            public event EventHandler<Message>? OnMessage;
 
             private bool isDisposed;
             private bool isReady;
             private bool hasStarted;
-            private Task processTask = null!;
+            private Task? processTask;
             private readonly WebSocket socket;
             private readonly TaskCompletionSource completionSource = new TaskCompletionSource();
             private readonly IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent();
@@ -269,7 +281,7 @@ namespace osu.Desktop.WebSockets
             {
                 while (!token.IsCancellationRequested)
                 {
-                    if (socket.State == WebSocketState.Closed || socket.State == WebSocketState.Aborted)
+                    if (socket.State is WebSocketState.Closed or WebSocketState.Aborted)
                         break;
 
                     try
@@ -346,7 +358,7 @@ namespace osu.Desktop.WebSockets
                     await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None).ConfigureAwait(false);
                 }
 
-                cts.Cancel();
+                await cts.CancelAsync().ConfigureAwait(false);
 
                 if (processTask != null)
                     await processTask.ConfigureAwait(false);
