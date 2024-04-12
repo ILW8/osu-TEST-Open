@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -178,11 +177,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved]
         private MultiplayerClient client { get; set; }
 
-        [Resolved]
-        private OngoingOperationTracker operationTracker { get; set; } = null!;
-
-        private IDisposable selectionOperation;
-
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
 
@@ -258,29 +252,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         protected override bool IsConnected => base.IsConnected && client.IsConnected.Value;
 
-        private async Task replacePlaylistItems(IEnumerable<MultiplayerPlaylistItem> items)
-        {
-            // ensure user is host
-            if (!client.IsHost)
-                return;
-
-            selectionOperation = operationTracker.BeginOperation();
-
-            var itemsToRemove = Room.Playlist?.ToArray() ?? Array.Empty<PlaylistItem>();
-
-            foreach (var playlistItem in items)
-            {
-                await client.AddPlaylistItem(playlistItem).ConfigureAwait(true);
-            }
-
-            foreach (var playlistItem in itemsToRemove)
-            {
-                await client.RemovePlaylistItem(playlistItem.ID).ConfigureAwait(false);
-            }
-
-            selectionOperation?.Dispose();
-        }
-
         private void processDownloadQueue()
         {
             lock (downloadQueue)
@@ -309,14 +280,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 Child = new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    ColumnDimensions = new[]
-                    {
+                    ColumnDimensions =
+                    [
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 10),
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 10),
-                        new Dimension(),
-                    },
+                        new Dimension()
+                    ],
                     Content = new[]
                     {
                         new Drawable[]
@@ -328,23 +299,22 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 Content = new[]
                                 {
                                     new Drawable[] { new OverlinedHeader("Lobby ID") },
-                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
-                                    new Drawable[] { new ParticipantsListHeader() },
-                                    new Drawable[]
-                                    {
+                                    [linkFlowContainer = new LinkFlowContainer { Height = 24, AutoSizeAxes = Axes.X }],
+                                    [new ParticipantsListHeader()],
+                                    [
                                         new ParticipantsList
                                         {
                                             RelativeSizeAxes = Axes.Both
-                                        },
-                                    },
+                                        }
+                                    ],
                                 },
-                                RowDimensions = new[]
-                                {
+                                RowDimensions =
+                                [
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(),
-                                }
+                                    new Dimension()
+                                ]
                             },
                             // Spacer
                             null,
