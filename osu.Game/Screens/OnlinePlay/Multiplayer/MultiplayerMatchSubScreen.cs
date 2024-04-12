@@ -35,6 +35,7 @@ using osu.Game.Screens.OnlinePlay.Components;
 using osu.Game.Screens.OnlinePlay.Match;
 using osu.Game.Screens.OnlinePlay.Match.Components;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Match;
+using osu.Game.Screens.OnlinePlay.Multiplayer.Match.Playlist;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Participants;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Users;
@@ -57,6 +58,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
+
+        private AddItemButton addItemButton;
 
         private Container osuCookieBackgroundContainer = null!;
 
@@ -142,12 +145,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                             new GridContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                RowDimensions = new[]
-                                {
-                                    new Dimension(GridSizeMode.AutoSize)
-                                },
                                 Content = new[]
                                 {
+                                    new Drawable[] { new OverlinedHeader("Lobby ID") },
+                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
                                     new Drawable[] { new ParticipantsListHeader() },
                                     new Drawable[]
                                     {
@@ -155,7 +156,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                         {
                                             RelativeSizeAxes = Axes.Both
                                         },
-                                    }
+                                    },
+                                },
+                                RowDimensions = new[]
+                                {
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(),
                                 }
                             },
                             // Spacer
@@ -196,17 +204,37 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 RelativeSizeAxes = Axes.Both,
                                 Content = new[]
                                 {
-                                    new Drawable[] { new OverlinedHeader("Lobby ID") },
-                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
                                     new Drawable[] { new OverlinedHeader("Chat") },
-                                    new Drawable[] { new MatchChatDisplay(Room) { RelativeSizeAxes = Axes.Both } }
+                                    new Drawable[] { new MatchChatDisplay(Room) { RelativeSizeAxes = Axes.Both } },
+                                    new Drawable[] { new OverlinedHeader("Beatmap") },
+                                    new Drawable[]
+                                    {
+                                        addItemButton = new AddItemButton
+                                        {
+                                            RelativeSizeAxes = Axes.X,
+                                            Height = 40,
+                                            Text = "Add item",
+                                            Action = () => OpenSongSelection()
+                                        },
+                                    },
+                                    null,
+                                    new Drawable[]
+                                    {
+                                        new MultiplayerPlaylist
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            RequestEdit = OpenSongSelection
+                                        }
+                                    },
                                 },
                                 RowDimensions = new[]
                                 {
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension()
                                 }
                             },
                         }
@@ -343,6 +371,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             }
 
             updateCurrentItem();
+
+            addItemButton.Alpha = localUserCanAddItem ? 1 : 0;
 
             Scheduler.AddOnce(UpdateMods);
             Scheduler.AddOnce(() =>
