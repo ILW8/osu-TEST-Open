@@ -32,7 +32,7 @@ namespace osu.Game.Screens.OnlinePlay.Lounge.Components
     public partial class DrawableRoom : CompositeDrawable
     {
         protected const float CORNER_RADIUS = 10;
-        private const float height = 100;
+        private const float height = 80;
 
         public readonly Room Room;
 
@@ -148,30 +148,6 @@ namespace osu.Game.Screens.OnlinePlay.Lounge.Components
                                                         Direction = FillDirection.Vertical,
                                                         Children = new Drawable[]
                                                         {
-                                                            new FillFlowContainer
-                                                            {
-                                                                AutoSizeAxes = Axes.Both,
-                                                                Direction = FillDirection.Horizontal,
-                                                                Spacing = new Vector2(5),
-                                                                Children = new Drawable[]
-                                                                {
-                                                                    new RoomStatusPill
-                                                                    {
-                                                                        Anchor = Anchor.CentreLeft,
-                                                                        Origin = Anchor.CentreLeft
-                                                                    },
-                                                                    specialCategoryPill = new RoomSpecialCategoryPill
-                                                                    {
-                                                                        Anchor = Anchor.CentreLeft,
-                                                                        Origin = Anchor.CentreLeft
-                                                                    },
-                                                                    endDateInfo = new EndDateInfo
-                                                                    {
-                                                                        Anchor = Anchor.CentreLeft,
-                                                                        Origin = Anchor.CentreLeft,
-                                                                    },
-                                                                }
-                                                            },
                                                             new FillFlowContainer
                                                             {
                                                                 RelativeSizeAxes = Axes.X,
@@ -306,6 +282,21 @@ namespace osu.Game.Screens.OnlinePlay.Lounge.Components
 
             pills.AddRange(new Drawable[]
             {
+                new RoomStatusPill
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft
+                },
+                specialCategoryPill = new RoomSpecialCategoryPill
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft
+                },
+                endDateInfo = new EndDateInfo
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                },
                 new PlaylistCountPill
                 {
                     Anchor = Anchor.CentreLeft,
