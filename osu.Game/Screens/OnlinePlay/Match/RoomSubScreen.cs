@@ -155,7 +155,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
                                     Padding = new MarginPadding
                                     {
                                         Horizontal = WaveOverlayContainer.WIDTH_PADDING,
-                                        Bottom = 30
+                                        Bottom = 4
                                     },
                                     Children = new[]
                                     {
@@ -165,7 +165,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
                                             RowDimensions = new[]
                                             {
                                                 new Dimension(GridSizeMode.AutoSize),
-                                                new Dimension(GridSizeMode.Absolute, 10)
+                                                new Dimension(GridSizeMode.Absolute, 1),
+                                                new Dimension()
                                             },
                                             Content = new[]
                                             {

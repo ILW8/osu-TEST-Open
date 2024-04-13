@@ -7,26 +7,25 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.Drawables;
 using osu.Game.Configuration;
-using osu.Game.Database;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Online;
-using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
@@ -35,6 +34,7 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Menu;
 using osu.Game.Screens.OnlinePlay.Components;
 using osu.Game.Screens.OnlinePlay.Match;
 using osu.Game.Screens.OnlinePlay.Match.Components;
@@ -42,9 +42,9 @@ using osu.Game.Screens.OnlinePlay.Multiplayer.Match;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Match.Playlist;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Participants;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
-using osu.Game.Screens.Play.HUD;
 using osu.Game.Users;
 using osuTK;
+using osuTK.Graphics;
 using ParticipantsList = osu.Game.Screens.OnlinePlay.Multiplayer.Participants.ParticipantsList;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer
@@ -187,9 +187,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private OsuGame game { get; set; }
 
         [Resolved]
-        private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
-
-        [Resolved]
         private BeatmapModelDownloader beatmapsDownloader { get; set; } = null!;
 
         // private BeatmapDownloadTracker beatmapDownloadTracker = null!;
@@ -201,13 +198,46 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private AddItemButton addItemButton;
 
-        private OsuTextBox poolInputTextBox;
+        private Container osuCookieBackgroundContainer = null!;
+
+        [CanBeNull]
+        private OsuCookieBackground osuCookieBackground;
 
         public MultiplayerMatchSubScreen(Room room)
             : base(room)
         {
             Title = room.RoomID.Value == null ? "New room" : room.Name.Value;
             Activity.Value = new UserActivity.InLobby(room);
+        }
+
+        private OsuCookieBackground getOsuCookieBackground(IWorkingBeatmap workingBeatmap) => new OsuCookieBackground(workingBeatmap)
+        {
+            // Scale = new Vector2(4f),
+            Anchor = Anchor.Centre,
+            Origin = Anchor.Centre,
+            FillMode = FillMode.Fill,
+        };
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            Beatmap.BindValueChanged(vce =>
+            {
+                Scheduler.Add(() =>
+                {
+                    Logger.Log($@"updating cookie background to map {vce.NewValue}");
+
+                    LoadComponentAsync(getOsuCookieBackground(vce.NewValue), loaded =>
+                    {
+                        osuCookieBackground?.FadeOut(300, Easing.OutCubic);
+                        osuCookieBackground?.Expire();
+
+                        loaded.Depth = osuCookieBackground?.Depth + 1 ?? 0;
+                        osuCookieBackground = loaded;
+                        osuCookieBackgroundContainer.Add(loaded);
+                    });
+                });
+            });
         }
 
         protected override void LoadComplete()
@@ -295,12 +325,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                             new GridContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                RowDimensions = new[]
-                                {
-                                    new Dimension(GridSizeMode.AutoSize)
-                                },
                                 Content = new[]
                                 {
+                                    new Drawable[] { new OverlinedHeader("Lobby ID") },
+                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
                                     new Drawable[] { new ParticipantsListHeader() },
                                     new Drawable[]
                                     {
@@ -308,17 +336,56 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                         {
                                             RelativeSizeAxes = Axes.Both
                                         },
+                                    },
+                                },
+                                RowDimensions = new[]
+                                {
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(),
+                                }
+                            },
+                            // Spacer
+                            null,
+                            // osu! cookie
+                            new Container
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Size = new Vector2(360f),
+                                Children = new Drawable[]
+                                {
+                                    osuCookieBackgroundContainer = new Container
+                                    {
+                                        AutoSizeAxes = Axes.None,
+                                        RelativeSizeAxes = Axes.Both,
+                                        Size = new Vector2(1f),
+                                        Child = osuCookieBackground = getOsuCookieBackground(Beatmap.Value)
+                                    },
+                                    new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Child = new OsuLogo
+                                        {
+                                            Anchor = Anchor.Centre,
+                                            Origin = Anchor.Centre,
+                                            Scale = new Vector2(0.5f),
+                                            Margin = new MarginPadding(32.0f),
+                                        },
                                     }
                                 }
                             },
                             // Spacer
                             null,
-                            // Beatmap column
+                            // Main right column
                             new GridContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Content = new[]
                                 {
+                                    new Drawable[] { new OverlinedHeader("Chat") },
+                                    new Drawable[] { chatDisplay = new MatchChatDisplay(Room) { RelativeSizeAxes = Axes.Both } },
                                     new Drawable[] { new OverlinedHeader("Beatmap") },
                                     new Drawable[]
                                     {
@@ -332,106 +399,20 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     },
                                     new Drawable[]
                                     {
-                                        new FillFlowContainer
-                                        {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Direction = FillDirection.Horizontal,
-                                            Children = new Drawable[]
-                                            {
-                                                poolInputTextBox = new OsuTextBox
-                                                {
-                                                    RelativeSizeAxes = Axes.X,
-                                                    Height = 40,
-                                                    Width = 0.6f,
-                                                    LengthLimit = 262144
-                                                },
-                                                new PurpleRoundedButton
-                                                {
-                                                    RelativeSizeAxes = Axes.X,
-                                                    Height = 40,
-                                                    Width = 0.4f,
-                                                    Text = @"Load pool",
-                                                    Action = loadPoolFromJson
-                                                }
-                                            }
-                                        }
-                                    },
-                                    new Drawable[]
-                                    {
                                         new MultiplayerPlaylist
                                         {
                                             RelativeSizeAxes = Axes.Both,
                                             RequestEdit = OpenSongSelection
                                         }
                                     },
-                                    new[]
-                                    {
-                                        UserModsSection = new FillFlowContainer
-                                        {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Margin = new MarginPadding { Top = 10 },
-                                            Alpha = 0,
-                                            Children = new Drawable[]
-                                            {
-                                                new OverlinedHeader("Extra mods"),
-                                                new FillFlowContainer
-                                                {
-                                                    AutoSizeAxes = Axes.Both,
-                                                    Direction = FillDirection.Horizontal,
-                                                    Spacing = new Vector2(10, 0),
-                                                    Children = new Drawable[]
-                                                    {
-                                                        new UserModSelectButton
-                                                        {
-                                                            Anchor = Anchor.CentreLeft,
-                                                            Origin = Anchor.CentreLeft,
-                                                            Width = 90,
-                                                            Text = "Select",
-                                                            Action = ShowUserModSelect,
-                                                        },
-                                                        new ModDisplay
-                                                        {
-                                                            Anchor = Anchor.CentreLeft,
-                                                            Origin = Anchor.CentreLeft,
-                                                            Current = UserMods,
-                                                            Scale = new Vector2(0.8f),
-                                                        },
-                                                    }
-                                                },
-                                            }
-                                        },
-                                    },
                                 },
                                 RowDimensions = new[]
                                 {
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
-                                }
-                            },
-                            // Spacer
-                            null,
-                            // Main right column
-                            new GridContainer
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Content = new[]
-                                {
-                                    new Drawable[] { new OverlinedHeader("Lobby ID") },
-                                    new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24 } },
-                                    new Drawable[] { new OverlinedHeader("Chat") },
-                                    new Drawable[] { chatDisplay = new MatchChatDisplay(Room) { RelativeSizeAxes = Axes.Both } }
-                                },
-                                RowDimensions = new[]
-                                {
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(),
+                                    new Dimension()
                                 }
                             },
                         }
@@ -439,147 +420,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 }
             }
         };
-
-        private void loadPoolFromJson()
-        {
-            Pool pool = JsonConvert.DeserializeObject<Pool>(
-                poolInputTextBox.Current.Value,
-                new JsonSerializerSettings
-                {
-                    Error = delegate(object _, ErrorEventArgs args) { args.ErrorContext.Handled = true; }
-                }
-            );
-
-            if (pool.Beatmaps == null)
-                return;
-
-            foreach (var map in pool.Beatmaps)
-            {
-                var mods = map.Mods;
-
-                List<Mod> modInstances = new List<Mod>();
-
-                foreach ((string modKey, var modParams) in mods)
-                {
-                    var osuRuleset = Rulesets.GetRuleset(0)?.CreateInstance();
-                    if (osuRuleset == null) continue;
-
-                    Mod modInstance = StandAloneChatDisplay.ParseMod(osuRuleset, modKey, modParams);
-                    if (modInstance != null)
-                        modInstances.Add(modInstance);
-                }
-
-                map.ParsedMods = new List<Mod>();
-                map.ParsedMods.AddRange(modInstances);
-            }
-
-            // download map and set playlist
-            beatmapLookupCache.GetBeatmapsAsync(pool.Beatmaps.Select(map => map.BeatmapID).ToArray()).ContinueWith(task => Schedule(() =>
-            {
-                APIBeatmap[] beatmaps = task.GetResultSafely();
-
-                playlistItemsToAdd.Clear();
-
-                var playlistItems = beatmaps
-                                    .Where(beatmap => beatmap != null && pool.Beatmaps.Select(b => b.BeatmapID).Contains(beatmap.OnlineID))
-                                    .Select(beatmap =>
-                                    {
-                                        var mods = pool.Beatmaps
-                                                       .FirstOrDefault(poolMap => poolMap.BeatmapID == beatmap.OnlineID)?
-                                                       .ParsedMods
-                                                       .Select(mod => new APIMod(mod))
-                                                       .ToArray();
-
-                                        var item = new PlaylistItem(beatmap)
-                                        {
-                                            RulesetID = beatmap.Ruleset.OnlineID,
-                                            RequiredMods = mods ?? Array.Empty<APIMod>(),
-                                            AllowedMods = Array.Empty<APIMod>()
-                                        };
-
-                                        return new MultiplayerPlaylistItem
-                                        {
-                                            ID = 0,
-                                            BeatmapID = item.Beatmap.OnlineID,
-                                            BeatmapChecksum = item.Beatmap.MD5Hash,
-                                            RulesetID = item.RulesetID,
-                                            RequiredMods = item.RequiredMods,
-                                            AllowedMods = item.AllowedMods
-                                        };
-                                    });
-
-                var multiplayerPlaylistItems = playlistItems.ToArray();
-
-                if (multiplayerPlaylistItems.Length != pool.Beatmaps.Count)
-                {
-                    Logger.Log($@"Expected {pool.Beatmaps.Count} maps, beatmap lookup returned {multiplayerPlaylistItems.Length} maps, aborting!",
-                        LoggingTarget.Runtime, LogLevel.Important);
-                    return;
-                }
-
-                foreach (var beatmap in beatmaps)
-                {
-                    if (beatmap?.BeatmapSet == null) continue;
-
-                    BeatmapDownloadTracker tracker = new BeatmapDownloadTracker(beatmap.BeatmapSet);
-                    AddInternal(tracker); // a leak, but I can't be bothered figuring out why BeatmapDownloadTracker doesn't work inside another container
-                    beatmapDownloadTrackers.Add(tracker);
-
-                    tracker.State.BindValueChanged(changeEvent =>
-                    {
-                        // download failed, abort.
-                        if (changeEvent.OldValue == DownloadState.Downloading && changeEvent.NewValue == DownloadState.NotDownloaded)
-                        {
-                            tracker.State.UnbindAll();
-                            beatmapDownloadTrackers.Remove(tracker);
-                            RemoveInternal(tracker, true);
-                            return;
-                        }
-
-                        switch (changeEvent.NewValue)
-                        {
-                            case DownloadState.LocallyAvailable:
-                                tracker.State.UnbindAll();
-                                beatmapDownloadTrackers.Remove(tracker);
-                                RemoveInternal(tracker, true);
-
-                                // what the fuck is this shit...
-                                playlistItemsToAdd.Add(multiplayerPlaylistItems.FirstOrDefault(item => item.BeatmapID == beatmap.OnlineID));
-
-                                if (playlistItemsToAdd.Count == multiplayerPlaylistItems.Length) // all maps in playlist are downloaded and ready
-                                {
-                                    // ReSharper disable once AsyncVoidLambda
-                                    Scheduler.Add(async () => await replacePlaylistItems(
-                                                                      playlistItemsToAdd
-                                                                          .OrderBy(mpPlaylistItem => pool.Beatmaps.Select(map => map.BeatmapID).ToList().IndexOf(mpPlaylistItem.BeatmapID))
-                                                                          .ToArray())
-                                                                  .ConfigureAwait(false));
-                                }
-
-                                return;
-
-                            case DownloadState.NotDownloaded:
-                                Logger.Log($@"Downloading beatmapset {beatmap.BeatmapSet.OnlineID}");
-                                lock (downloadQueue)
-                                    downloadQueue.Enqueue(beatmap.BeatmapSet);
-                                break;
-
-                            case DownloadState.Unknown:
-                                break;
-
-                            case DownloadState.Downloading:
-                                break;
-
-                            case DownloadState.Importing:
-                                break;
-
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-                    }, true);
-                }
-            }));
-        }
 
         /// <summary>
         /// Opens the song selection screen to add or edit an item.
@@ -843,6 +683,56 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public partial class AddItemButton : PurpleRoundedButton
         {
+        }
+    }
+
+    internal partial class OsuCookieBackground : CompositeDrawable
+    {
+        private readonly IWorkingBeatmap beatmap;
+
+        public OsuCookieBackground(IWorkingBeatmap beatmap)
+        {
+            this.beatmap = beatmap;
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            RelativeSizeAxes = Axes.Both;
+
+            InternalChild = new BufferedContainer(cachedFrameBuffer: true)
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    // We will create the white-to-black gradient by modulating transparency and having
+                    // a black backdrop. This results in an sRGB-space gradient and not linear space,
+                    // transitioning from white to black more perceptually uniformly.
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black,
+                    },
+                    // We use a container, such that we can set the colour gradient to go across the
+                    // vertices of the masked container instead of the vertices of the (larger) sprite.
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = ColourInfo.GradientVertical(Color4.White, Color4.White.Opacity(0.3f)),
+                        Children = new[]
+                        {
+                            // Zoomed-in and cropped beatmap background
+                            new BeatmapBackgroundSprite(beatmap)
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                FillMode = FillMode.Fill,
+                            },
+                        },
+                    },
+                }
+            };
         }
     }
 }
