@@ -311,13 +311,16 @@ namespace osu.Game.Online.Chat
                                 {
                                     APIBeatmap beatmapInfo = task.GetResultSafely();
 
-                                    if (beatmapInfo?.BeatmapSet == null) return;
+                                    if (beatmapInfo?.BeatmapSet == null)
+                                    {
+                                        botMessageQueue.Enqueue(new Tuple<string, Channel>($@"Couldn't retrieve metadata for map ID {numericParam}", Channel.Value));
+                                        return;
+                                    }
 
                                     addPlaylistItem(beatmapInfo);
 
                                     RemoveInternal(beatmapDownloadTracker, true);
                                     AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
-
                                     beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
                                     {
                                         switch (changeEvent.NewValue)
