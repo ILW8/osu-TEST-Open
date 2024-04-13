@@ -323,7 +323,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Size = new Vector2(360f),
+                                Size = new Vector2(420f),
                                 Children = new Drawable[]
                                 {
                                     osuCookieBackgroundContainer = new Container
