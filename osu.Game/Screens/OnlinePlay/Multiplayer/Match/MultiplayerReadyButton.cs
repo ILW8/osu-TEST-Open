@@ -151,7 +151,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                 {
                     case MultiplayerUserState.Spectating:
                     case MultiplayerUserState.Ready:
-                        if (multiplayerClient.IsHost && room.State != MultiplayerRoomState.Open)
+                        if (multiplayerClient.IsHost && room.State != MultiplayerRoomState.Open && room.State != MultiplayerRoomState.Results)
                         {
                             Text = "Abort the match";
                             break;
@@ -164,7 +164,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
 
                     default:
                         // Show the abort button for the host as long as gameplay is in progress.
-                        if (multiplayerClient.IsHost && room.State != MultiplayerRoomState.Open)
+                        if (multiplayerClient.IsHost && (room.State != MultiplayerRoomState.Open) && (room.State != MultiplayerRoomState.Results))
                             Text = "Abort the match";
                         else
                             Text = "Ready";

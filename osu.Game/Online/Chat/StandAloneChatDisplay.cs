@@ -11,7 +11,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -21,7 +20,6 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Logging;
-using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Database;
@@ -37,9 +35,11 @@ using osu.Game.Resources.Localisation.Web;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.OnlinePlay;
+using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Utils;
 using osuTK.Graphics;
 using osuTK.Input;
+using JsonException = System.Text.Json.JsonException;
 
 namespace osu.Game.Online.Chat
 {
@@ -92,12 +92,8 @@ namespace osu.Game.Online.Chat
 
         private const float text_box_height = 30;
 
-        [CanBeNull]
-        private ScheduledDelegate countdownUpdateDelegate;
-
-        protected readonly MultiplayerCountdown Countdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
-
-        private double countdownChangeTime;
+        [Resolved]
+        private ChatTimerHandler chatTimerHandler { get; set; }
 
         /// <summary>
         /// Construct a new instance.
@@ -151,13 +147,6 @@ namespace osu.Game.Online.Chat
 
             AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(new BeatmapSetInfo()));
 
-            Client.RoomUpdated += () =>
-            {
-                if (Client.Room?.State == MultiplayerRoomState.Open) return; // only allow timer if room is idle
-
-                countdownUpdateDelegate?.Cancel();
-                countdownUpdateDelegate = null;
-            };
             Scheduler.Add(() => broadcastServer.Add(chatBroadcaster));
             Scheduler.Add(processMessageQueue);
         }
@@ -170,7 +159,7 @@ namespace osu.Game.Online.Chat
                 {
                     (string text, var target) = messageQueue.Dequeue();
                     channelManager?.PostMessage(text, target: target);
-                    Scheduler.AddDelayed(processMessageQueue, 1000);
+                    Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
             }
@@ -181,13 +170,100 @@ namespace osu.Game.Online.Chat
                 {
                     (string text, Channel target) = botMessageQueue.Dequeue();
                     channelManager?.PostMessage($@"[TESTOpenBot]: {text}", target: target);
-                    Scheduler.AddDelayed(processMessageQueue, 1000);
+                    Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
             }
 
             // no message has been posted
             Scheduler.AddDelayed(processMessageQueue, 50);
+        }
+
+        [CanBeNull]
+        public static Mod ParseMod(Ruleset ruleset, string acronym, IEnumerable<object> parameters)
+        {
+            var modInstance = ruleset.CreateModFromAcronym(acronym);
+            if (modInstance == null)
+                return null;
+
+            var sourceProperties = modInstance.GetOrderedSettingsSourceProperties().ToArray();
+
+            var parametersList = parameters.ToList();
+
+            // more parameters were given than mod has parameters
+            if (parametersList.Count > sourceProperties.Length)
+                return null;
+
+            // foreach (object modParameter in parameters)
+            for (int i = 0; i < parametersList.Count; i++)
+            {
+                object paramValue = sourceProperties[i].Item2.GetValue(modInstance);
+                var paramAttr = sourceProperties[i].Item1;
+
+                switch (paramValue)
+                {
+                    case BindableNumber<int> bParamValue:
+                        bParamValue.Value = Convert.ToInt32(parametersList[i]);
+                        break;
+
+                    case Bindable<int?> bParamValue:
+                        bParamValue.Value = Convert.ToInt32(parametersList[i]);
+                        break;
+
+                    case BindableNumber<double> bParamValueDouble:
+                        bParamValueDouble.Value = Convert.ToDouble(parametersList[i]);
+                        break;
+
+                    case BindableNumber<float> bParamValueFloat:
+                        bParamValueFloat.Value = Convert.ToSingle(parametersList[i]);
+                        break;
+
+                    case BindableBool bParamValueBool:
+                        bParamValueBool.Value = Convert.ToBoolean(parametersList[i]);
+                        break;
+
+                    case IBindable bindable:
+                        var bindableType = bindable.GetType();
+
+                        if (!bindableType.IsGenericType)
+                        {
+                            Logger.Log($@"{acronym}'s {paramAttr.Label} is not a generic type ({bindableType.Name}), expected generic type. Skipping.",
+                                LoggingTarget.Runtime,
+                                LogLevel.Important);
+                            break;
+                        }
+
+                        var enumType = bindable.GetType().GetGenericArguments()[0];
+
+                        if (enumType.IsEnum)
+                        {
+                            int intData = (int)parametersList[i];
+
+                            if (Enum.GetValues(enumType).Cast<int>().Contains(intData))
+                            {
+                                typeof(Bindable<>).MakeGenericType(enumType).GetProperty(nameof(Bindable<object>.Value))?.SetValue(bindable, intData);
+                                break;
+                            }
+
+                            Logger.Log($@"{acronym}'s {paramAttr.Label} not assignable to value {intData} (out of range)", LoggingTarget.Runtime,
+                                LogLevel.Important);
+                            break;
+                        }
+
+                        Logger.Log(
+                            $@"[!mp mods] {acronym}'s {paramAttr.Label} (of type {bindable.GetType().GetRealTypeName()}) not assignable to value {parametersList[i]} ({parametersList[i].GetType().Name})",
+                            LoggingTarget.Runtime, LogLevel.Important);
+                        break;
+
+                    default:
+                        Logger.Log(
+                            $@"[!mp mods] Tried setting {acronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {parametersList[i].GetType().Name}",
+                            LoggingTarget.Runtime, LogLevel.Important);
+                        break;
+                }
+            }
+
+            return modInstance;
         }
 
         protected override void Dispose(bool isDisposing)
@@ -202,6 +278,8 @@ namespace osu.Game.Online.Chat
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
             new StandAloneDrawableChannel(channel);
 
+        public void EnqueueBotMessage(string message) => botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
+
         private void postMessage(TextBox sender, bool newText)
         {
             string text = TextBox.Text.Trim();
@@ -213,7 +291,6 @@ namespace osu.Game.Online.Chat
                 channelManager?.PostCommand(text.Substring(1), Channel.Value);
             else
             {
-                // channelManager?.PostMessage(text, target: Channel.Value);
                 messageQueue.Enqueue(new Tuple<string, Channel>(text, Channel.Value));
 
                 string[] parts = text.Split();
@@ -225,12 +302,12 @@ namespace osu.Game.Online.Chat
                         break;
 
                     // commands with numerical parameter
-                    if (int.TryParse(parts[2], out int onlineID))
+                    if (int.TryParse(parts[2], out int numericParam))
                     {
                         switch (parts[1])
                         {
                             case @"map":
-                                beatmapLookupCache.GetBeatmapAsync(onlineID).ContinueWith(task => Schedule(() =>
+                                beatmapLookupCache.GetBeatmapAsync(numericParam).ContinueWith(task => Schedule(() =>
                                 {
                                     APIBeatmap beatmapInfo = task.GetResultSafely();
 
@@ -256,10 +333,7 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"timer":
-                                Countdown.TimeRemaining = TimeSpan.FromSeconds(onlineID);
-                                countdownChangeTime = Time.Current;
-                                sendTimerMessage();
-
+                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, Channel.Value);
                                 break;
                         }
                     }
@@ -270,24 +344,20 @@ namespace osu.Game.Online.Chat
                             case @"timer":
                                 if (parts[2] == @"abort")
                                 {
-                                    if (countdownUpdateDelegate == null)
-                                        break;
+                                    chatTimerHandler.Abort();
 
-                                    countdownUpdateDelegate.Cancel();
-                                    countdownUpdateDelegate = null;
-
-                                    // Scheduler.AddDelayed(() => channelManager?.PostMessage(@"Countdown aborted", target: Channel.Value), 1000);
+                                    // move this into ChatTimerHandler?
                                     botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
                                 }
 
                                 break;
 
                             case @"mods":
-                                // abort if room playlist is somehow null:
-                                if (roomPlaylist == null)
+                                var itemToEdit = Client.Room?.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
+
+                                if (itemToEdit == null)
                                     break;
 
-                                var itemToEdit = roomPlaylist.First();
                                 string[] mods = parts[2].Split("+");
                                 List<Mod> modInstances = new List<Mod>();
 
@@ -301,13 +371,14 @@ namespace osu.Game.Online.Chat
 
                                     string modAcronym = mod[..2];
                                     var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
-                                    var modInstance = rulesetInstance?.CreateModFromAcronym(modAcronym);
-                                    if (modInstance == null)
-                                        break;
+
+                                    Mod modInstance;
 
                                     if (mod.Length == 2)
                                     {
-                                        modInstances.Add(modInstance);
+                                        modInstance = ParseMod(rulesetInstance, modAcronym, new object[] { });
+                                        if (modInstance != null)
+                                            modInstances.Add(modInstance);
                                         continue;
                                     }
 
@@ -318,112 +389,43 @@ namespace osu.Game.Online.Chat
                                     {
                                         modParamsNode = JsonNode.Parse(mod[2..]);
                                     }
-                                    catch (JsonReaderException)
+                                    catch (JsonException)
                                     {
-                                        Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
-                                        continue;
+                                        modParamsNode = null;
                                     }
 
                                     if (modParamsNode is JsonArray modParams)
                                     {
-                                        var sourceProperties = modInstance.GetOrderedSettingsSourceProperties().ToArray();
+                                        List<object> parsedParamsList = new List<object>();
 
-                                        if (modParams.Count > sourceProperties.Length)
+                                        foreach (JsonNode node in modParams)
                                         {
-                                            Logger.Log(
-                                                $@"[!mp mods] Expected at most {sourceProperties.Length} parameter(s) for mod {modAcronym}, got {modParams.Count} parameter(s). Ignoring extra parameter(s)",
-                                                LoggingTarget.Runtime, LogLevel.Important);
-                                            break;
-                                        }
-
-                                        for (int i = 0; i < Math.Min(sourceProperties.Length, modParams.Count); i++)
-                                        {
-                                            var node = modParams[i];
-
                                             if (node.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
                                                 continue;
 
-                                            object paramValue = sourceProperties[i].Item2.GetValue(modInstance);
-                                            var paramAttr = sourceProperties[i].Item1;
-
-                                            if (node.AsValue().TryGetValue(out int intData))
+                                            if (node.AsValue().TryGetValue(out int parsedInt))
                                             {
-                                                switch (paramValue)
-                                                {
-                                                    case BindableNumber<int> bParamValue:
-                                                        bParamValue.Value = intData;
-                                                        continue;
-
-                                                    case Bindable<int?> bParamValue:
-                                                        bParamValue.Value = intData;
-                                                        continue;
-
-                                                    case BindableNumber<double> bParamValueDouble:
-                                                        bParamValueDouble.Value = intData;
-                                                        continue;
-
-                                                    case IBindable bindable:
-                                                        var enumType = bindable.GetType().GetGenericArguments()[0];
-
-                                                        if (enumType.IsEnum)
-                                                        {
-                                                            if (Enum.GetValues(enumType).Cast<int>().Contains(intData))
-                                                            {
-                                                                typeof(Bindable<>).MakeGenericType(enumType).GetProperty(nameof(Bindable<object>.Value))?.SetValue(bindable, intData);
-                                                                continue;
-                                                            }
-
-                                                            Logger.Log($@"[!mp mods] {modAcronym}'s {paramAttr.Label} not assignable to value {intData} (out of range)", LoggingTarget.Runtime,
-                                                                LogLevel.Important);
-                                                            continue;
-                                                        }
-
-                                                        Logger.Log(
-                                                            $@"[!mp mods] {modAcronym}'s {paramAttr.Label} (of type {bindable.GetType().GetRealTypeName()}) not assignable to value {intData} ({intData.GetType().Name})",
-                                                            LoggingTarget.Runtime, LogLevel.Important);
-                                                        continue;
-
-                                                    default:
-                                                        Logger.Log(
-                                                            $@"[!mp mods] Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {intData.GetType().Name}",
-                                                            LoggingTarget.Runtime, LogLevel.Important);
-                                                        continue;
-                                                }
-                                            }
-
-                                            if (node.AsValue().TryGetValue(out double doubleData))
-                                            {
-                                                if (paramValue is BindableNumber<double> bParamValue)
-                                                {
-                                                    bParamValue.Value = doubleData;
-                                                    continue;
-                                                }
-
-                                                Logger.Log(
-                                                    $@"[!mp mods] Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {doubleData.GetType().Name}",
-                                                    LoggingTarget.Runtime, LogLevel.Important);
+                                                parsedParamsList.Add(parsedInt);
                                                 continue;
                                             }
 
-                                            if (node.AsValue().TryGetValue(out bool boolData))
+                                            if (node.AsValue().TryGetValue(out double parsedDouble))
                                             {
-                                                if (paramValue is BindableBool bParamValue)
-                                                {
-                                                    bParamValue.Value = boolData;
-                                                    continue;
-                                                }
-
-                                                Logger.Log(
-                                                    $@"[!mp mods] Tried setting {modAcronym}'s {paramAttr.Label} parameter (of type {paramValue?.GetType().Name}) using type {boolData.GetType().Name}",
-                                                    LoggingTarget.Runtime, LogLevel.Important);
+                                                parsedParamsList.Add(parsedDouble);
+                                                continue;
                                             }
+
+                                            if (node.AsValue().TryGetValue(out bool parsedBool))
+                                                parsedParamsList.Add(parsedBool);
                                         }
 
-                                        modInstances.Add(modInstance);
+                                        modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
+                                        if (modInstance != null)
+                                            modInstances.Add(modInstance);
                                     }
                                     else
                                     {
-                                        Logger.Log(@$"[!mp mods] Couldn't parse mod parameter(s) {modAcronym}, ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                        Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
                                     }
                                 }
 
@@ -434,7 +436,7 @@ namespace osu.Game.Online.Chat
                                 }
 
                                 // get playlist item to edit:
-                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.Beatmap.OnlineID).ContinueWith(task => Schedule(() =>
+                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
                                 {
                                     APIBeatmap beatmapInfo = task.GetResultSafely();
 
@@ -465,54 +467,30 @@ namespace osu.Game.Online.Chat
 
                     break;
                 }
+
+                for (;;)
+                {
+                    if (!(parts.Length == 2 && parts[0] == @"!mp"))
+                        break;
+
+                    switch (parts[1])
+                    {
+                        case @"abort":
+                            if (!Client.IsHost)
+                                return;
+
+                            Client.AbortMatch().FireAndForget();
+                            break;
+                    }
+
+                    break;
+                }
             }
 
             TextBox.Text = string.Empty;
         }
 
-        private TimeSpan countdownTimeRemaining
-        {
-            get
-            {
-                double timeElapsed = Time.Current - countdownChangeTime;
-                TimeSpan remaining;
-
-                if (timeElapsed > Countdown.TimeRemaining.TotalMilliseconds)
-                    remaining = TimeSpan.Zero;
-                else
-                    remaining = Countdown.TimeRemaining - TimeSpan.FromMilliseconds(timeElapsed);
-
-                return remaining;
-            }
-        }
-
-        private void processTimerEvent()
-        {
-            countdownUpdateDelegate?.Cancel();
-
-            double timeToNextMessage = countdownTimeRemaining.TotalSeconds switch
-            {
-                > 60 => countdownTimeRemaining.TotalMilliseconds % 60_000,
-                > 30 => countdownTimeRemaining.TotalMilliseconds % 30_000,
-                > 10 => countdownTimeRemaining.TotalMilliseconds % 10_000,
-                _ => countdownTimeRemaining.TotalMilliseconds % 5_000
-            };
-
-            countdownUpdateDelegate = Scheduler.AddDelayed(sendTimerMessage, timeToNextMessage);
-        }
-
-        private void sendTimerMessage()
-        {
-            int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
-
-            // channelManager?.PostMessage(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", target: Channel.Value);
-            botMessageQueue.Enqueue(new Tuple<string, Channel>(secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds", Channel.Value));
-
-            if (secondsRemaining > 0)
-                countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 800); // force delay invocation of next timer event
-        }
-
-        private void addPlaylistItem(APIBeatmap beatmapInfo)
+        private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[] requiredMods = null, APIMod[] allowedMods = null)
         {
             // ensure user is host
             if (!Client.IsHost)
@@ -523,8 +501,8 @@ namespace osu.Game.Online.Chat
             var item = new PlaylistItem(beatmapInfo)
             {
                 RulesetID = beatmapInfo.Ruleset.OnlineID,
-                RequiredMods = Array.Empty<APIMod>(),
-                AllowedMods = Array.Empty<APIMod>()
+                RequiredMods = requiredMods ?? Array.Empty<APIMod>(),
+                AllowedMods = allowedMods ?? Array.Empty<APIMod>()
             };
 
             // PlaylistItem item
@@ -538,7 +516,7 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
-            var itemsToRemove = roomPlaylist?.ToArray() ?? Array.Empty<PlaylistItem>();
+            var itemsToRemove = roomPlaylist?.Where(playlistItem => !playlistItem.Expired).ToArray() ?? Array.Empty<PlaylistItem>();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
@@ -555,10 +533,17 @@ namespace osu.Game.Online.Chat
 
         protected virtual ChatLine CreateMessage(Message message)
         {
-            string[] parts = message.Content.Split();
+            chatBroadcaster.AddNewMessage(message);
+            return new StandAloneMessage(message);
+        }
 
-            if (parts.Length > 0 && parts[0] == @"!roll" && Client.IsHost)
+        private void newCommandHandler(IEnumerable<Message> messages)
+        {
+            foreach (var message in messages)
             {
+                string[] parts = message.Content.Split();
+                if (parts.Length <= 0 || parts[0] != @"!roll" || !Client.IsHost) continue;
+
                 long limit = 100;
 
                 if (parts.Length > 1)
@@ -579,16 +564,14 @@ namespace osu.Game.Online.Chat
 
                 var rnd = new Random();
                 long randomNumber = rnd.NextInt64(1, limit);
-                // channelManager?.PostMessage($@"{message.Sender} rolls ${randomNumber}", target: Channel.Value);
                 botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
             }
-
-            chatBroadcaster.AddNewMessage(message);
-            return new StandAloneMessage(message);
         }
 
         private void channelChanged(ValueChangedEvent<Channel> e)
         {
+            if (drawableChannel != null)
+                drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
             drawableChannel?.Expire();
 
             if (e.OldValue != null)
@@ -601,6 +584,7 @@ namespace osu.Game.Online.Chat
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
+            drawableChannel.Channel.NewMessagesArrived += newCommandHandler;
 
             chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);

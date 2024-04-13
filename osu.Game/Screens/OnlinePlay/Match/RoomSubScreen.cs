@@ -351,7 +351,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         public override void OnResuming(ScreenTransitionEvent e)
         {
-            (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+            if (multiplayerClient.Room?.State == MultiplayerRoomState.Results)
+                (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
             base.OnResuming(e);
             updateWorkingBeatmap();
             beginHandlingTrack();

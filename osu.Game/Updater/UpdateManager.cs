@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Platform;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Localisation;
@@ -88,16 +89,16 @@ namespace osu.Game.Updater
 
         private partial class UpdateCompleteNotification : SimpleNotification
         {
-            private readonly string version;
+            [Resolved]
+            private GameHost host { get; set; } = null!;
 
             public UpdateCompleteNotification(string version)
             {
-                this.version = version;
                 Text = NotificationsStrings.GameVersionAfterUpdate(version);
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours, ChangelogOverlay changelog, INotificationOverlay notificationOverlay)
+            private void load(OsuColour colours, INotificationOverlay notificationOverlay)
             {
                 Icon = FontAwesome.Solid.CheckSquare;
                 IconContent.Colour = colours.BlueDark;
@@ -105,7 +106,7 @@ namespace osu.Game.Updater
                 Activated = delegate
                 {
                     notificationOverlay.Hide();
-                    changelog.ShowBuild(OsuGameBase.CLIENT_STREAM_NAME, version);
+                    host.OpenUrlExternally(@"https://github.com/ILW8/osu-TEST-Open/releases");
                     return true;
                 };
             }

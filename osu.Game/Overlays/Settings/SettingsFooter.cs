@@ -6,6 +6,7 @@ using osu.Framework.Development;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -83,6 +84,9 @@ namespace osu.Game.Overlays.Settings
             [Resolved]
             private OsuColour colours { get; set; } = null!;
 
+            [Resolved]
+            private GameHost host { get; set; } = null!;
+
             public BuildDisplay(string version)
             {
                 this.version = version;
@@ -93,9 +97,9 @@ namespace osu.Game.Overlays.Settings
             }
 
             [BackgroundDependencyLoader]
-            private void load(ChangelogOverlay? changelog)
+            private void load()
             {
-                Action = () => changelog?.ShowBuild(OsuGameBase.CLIENT_STREAM_NAME, version);
+                Action = () => host.OpenUrlExternally(@"https://github.com/ILW8/osu-TEST-Open/releases");
 
                 Add(new OsuSpriteText
                 {

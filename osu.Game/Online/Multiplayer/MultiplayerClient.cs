@@ -398,7 +398,7 @@ namespace osu.Game.Online.Multiplayer
 
                 Debug.Assert(APIRoom != null);
 
-                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open)
+                if (Room.State == MultiplayerRoomState.Playing && state == MultiplayerRoomState.Open && !ManualExitRequested)
                 {
                     state = MultiplayerRoomState.Results;
                 }
@@ -412,7 +412,13 @@ namespace osu.Game.Online.Multiplayer
                         break;
 
                     case MultiplayerRoomState.Playing:
+                        ManualExitRequested = false;
                         APIRoom.Status.Value = new RoomStatusPlaying();
+                        ManualExitRequested = false;
+                        break;
+
+                    case MultiplayerRoomState.WaitingForLoad:
+                        ManualExitRequested = false;
                         break;
 
                     case MultiplayerRoomState.Closed:
@@ -563,6 +569,13 @@ namespace osu.Game.Online.Multiplayer
                 if (user == null)
                     return;
 
+                // ensure spectator is always sorted to the end of users list
+                if (state == MultiplayerUserState.Spectating)
+                {
+                    Room?.Users.Remove(user);
+                    Room?.Users.Add(user);
+                }
+
                 // if/else for the sake of not having to modify osu-spectator-server
                 if (!(state == MultiplayerUserState.Idle &&
                       user.UserID == LocalUser?.UserID &&
@@ -579,7 +592,6 @@ namespace osu.Game.Online.Multiplayer
                 else
                 {
                     user.State = state;
-                    ManualExitRequested = false;
                 }
 
                 RoomUpdated?.Invoke();
@@ -718,6 +730,12 @@ namespace osu.Game.Online.Multiplayer
             {
                 if (Room == null)
                     return;
+
+                if (Room.State is MultiplayerRoomState.Playing or MultiplayerRoomState.WaitingForLoad)
+                    Room.State = MultiplayerRoomState.Results;
+
+                if (Room.State == MultiplayerRoomState.Results)
+                    Room.State = MultiplayerRoomState.Open;
 
                 GameplayAborted?.Invoke(reason);
             }, false);

@@ -1,9 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 
 namespace osu.Game.Online.Broadcasts
@@ -21,20 +25,28 @@ namespace osu.Game.Online.Broadcasts
             Message.RoomName.BindTo(room.Name);
         }
 
+        private void broadcast()
+        {
+            // use this method to inject logic before actually broadcasting
+
+            Broadcast();
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            multiplayerClient.RoomUpdated += onRoomUpdated;
 
             Message.RoomName.BindValueChanged(valueChangedEvent =>
             {
                 if (valueChangedEvent.OldValue == valueChangedEvent.NewValue)
                     return;
 
-                Broadcast();
+                broadcast();
             });
 
-            Broadcast();
+            multiplayerClient.RoomUpdated += onRoomUpdated;
+            onRoomUpdated();
+            broadcast();
         }
 
         protected override void Dispose(bool isDisposing)
@@ -47,12 +59,41 @@ namespace osu.Game.Online.Broadcasts
         private void onRoomUpdated()
         {
             var newState = multiplayerClient.Room?.State ?? MultiplayerRoomState.Closed;
-            if (newState == Message.RoomState)
-                return;
 
             Message.RoomState = newState;
 
-            Broadcast();
+            // // todo: update lobby users here too
+            // foreach (int key in Message.RoomUsers.Keys.Except((multiplayerClient.Room?.Users ?? Array.Empty<MultiplayerRoomUser>()).Select(mpRoomUser => mpRoomUser.UserID).ToList()).ToList())
+            // {
+            //     Message.RoomUsers.Remove(key);
+            // }
+            //
+            //
+            // foreach (MultiplayerRoomUser roomUser in multiplayerClient.Room?.Users ?? Array.Empty<MultiplayerRoomUser>())
+            // {
+            //     if (Message.RoomUsers.TryGetValue(roomUser.UserID, out var gameplayPlayerState))
+            //     {
+            //         gameplayPlayerState.UserState = roomUser.State;
+            //         gameplayPlayerState.TeamID = (roomUser.MatchState as TeamVersusUserState)?.TeamID;
+            //     }
+            // }
+
+            // efficient? no, but I don't care anymore
+            Message.RoomUsers.Clear();
+
+            foreach (var item in (multiplayerClient.Room?.Users ?? Array.Empty<MultiplayerRoomUser>()).Select((value, i) => new { i, value }))
+            {
+                var roomUser = item.value;
+                Message.RoomUsers[roomUser.UserID] = new RoomPlayerState(
+                    roomUser,
+                    item.i,
+                    (roomUser.MatchState as TeamVersusUserState)?.TeamID)
+                {
+                    UserState = roomUser.State
+                };
+            }
+
+            broadcast();
         }
     }
 
@@ -60,5 +101,23 @@ namespace osu.Game.Online.Broadcasts
     {
         public readonly Bindable<string> RoomName = new Bindable<string>();
         public MultiplayerRoomState RoomState = MultiplayerRoomState.Open;
+        public readonly Dictionary<int, RoomPlayerState> RoomUsers = new Dictionary<int, RoomPlayerState>();
+    }
+
+    public class RoomPlayerState
+    {
+        public RoomPlayerState(MultiplayerRoomUser user, int slotIndex, int? teamID)
+        {
+            Username = user.User?.Username ?? @"%% unknown user %%";
+            UserID.Value = user.User?.OnlineID ?? 0;
+            SlotIndex.Value = slotIndex;
+            TeamID = teamID;
+        }
+
+        public readonly string Username;
+        public readonly BindableInt UserID = new BindableInt(); // using BindableInt instead of int because int doesn't appear when value == 0 in output json...
+        public int? TeamID;
+        public readonly BindableInt SlotIndex = new BindableInt();
+        public MultiplayerUserState UserState;
     }
 }

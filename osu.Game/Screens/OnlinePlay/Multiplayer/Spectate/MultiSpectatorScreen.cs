@@ -33,6 +33,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
 
+        [Resolved]
+        private ChatTimerHandler chatTimerHandler { get; set; } = null!;
+
         private MultiplayerGameplayStateBroadcaster mpGameplayStateBroadcaster = null!;
 
         // Isolates beatmap/ruleset to this screen.
@@ -186,7 +189,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             LoadComponentAsync(new GameplayChatDisplay(room)
             {
                 Expanded = { Value = true },
-            }, chat => leaderboardFlow.Insert(1, chat));
+            }, chat =>
+            {
+                chatTimerHandler.OnChatMessageDue += chat.EnqueueBotMessage;
+                leaderboardFlow.Insert(1, chat);
+            });
 
             multiplayerClient.ResultsReady += onResultsReady;
         }
@@ -226,12 +233,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
                 this.Exit();
             }, 12_000);
-        }
-
-        public override void OnSuspending(ScreenTransitionEvent e)
-        {
-            broadcastServer.Remove(mpGameplayStateBroadcaster);
-            base.OnSuspending(e);
         }
 
         protected override void Update()
@@ -332,14 +333,23 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public override bool OnExiting(ScreenExitEvent e)
         {
             if (isExiting)
-                return base.OnExiting(e);
+            {
+                bool cancelExit = base.OnExiting(e);
 
-            (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+                if (!cancelExit)
+                    broadcastServer.Remove(mpGameplayStateBroadcaster);
+
+                return cancelExit;
+            }
+
+            if (multiplayerClient.Room?.State == MultiplayerRoomState.Results)
+                (multiplayerClient as IMultiplayerClient).RoomStateChanged(MultiplayerRoomState.Open);
+
             Scheduler.AddDelayed(() =>
             {
                 isExiting = true;
                 this.Exit();
-            }, 250);
+            }, 500);
 
             return true;
         }
@@ -351,7 +361,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // // On a manual exit, set the player back to idle unless gameplay has finished.
             // // Of note, this doesn't cover exiting using alt-f4 or menu home option.
-            if (multiplayerClient.Room.State == MultiplayerRoomState.Open)
+            if (multiplayerClient.Room.State is MultiplayerRoomState.Open or MultiplayerRoomState.Results)
                 return base.OnBackButton();
 
             multiplayerClient.ManualExitRequested = true;
