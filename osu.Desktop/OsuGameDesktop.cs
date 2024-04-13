@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
+using osu.Desktop.Performance;
 using osu.Desktop.Security;
 using osu.Desktop.WebSockets;
 using osu.Desktop.Windows;
@@ -20,6 +21,7 @@ using osu.Game.IO;
 using osu.Game.Online.Broadcasts;
 using osu.Game.IPC;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Performance;
 using osu.Game.Utils;
 using SDL2;
 
@@ -34,6 +36,9 @@ namespace osu.Desktop
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
             => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
+        [Cached(typeof(IHighPerformanceSessionManager))]
+        private readonly HighPerformanceSessionManager highPerformanceSessionManager = new HighPerformanceSessionManager();
 
         public OsuGameDesktop(string[]? args = null)
             : base(args)
@@ -93,8 +98,8 @@ namespace osu.Desktop
         [SupportedOSPlatform("windows")]
         private string? getStableInstallPathFromRegistry()
         {
-            using (RegistryKey? key = Registry.ClassesRoot.OpenSubKey("osu"))
-                return key?.OpenSubKey(@"shell\open\command")?.GetValue(string.Empty)?.ToString()?.Split('"')[1].Replace("osu!.exe", "");
+            using (RegistryKey? key = Registry.ClassesRoot.OpenSubKey("osu!"))
+                return key?.OpenSubKey(WindowsAssociationManager.SHELL_OPEN_COMMAND)?.GetValue(string.Empty)?.ToString()?.Split('"')[1].Replace("osu!.exe", "");
         }
 
         protected override UpdateManager CreateUpdateManager()
