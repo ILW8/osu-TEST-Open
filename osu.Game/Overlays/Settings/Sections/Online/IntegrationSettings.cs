@@ -28,6 +28,12 @@ namespace osu.Game.Overlays.Settings.Sections.Online
                     LabelText = "Broadcast game state",
                     Current = config.GetBindable<bool>(OsuSetting.BroadcastGameState),
                 }
+                // ,
+                // new SettingsCheckbox
+                // {
+                //     LabelText = @"Serve static files",
+                //     Current = config.GetBindable<bool>(OsuSetting.EnableHttpServer),
+                // }
             };
         }
     }

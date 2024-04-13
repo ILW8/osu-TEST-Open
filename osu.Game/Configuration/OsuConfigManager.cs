@@ -209,6 +209,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.EditorWaveformOpacity, 0.25f);
 
             SetDefault(OsuSetting.BroadcastGameState, false);
+            SetDefault(OsuSetting.EnableHttpServer, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -440,5 +441,6 @@ namespace osu.Game.Configuration
         UserOnlineStatus,
         MultiplayerRoomFilter,
         BroadcastGameState,
+        // EnableHttpServer
     }
 }
