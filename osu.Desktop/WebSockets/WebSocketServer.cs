@@ -93,6 +93,8 @@ namespace osu.Desktop.WebSockets
             if (webHost != null)
                 await webHost.StopAsync(cts.Token).ConfigureAwait(false);
 
+            webHost = null;
+
             IsListening = false;
         }
 
