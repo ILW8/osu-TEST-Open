@@ -1,7 +1,9 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Reflection;
 using System.Threading.Tasks;
+using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -12,6 +14,7 @@ using osu.Game.Graphics;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
+using osu.Game.Utils;
 using osuTK;
 
 namespace osu.Game.Updater
@@ -52,6 +55,9 @@ namespace osu.Game.Updater
                 // only show a notification if we've previously saved a version to the config file (ie. not the first run).
                 if (!string.IsNullOrEmpty(lastVersion))
                     Notifications.Post(new UpdateCompleteNotification(version));
+
+                if (RuntimeInfo.EntryAssembly.GetCustomAttribute<OfficialBuildAttribute>() == null)
+                    Notifications.Post(new SimpleNotification { Text = NotificationsStrings.NotOfficialBuild });
             }
 
             // debug / local compilations will reset to a non-release string.

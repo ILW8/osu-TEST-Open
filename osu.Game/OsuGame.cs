@@ -48,7 +48,6 @@ using osu.Game.Online;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Game.Online.Solo;
 using osu.Game.Online.Spectator;
 using osu.Game.Overlays;
 using osu.Game.Overlays.BeatmapListing;
@@ -57,7 +56,6 @@ using osu.Game.Overlays.Notifications;
 using osu.Game.Overlays.SkinEditor;
 using osu.Game.Overlays.Toolbar;
 using osu.Game.Overlays.Volume;
-using osu.Game.Performance;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens;
@@ -781,7 +779,7 @@ namespace osu.Game
                         break;
 
                     case ScorePresentType.Results:
-                        screen.Push(new SoloResultsScreen(databasedScore.ScoreInfo, false));
+                        screen.Push(new SoloResultsScreen(databasedScore.ScoreInfo));
                         break;
                 }
             }, validScreens: validScreens);
@@ -804,8 +802,6 @@ namespace osu.Game
         protected virtual Loader CreateLoader() => new Loader();
 
         protected virtual UpdateManager CreateUpdateManager() => new UpdateManager();
-
-        protected virtual HighPerformanceSession CreateHighPerformanceSession() => new HighPerformanceSession();
 
         protected override Container CreateScalingContainer() => new ScalingContainer(ScalingMode.Everything);
 
@@ -1032,7 +1028,7 @@ namespace osu.Game
                 ScreenStack.Push(CreateLoader().With(l => l.RelativeSizeAxes = Axes.Both));
             });
 
-            loadComponentSingleFile(new SoloStatisticsWatcher(), Add, true);
+            loadComponentSingleFile(new UserStatisticsWatcher(), Add, true);
             loadComponentSingleFile(new ChatTimerHandler(), Add, true);
             loadComponentSingleFile(Toolbar = new Toolbar
             {
@@ -1098,8 +1094,7 @@ namespace osu.Game
 
             loadComponentSingleFile(new AccountCreationOverlay(), topMostOverlayContent.Add, true);
             loadComponentSingleFile<IDialogOverlay>(new DialogOverlay(), topMostOverlayContent.Add, true);
-
-            loadComponentSingleFile(CreateHighPerformanceSession(), Add);
+            loadComponentSingleFile(new MedalOverlay(), topMostOverlayContent.Add);
 
             loadComponentSingleFile(new BackgroundDataStoreProcessor(), Add);
 
@@ -1206,6 +1201,9 @@ namespace osu.Game
             Logger.NewEntry += entry =>
             {
                 if (entry.Level < LogLevel.Important || entry.Target > LoggingTarget.Database || entry.Target == null) return;
+
+                if (entry.Exception is SentryOnlyDiagnosticsException)
+                    return;
 
                 const int short_term_display_limit = 3;
 

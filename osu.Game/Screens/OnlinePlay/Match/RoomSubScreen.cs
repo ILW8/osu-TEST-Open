@@ -252,7 +252,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
                 }
             };
 
-            LoadComponent(UserModsSelectOverlay = new UserModSelectOverlay(OverlayColourScheme.Plum)
+            LoadComponent(UserModsSelectOverlay = new RoomModSelectOverlay
             {
                 SelectedMods = { BindTarget = UserMods },
                 IsValidMod = _ => false
