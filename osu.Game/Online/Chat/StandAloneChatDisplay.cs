@@ -346,14 +346,14 @@ namespace osu.Game.Online.Chat
                     {
                         switch (parts[1])
                         {
+                            // ReSharper disable once StringLiteralTypo
+                            case @"aborttimer":
+                                abortTimer();
+                                break;
+
                             case @"timer":
                                 if (parts[2] == @"abort")
-                                {
-                                    chatTimerHandler.Abort();
-
-                                    // move this into ChatTimerHandler?
-                                    botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
-                                }
+                                    abortTimer();
 
                                 break;
 
@@ -493,6 +493,14 @@ namespace osu.Game.Online.Chat
             }
 
             TextBox.Text = string.Empty;
+        }
+
+        private void abortTimer()
+        {
+            chatTimerHandler.Abort();
+
+            // move this into ChatTimerHandler?
+            botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
         }
 
         private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[] requiredMods = null, APIMod[] allowedMods = null)
