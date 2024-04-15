@@ -20,6 +20,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
+using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Collections;
@@ -581,6 +582,23 @@ namespace osu.Game.Screens.OnlinePlay
                         {
                             this.FadeTo(0, 500)
                                 .ResizeWidthTo(0, 500, Easing.OutQuint);
+                        }
+
+                        break;
+
+                    case DownloadState.NotDownloaded:
+                        Logger.Log($@"DrawableRoomPlaylistItem PlaylistDownloadButton state is {DownloadState.NotDownloaded} && {DownloadEnabled}");
+
+                        if (DownloadEnabled)
+                        {
+                            this.ResizeWidthTo(width, 500, Easing.OutQuint)
+                                .FadeTo(1, 500).Finally(_ =>
+                                {
+                                    Logger.Log(@"[PlaylistDownloadButton] In transition callback, about to trigger click on download button");
+                                    var button = this.ChildrenOfType<DownloadButton>().FirstOrDefault();
+                                    Logger.Log($@"[PlaylistDownloadButton] Child of type DownloadButton is null? {button == null}");
+                                    button?.TriggerClick();
+                                });
                         }
 
                         break;
