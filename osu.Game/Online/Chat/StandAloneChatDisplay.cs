@@ -89,6 +89,7 @@ namespace osu.Game.Online.Chat
         private readonly bool postingTextBox;
 
         protected readonly Box Background;
+        private IBindable<bool> autoDownload = null!;
 
         private const float text_box_height = 30;
 
@@ -139,11 +140,13 @@ namespace osu.Game.Online.Chat
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(ChannelManager manager, BeatmapModelDownloader beatmaps, BeatmapLookupCache beatmapsCache)
+        private void load(ChannelManager manager, BeatmapModelDownloader beatmaps, BeatmapLookupCache beatmapsCache, OsuConfigManager config)
         {
             channelManager ??= manager;
             beatmapsDownloader = beatmaps;
             beatmapLookupCache = beatmapsCache;
+
+            autoDownload = config.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps);
 
             AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(new BeatmapSetInfo()));
 
@@ -323,16 +326,13 @@ namespace osu.Game.Online.Chat
                                     AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
                                     beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
                                     {
-                                        switch (changeEvent.NewValue)
-                                        {
-                                            case DownloadState.LocallyAvailable:
-                                                beatmapDownloadTracker.State.UnbindAll();
-                                                return;
+                                        if (changeEvent.NewValue != DownloadState.NotDownloaded) return;
 
-                                            case DownloadState.NotDownloaded:
-                                                beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
-                                                break;
-                                        }
+                                        if (autoDownload.Value)
+                                            beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
+
+                                        beatmapDownloadTracker.State.UnbindAll();
+                                        RemoveInternal(beatmapDownloadTracker, true);
                                     });
                                 }));
                                 break;
