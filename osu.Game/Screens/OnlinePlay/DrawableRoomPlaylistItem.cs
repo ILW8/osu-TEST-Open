@@ -20,9 +20,11 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
+using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Collections;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -539,6 +541,7 @@ namespace osu.Game.Screens.OnlinePlay
         private sealed partial class PlaylistDownloadButton : BeatmapDownloadButton
         {
             private readonly IBeatmapInfo beatmap;
+            private IBindable<bool> autoDownload = null!;
 
             [Resolved]
             private BeatmapManager beatmapManager { get; set; }
@@ -555,6 +558,12 @@ namespace osu.Game.Screens.OnlinePlay
 
                 Size = new Vector2(width, 30);
                 Alpha = 0;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OsuConfigManager config)
+            {
+                autoDownload = config.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps);
             }
 
             protected override void LoadComplete()
@@ -582,6 +591,25 @@ namespace osu.Game.Screens.OnlinePlay
                             this.FadeTo(0, 500)
                                 .ResizeWidthTo(0, 500, Easing.OutQuint);
                         }
+
+                        break;
+
+                    case DownloadState.NotDownloaded:
+                        Logger.Log($@"DrawableRoomPlaylistItem PlaylistDownloadButton state is {DownloadState.NotDownloaded} && {DownloadEnabled}");
+
+                        this.ResizeWidthTo(width, 500, Easing.OutQuint)
+                            .FadeTo(1, 500).Finally(_ =>
+                            {
+                                if (!DownloadEnabled || !autoDownload.Value) return;
+
+                                Logger.Log(@"[PlaylistDownloadButton] In transition callback, DownloadEnabled and autoDownload true. About to trigger click on download button");
+                                var button = this.ChildrenOfType<DownloadButton>().FirstOrDefault();
+
+                                if (button == null)
+                                    Logger.Log(@"[PlaylistDownloadButton] Child of type DownloadButton is null !!");
+
+                                button?.TriggerClick();
+                            });
 
                         break;
 
