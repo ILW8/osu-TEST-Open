@@ -74,6 +74,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.AutomaticallyDownloadWhenSpectating, false);
 #pragma warning restore CS0618 // Type or member is obsolete
             SetDefault(OsuSetting.AutomaticallyDownloadMissingBeatmaps, false);
+            SetDefault(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps, true);
 
             SetDefault(OsuSetting.SavePassword, true).ValueChanged += enabled =>
             {
@@ -435,6 +436,7 @@ namespace osu.Game.Configuration
         ReplaySettingsOverlay,
         ReplayPlaybackControlsExpanded,
         AutomaticallyDownloadMissingBeatmaps,
+        AutomaticallyDownloadMultiMissingBeatmaps,
         EditorShowSpeedChanges,
         TouchDisableGameplayTaps,
         ModSelectTextSearchStartsActive,

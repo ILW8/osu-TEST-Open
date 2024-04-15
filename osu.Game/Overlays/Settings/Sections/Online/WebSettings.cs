@@ -37,6 +37,12 @@ namespace osu.Game.Overlays.Settings.Sections.Online
                 },
                 new SettingsCheckbox
                 {
+                    LabelText = @"Automatically download queued beatmaps in multiplayer",
+                    Keywords = new[] { "multi", "multiplayer", "playlist", "queue" },
+                    Current = config.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps)
+                },
+                new SettingsCheckbox
+                {
                     LabelText = OnlineSettingsStrings.ShowExplicitContent,
                     Keywords = new[] { "nsfw", "18+", "offensive" },
                     Current = config.GetBindable<bool>(OsuSetting.ShowOnlineExplicitContent),
