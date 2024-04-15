@@ -22,6 +22,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Input.Bindings;
 using osu.Game.Online.API;
 using osu.Game.Online.Broadcasts;
@@ -77,6 +78,9 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         [Resolved]
         private MusicController music { get; set; }
+
+        [Resolved]
+        protected OsuConfigManager ConfigManager { get; private set; }
 
         [Resolved]
         private BeatmapManager beatmapManager { get; set; }

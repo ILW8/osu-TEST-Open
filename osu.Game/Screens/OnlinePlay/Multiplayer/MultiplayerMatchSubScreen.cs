@@ -31,6 +31,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Menu;
@@ -213,7 +214,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         };
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
             Beatmap.BindValueChanged(vce =>
             {
@@ -375,6 +376,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             RequestEdit = OpenSongSelection
                                         }
                                     },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = "Automatically download queued beatmaps",
+                                            Current = ConfigManager.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps),
+                                        }
+                                    },
                                 },
                                 RowDimensions = new[]
                                 {
@@ -382,7 +391,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension()
+                                    new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize)
                                 }
                             },
                         }
