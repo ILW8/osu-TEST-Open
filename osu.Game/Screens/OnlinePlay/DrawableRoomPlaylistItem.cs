@@ -608,7 +608,10 @@ namespace osu.Game.Screens.OnlinePlay
                                 if (button == null)
                                     Logger.Log(@"[PlaylistDownloadButton] Child of type DownloadButton is null !!");
 
-                                button?.TriggerClick();
+                                // in case some other mechanism starts the download.
+                                // even if this check wasn't here, it would just make the download button shake
+                                if (button?.State.Value == DownloadState.NotDownloaded)
+                                    button.TriggerClick();
                             });
 
                         break;
