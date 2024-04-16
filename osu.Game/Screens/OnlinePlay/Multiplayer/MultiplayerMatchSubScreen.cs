@@ -191,6 +191,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Queue<APIBeatmapSet> downloadQueue = new Queue<APIBeatmapSet>();
 
+        private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
+
+        private Container osuCookieContainer = null!;
+
         private AddItemButton addItemButton;
 
         private Container osuCookieBackgroundContainer = null!;
@@ -242,6 +246,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             BeatmapAvailability.BindValueChanged(updateBeatmapAvailability, true);
             UserMods.BindValueChanged(onUserModsChanged);
 
+            showOsuCookie.BindValueChanged(vce =>
+            {
+                if (vce.NewValue)
+                {
+                    osuCookieContainer.Show();
+                    return;
+                }
+
+                osuCookieContainer.Hide();
+            }, true);
+
             client.LoadRequested += onLoadRequested;
             client.RoomUpdated += onRoomUpdated;
 
@@ -285,7 +300,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                     [
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 10),
-                        new Dimension(),
+                        new Dimension(GridSizeMode.AutoSize),
                         new Dimension(GridSizeMode.Absolute, 10),
                         new Dimension()
                     ],
@@ -320,7 +335,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                             // Spacer
                             null,
                             // osu! cookie
-                            new Container
+                            osuCookieContainer = new Container
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
@@ -380,10 +395,18 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     {
                                         new SettingsCheckbox
                                         {
-                                            LabelText = "Automatically download queued beatmaps",
+                                            LabelText = @"Automatically download queued beatmaps",
                                             Current = ConfigManager.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps),
-                                        }
+                                        },
                                     },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Show osu! cookie",
+                                            Current = showOsuCookie,
+                                        }
+                                    }
                                 },
                                 RowDimensions = new[]
                                 {
@@ -392,6 +415,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize)
                                 }
                             },
