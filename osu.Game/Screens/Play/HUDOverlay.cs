@@ -383,6 +383,7 @@ namespace osu.Game.Screens.Play
         {
             Anchor = Anchor.TopRight,
             Origin = Anchor.TopRight,
+            Margin = new MarginPadding { Top = 96 }
         };
 
         protected PlayerSettingsOverlay CreatePlayerSettingsOverlay() => new PlayerSettingsOverlay();
