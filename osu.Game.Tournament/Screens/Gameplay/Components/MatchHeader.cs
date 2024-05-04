@@ -15,6 +15,24 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
+        private MatchRoundDisplay matchRoundDisplay = null!;
+
+        private bool showRoundText = true;
+
+        public bool ShowRoundText
+        {
+            get => showRoundText;
+            set
+            {
+                if (value == showRoundText)
+                    return;
+
+                showRoundText = value;
+
+                if (IsLoaded)
+                    updateDisplay();
+            }
+        }
 
         private bool showScores = true;
 
@@ -76,7 +94,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                         },
-                        new MatchRoundDisplay
+                        matchRoundDisplay = new MatchRoundDisplay
                         {
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
@@ -108,6 +126,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             teamDisplay1.ShowScore = showScores;
             teamDisplay2.ShowScore = showScores;
 
+            matchRoundDisplay.FadeTo(showRoundText ? 1 : 0, 250f);
             logo.Alpha = showLogo ? 1 : 0;
         }
     }

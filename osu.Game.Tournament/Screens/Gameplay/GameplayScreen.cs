@@ -25,6 +25,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
+        private OsuButton toggleRoundTextButton = null!;
         private MatchIPCInfo ipc = null!;
 
         [Resolved]
@@ -106,6 +107,16 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             RelativeSizeAxes = Axes.X,
                             Text = "Toggle chat",
                             Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
+                        },
+                        toggleRoundTextButton = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Toggle round text",
+                            Action = () =>
+                            {
+                                header.ShowRoundText = !header.ShowRoundText;
+                                toggleRoundTextButton.Alpha = header.ShowRoundText ? 1 : 0.5f;
+                            }
                         },
                         new SettingsSlider<int>
                         {
