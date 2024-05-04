@@ -43,6 +43,10 @@ namespace osu.Game.Tournament.Models
 
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
+        public Bindable<bool> DisplayRoundTextInGameplay = new BindableBool(true);
+        public Bindable<bool> DisplayRoundTextInMappool = new BindableBool(true);
+
+
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
     }
 }

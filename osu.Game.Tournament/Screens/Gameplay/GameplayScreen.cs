@@ -25,7 +25,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
-        private OsuButton toggleRoundTextButton = null!;
         private MatchIPCInfo ipc = null!;
 
         [Resolved]
@@ -108,16 +107,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Text = "Toggle chat",
                             Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
                         },
-                        toggleRoundTextButton = new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Toggle round text",
-                            Action = () =>
-                            {
-                                header.ShowRoundText = !header.ShowRoundText;
-                                toggleRoundTextButton.Alpha = header.ShowRoundText ? 1 : 0.5f;
-                            }
-                        },
                         new SettingsSlider<int>
                         {
                             LabelText = "Chroma width",
@@ -130,6 +119,26 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in gameplay",
+                            Current = LadderInfo.DisplayRoundTextInGameplay
+                        },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in mappool",
+                            Current = LadderInfo.DisplayRoundTextInMappool
+                        }
                     }
                 }
             });
@@ -141,6 +150,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            LadderInfo.DisplayRoundTextInGameplay.BindValueChanged(d => header.ShowRoundText = d.NewValue, true);
         }
 
         protected override void LoadComplete()

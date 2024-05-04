@@ -35,6 +35,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
 
+        private MatchHeader header = null!;
+
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
@@ -47,7 +49,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     Loop = true,
                     RelativeSizeAxes = Axes.Both,
                 },
-                new MatchHeader
+                header = new MatchHeader
                 {
                     ShowScores = true,
                 },
@@ -104,11 +106,32 @@ namespace osu.Game.Tournament.Screens.MapPool
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
                         },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in gameplay",
+                            Current = LadderInfo.DisplayRoundTextInGameplay
+                        },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in mappool",
+                            Current = LadderInfo.DisplayRoundTextInMappool
+                        },
                     },
                 }
             };
 
             ipc.Beatmap.BindValueChanged(beatmapChanged);
+            LadderInfo.DisplayRoundTextInMappool.BindValueChanged(d => header.ShowRoundText = d.NewValue, true);
         }
 
         private Bindable<bool>? splitMapPoolByMods;
