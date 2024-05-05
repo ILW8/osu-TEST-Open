@@ -161,7 +161,7 @@ namespace osu.Game.Online.Chat
                 if (messageQueue.Count > 0)
                 {
                     (string text, var target) = messageQueue.Dequeue();
-                    channelManager?.PostMessage(text, target: target);
+                    sendMessageAndLog(text, target);
                     Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
@@ -172,7 +172,8 @@ namespace osu.Game.Online.Chat
                 if (botMessageQueue.Count > 0)
                 {
                     (string text, Channel target) = botMessageQueue.Dequeue();
-                    channelManager?.PostMessage($@"[TESTOpenBot]: {text}", target: target);
+                    string message = $@"[TESTOpenBot]: {text}";
+                    sendMessageAndLog(message, target);
                     Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
@@ -180,6 +181,19 @@ namespace osu.Game.Online.Chat
 
             // no message has been posted
             Scheduler.AddDelayed(processMessageQueue, 50);
+            return;
+
+            void sendMessageAndLog(string message, Channel target)
+            {
+                if (channelManager != null)
+                {
+                    Logger.Log($"Sent \"{message}\" to {target}");
+                    channelManager.PostMessage(message, target: target);
+                    return;
+                }
+
+                Logger.Log($"Couldn't send \"{message}\" to {target}: channelManager is null");
+            }
         }
 
         [CanBeNull]
@@ -281,7 +295,17 @@ namespace osu.Game.Online.Chat
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
             new StandAloneDrawableChannel(channel);
 
-        public void EnqueueBotMessage(string message) => botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
+        public void EnqueueBotMessage(string message)
+        {
+            Logger.Log($"Queued \"{message}\" as bot message");
+            botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
+        }
+
+        public void EnqueueUserMessage(string message)
+        {
+            Logger.Log($"Queued \"{message}\" as user message");
+            messageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
+        }
 
         private void postMessage(TextBox sender, bool newText)
         {
@@ -294,7 +318,7 @@ namespace osu.Game.Online.Chat
                 channelManager?.PostCommand(text.Substring(1), Channel.Value);
             else
             {
-                messageQueue.Enqueue(new Tuple<string, Channel>(text, Channel.Value));
+                EnqueueUserMessage(text);
 
                 string[] parts = text.Split();
 
@@ -316,7 +340,7 @@ namespace osu.Game.Online.Chat
 
                                     if (beatmapInfo?.BeatmapSet == null)
                                     {
-                                        botMessageQueue.Enqueue(new Tuple<string, Channel>($@"Couldn't retrieve metadata for map ID {numericParam}", Channel.Value));
+                                        EnqueueBotMessage($@"Couldn't retrieve metadata for map ID {numericParam}");
                                         return;
                                     }
 
@@ -500,7 +524,7 @@ namespace osu.Game.Online.Chat
             chatTimerHandler.Abort();
 
             // move this into ChatTimerHandler?
-            botMessageQueue.Enqueue(new Tuple<string, Channel>(@"Countdown aborted", Channel.Value));
+            EnqueueBotMessage(@"Countdown aborted");
         }
 
         private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[] requiredMods = null, APIMod[] allowedMods = null)
@@ -577,7 +601,7 @@ namespace osu.Game.Online.Chat
 
                 var rnd = new Random();
                 long randomNumber = rnd.NextInt64(1, limit);
-                botMessageQueue.Enqueue(new Tuple<string, Channel>($@"{message.Sender} rolls {randomNumber}", Channel.Value));
+                EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
             }
         }
 
