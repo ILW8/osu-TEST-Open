@@ -600,7 +600,7 @@ namespace osu.Game.Online.Chat
                 }
 
                 var rnd = new Random();
-                long randomNumber = rnd.NextInt64(1, limit);
+                long randomNumber = rnd.NextInt64(1, limit + 1);
                 EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
             }
         }
