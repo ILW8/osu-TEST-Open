@@ -161,7 +161,7 @@ namespace osu.Game.Online.Chat
                 if (messageQueue.Count > 0)
                 {
                     (string text, var target) = messageQueue.Dequeue();
-                    channelManager?.PostMessage(text, target: target);
+                    sendMessageAndLog(text, target);
                     Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
@@ -172,7 +172,8 @@ namespace osu.Game.Online.Chat
                 if (botMessageQueue.Count > 0)
                 {
                     (string text, Channel target) = botMessageQueue.Dequeue();
-                    channelManager?.PostMessage($@"[TESTOpenBot]: {text}", target: target);
+                    string message = $@"[TESTOpenBot]: {text}";
+                    sendMessageAndLog(message, target);
                     Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
                 }
@@ -180,6 +181,19 @@ namespace osu.Game.Online.Chat
 
             // no message has been posted
             Scheduler.AddDelayed(processMessageQueue, 50);
+            return;
+
+            void sendMessageAndLog(string message, Channel target)
+            {
+                if (channelManager != null)
+                {
+                    Logger.Log($"Sent \"{message}\" to {target}");
+                    channelManager.PostMessage(message, target: target);
+                    return;
+                }
+
+                Logger.Log($"Couldn't send \"{message}\" to {target}: channelManager is null");
+            }
         }
 
         [CanBeNull]
