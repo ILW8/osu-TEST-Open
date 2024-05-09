@@ -51,7 +51,20 @@ namespace osu.Game.Scoring
 
             scoreImporter = new ScoreImporter(rulesets, beatmaps, storage, realm, api)
             {
-                PostNotification = obj => PostNotification?.Invoke(obj)
+                PostNotification = obj =>
+                {
+                    if (obj is ProgressNotification progressNotification)
+                    {
+                        var originalCompletionTarget = progressNotification.CompletionTarget;
+                        progressNotification.CompletionTarget = notification =>
+                        {
+                            progressNotification.CompletionClickAction?.Invoke();
+                            originalCompletionTarget?.Invoke(notification);
+                        };
+                    }
+
+                    PostNotification?.Invoke(obj);
+                }
             };
 
             scoreExporter = new LegacyScoreExporter(storage)
@@ -149,9 +162,15 @@ namespace osu.Game.Scoring
             });
         }
 
-        public Task Import(params string[] paths) => scoreImporter.Import(paths);
+        public Task Import(params string[] paths)
+        {
+            return scoreImporter.Import(paths);
+        }
 
-        public Task Import(ImportTask[] imports, ImportParameters parameters = default) => scoreImporter.Import(imports, parameters);
+        public Task Import(ImportTask[] imports, ImportParameters parameters = default)
+        {
+            return scoreImporter.Import(imports, parameters);
+        }
 
         public override bool IsAvailableLocally(ScoreInfo model)
             => Realm.Run(realm => realm.All<ScoreInfo>()
