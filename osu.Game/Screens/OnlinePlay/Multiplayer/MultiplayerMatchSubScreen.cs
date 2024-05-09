@@ -70,20 +70,20 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
     public partial class ChatTimerHandler : Component
     {
-        protected readonly MultiplayerCountdown MultiplayerChatTimerCountdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
-        protected double CountdownChangeTime;
+        private readonly MultiplayerCountdown multiplayerChatTimerCountdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
+        private double countdownChangeTime;
 
         private TimeSpan countdownTimeRemaining
         {
             get
             {
-                double timeElapsed = Time.Current - CountdownChangeTime;
+                double timeElapsed = Time.Current - countdownChangeTime;
                 TimeSpan remaining;
 
-                if (timeElapsed > MultiplayerChatTimerCountdown.TimeRemaining.TotalMilliseconds)
+                if (timeElapsed > multiplayerChatTimerCountdown.TimeRemaining.TotalMilliseconds)
                     remaining = TimeSpan.Zero;
                 else
-                    remaining = MultiplayerChatTimerCountdown.TimeRemaining - TimeSpan.FromMilliseconds(timeElapsed);
+                    remaining = multiplayerChatTimerCountdown.TimeRemaining - TimeSpan.FromMilliseconds(timeElapsed);
 
                 return remaining;
             }
@@ -94,11 +94,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
-
-        [Resolved]
-        protected ChannelManager ChannelManager { get; private set; }
-
-        protected Channel TargetChannel;
 
         public event Action<string> OnChatMessageDue;
 
@@ -113,21 +108,27 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 if (countdownUpdateDelegate == null)
                     return;
 
-                Logger.Log($@"Timer scheduled delegate called, room state is {Client.Room?.State}");
+                Logger.Log($@"Room state updated: {Client.Room?.State}. Aborting timer.");
                 countdownUpdateDelegate?.Cancel();
                 countdownUpdateDelegate = null;
                 OnChatMessageDue?.Invoke(@"Countdown aborted (game started)");
             };
         }
 
-        public void SetTimer(TimeSpan duration, double startTime, Channel targetChannel)
+        public void SetTimer(TimeSpan duration, double startTime)
         {
-            // OnChatMessageDue = null;
-            MultiplayerChatTimerCountdown.TimeRemaining = duration;
-            CountdownChangeTime = startTime;
-            TargetChannel = targetChannel;
+            multiplayerChatTimerCountdown.TimeRemaining = duration;
+            countdownChangeTime = startTime;
 
-            countdownUpdateDelegate?.Cancel();
+            Logger.Log($@"Starting new timer ({startTime}, {duration})");
+
+            if (countdownUpdateDelegate != null)
+            {
+                Logger.Log(@"Aborting existing timer");
+                countdownUpdateDelegate.Cancel();
+                OnChatMessageDue?.Invoke(@"Countdown aborted");
+            }
+
             countdownUpdateDelegate = Scheduler.Add(sendTimerMessage);
         }
 
