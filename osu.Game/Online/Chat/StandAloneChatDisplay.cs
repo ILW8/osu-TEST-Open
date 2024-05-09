@@ -510,6 +510,11 @@ namespace osu.Game.Online.Chat
 
                             Client.AbortMatch().FireAndForget();
                             break;
+
+                        // ReSharper disable once StringLiteralTypo
+                        case @"aborttimer":
+                            abortTimer();
+                            break;
                     }
 
                     break;
