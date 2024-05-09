@@ -342,6 +342,13 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"start":
+                                // we intentionally do this check both in startMatch and here
+                                if (!Client.IsHost)
+                                {
+                                    Logger.Log(@"Tried to start match when user is not host of the room. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
+                                    return;
+                                }
+
                                 chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, messagePrefix: @"Match starts in", onTimerComplete: startMatch);
                                 break;
                         }
