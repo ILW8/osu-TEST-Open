@@ -180,7 +180,21 @@ namespace osu.Game.Overlays
             notification.Closed += () => notificationClosed(notification);
 
             if (notification is IHasCompletionTarget hasCompletionTarget)
-                hasCompletionTarget.CompletionTarget = Post;
+            {
+                if (hasCompletionTarget.CompletionTarget != null)
+                {
+                    var originalCompletionTarget = hasCompletionTarget.CompletionTarget;
+                    hasCompletionTarget.CompletionTarget = (notification1 =>
+                    {
+                        Scheduler.AddOnce(() => originalCompletionTarget?.Invoke(notification1));
+                        Post(notification1);
+                    });
+                }
+                else
+                {
+                    hasCompletionTarget.CompletionTarget = Post;
+                }
+            }
 
             playDebouncedSample(notification.PopInSampleName);
 
