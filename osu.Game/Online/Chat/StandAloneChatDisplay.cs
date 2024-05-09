@@ -362,7 +362,18 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"timer":
-                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, Channel.Value);
+                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current);
+                                break;
+
+                            case @"start":
+                                // we intentionally do this check both in startMatch and here
+                                if (!Client.IsHost)
+                                {
+                                    Logger.Log(@"Tried to start match when user is not host of the room. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
+                                    return;
+                                }
+
+                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, messagePrefix: @"Match starts in", onTimerComplete: startMatch);
                                 break;
                         }
                     }
@@ -370,6 +381,7 @@ namespace osu.Game.Online.Chat
                     {
                         switch (parts[1])
                         {
+                            // i don't think this belongs here in the first place... whatever
                             // ReSharper disable once StringLiteralTypo
                             case @"aborttimer":
                                 abortTimer();
@@ -511,6 +523,11 @@ namespace osu.Game.Online.Chat
                             Client.AbortMatch().FireAndForget();
                             break;
 
+                        // start immediately
+                        case @"start":
+                            startMatch();
+                            break;
+
                         // ReSharper disable once StringLiteralTypo
                         case @"aborttimer":
                             abortTimer();
@@ -522,6 +539,25 @@ namespace osu.Game.Online.Chat
             }
 
             TextBox.Text = string.Empty;
+        }
+
+        private void startMatch()
+        {
+            if (!Client.IsHost)
+            {
+                Logger.Log(@"Tried to start match when user is not host of the room. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
+                return;
+            }
+
+            // no one is ready, server won't allow starting the map
+            if (Client.Room?.Users.All(u => u.State != MultiplayerUserState.Ready) ?? false)
+            {
+                Logger.Log(@"Tried to start match when no player is ready. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
+                botMessageQueue.Enqueue(new Tuple<string, Channel>(@"No player ready, cannot start match.", Channel.Value));
+                return;
+            }
+
+            Client.StartMatch().FireAndForget();
         }
 
         private void abortTimer()
