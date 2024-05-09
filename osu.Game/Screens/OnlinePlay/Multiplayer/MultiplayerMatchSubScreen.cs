@@ -72,6 +72,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
     {
         private readonly MultiplayerCountdown multiplayerChatTimerCountdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
         private double countdownChangeTime;
+        private string countdownMessagePrefix;
 
         private TimeSpan countdownTimeRemaining
         {
@@ -95,7 +96,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved]
         protected MultiplayerClient Client { get; private set; }
 
+        [CanBeNull]
         public event Action<string> OnChatMessageDue;
+
+        [CanBeNull]
+        public event Action OnTimerComplete;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -115,20 +120,23 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             };
         }
 
-        public void SetTimer(TimeSpan duration, double startTime)
+        public void SetTimer(TimeSpan duration, double startTime, string messagePrefix = @"Countdown ends in", Action onTimerComplete = null)
         {
+            Logger.Log($@"Starting new timer ({startTime}, {duration}, prefix: '{messagePrefix}', completeAction: {onTimerComplete?.Method.Name ?? @"null"})");
+
             multiplayerChatTimerCountdown.TimeRemaining = duration;
             countdownChangeTime = startTime;
-
-            Logger.Log($@"Starting new timer ({startTime}, {duration})");
 
             if (countdownUpdateDelegate != null)
             {
                 Logger.Log(@"Aborting existing timer");
                 countdownUpdateDelegate.Cancel();
+                countdownUpdateDelegate = null;
                 OnChatMessageDue?.Invoke(@"Countdown aborted");
             }
 
+            OnTimerComplete = onTimerComplete;
+            countdownMessagePrefix = messagePrefix;
             countdownUpdateDelegate = Scheduler.Add(sendTimerMessage);
         }
 
@@ -152,12 +160,18 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private void sendTimerMessage()
         {
             int secondsRemaining = (int)Math.Round(countdownTimeRemaining.TotalSeconds);
-            string message = secondsRemaining == 0 ? @"Countdown finished" : $@"Countdown ends in {secondsRemaining} seconds";
+            string message = secondsRemaining <= 0 ? @"Countdown finished" : $@"{countdownMessagePrefix} {secondsRemaining} seconds";
             OnChatMessageDue?.Invoke(message);
+            Logger.Log($@"Sent timer message, {secondsRemaining} seconds remaining on timer.");
 
-            if (secondsRemaining <= 0) return;
+            if (secondsRemaining <= 0)
+            {
+                countdownUpdateDelegate = null;
+                OnTimerComplete?.Invoke();
+                return;
+            }
 
-            Logger.Log($@"Sent timer message, {secondsRemaining} seconds remaining on timer. ");
+            Logger.Log($@"Scheduling {nameof(processTimerEvent)} in 100ms.");
             countdownUpdateDelegate = Scheduler.AddDelayed(processTimerEvent, 100);
         }
 
@@ -484,6 +498,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         public override bool OnExiting(ScreenExitEvent e)
         {
             chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueBotMessage;
+            chatTimerHandler.Abort();
 
             // room has not been created yet or we're offline; exit immediately.
             if (client.Room == null || !IsConnected)
