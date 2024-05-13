@@ -54,7 +54,6 @@ namespace osu.Game.Screens.Play
             return child == bottomRightElements;
         }
 
-        public readonly ModDisplay ModDisplay;
         public readonly HoldForMenuButton HoldToQuit;
         public readonly PlayerSettingsOverlay PlayerSettingsOverlay;
 
@@ -71,8 +70,6 @@ namespace osu.Game.Screens.Play
 
         [CanBeNull]
         private readonly DrawableRuleset drawableRuleset;
-
-        private readonly IReadOnlyList<Mod> mods;
 
         /// <summary>
         /// Whether the elements that can optionally be hidden should be visible.
@@ -114,7 +111,6 @@ namespace osu.Game.Screens.Play
         public HUDOverlay([CanBeNull] DrawableRuleset drawableRuleset, IReadOnlyList<Mod> mods, bool alwaysShowLeaderboard = true)
         {
             this.drawableRuleset = drawableRuleset;
-            this.mods = mods;
 
             RelativeSizeAxes = Axes.Both;
 
@@ -143,7 +139,6 @@ namespace osu.Game.Screens.Play
                     Direction = FillDirection.Vertical,
                     Children = new Drawable[]
                     {
-                        ModDisplay = CreateModsContainer(),
                         PlayerSettingsOverlay = CreatePlayerSettingsOverlay(),
                     }
                 },
@@ -188,8 +183,6 @@ namespace osu.Game.Screens.Play
                 BindDrawableRuleset(drawableRuleset);
             }
 
-            ModDisplay.Current.Value = mods;
-
             configVisibilityMode = config.GetBindable<HUDVisibilityMode>(OsuSetting.HUDVisibilityMode);
             configLeaderboardVisibility = config.GetBindable<bool>(OsuSetting.GameplayLeaderboard);
             configSettingsOverlay = config.GetBindable<bool>(OsuSetting.ReplaySettingsOverlay);
@@ -224,16 +217,7 @@ namespace osu.Game.Screens.Play
 
             replayLoaded.BindValueChanged(e =>
             {
-                if (e.NewValue)
-                {
-                    ModDisplay.FadeIn(200);
-                    InputCountController.Margin = new MarginPadding(10) { Bottom = 30 };
-                }
-                else
-                {
-                    ModDisplay.Delay(2000).FadeOut(200);
-                    InputCountController.Margin = new MarginPadding(10);
-                }
+                InputCountController.Margin = e.NewValue ? new MarginPadding(10) { Bottom = 30 } : new MarginPadding(10);
 
                 updateVisibility();
             }, true);
@@ -377,13 +361,6 @@ namespace osu.Game.Screens.Play
         {
             Anchor = Anchor.BottomRight,
             Origin = Anchor.BottomRight,
-        };
-
-        protected ModDisplay CreateModsContainer() => new ModDisplay
-        {
-            Anchor = Anchor.TopRight,
-            Origin = Anchor.TopRight,
-            Margin = new MarginPadding { Top = 96 }
         };
 
         protected PlayerSettingsOverlay CreatePlayerSettingsOverlay() => new PlayerSettingsOverlay();
