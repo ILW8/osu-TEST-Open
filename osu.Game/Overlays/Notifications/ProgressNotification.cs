@@ -183,11 +183,16 @@ namespace osu.Game.Overlays.Notifications
 
         private ProgressNotificationState state;
 
-        protected virtual Notification CreateCompletionNotification() => new ProgressCompletionNotification
+        protected virtual Notification CreateCompletionNotification() => new SilencedProgressCompletionNotification
         {
             Activated = CompletionClickAction,
             Text = CompletionText
         };
+
+        private partial class SilencedProgressCompletionNotification : ProgressCompletionNotification
+        {
+            public override bool IsImportant => false;
+        }
 
         public override bool DisplayOnTop => false;
 
