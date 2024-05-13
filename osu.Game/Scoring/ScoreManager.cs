@@ -49,7 +49,7 @@ namespace osu.Game.Scoring
             this.beatmaps = beatmaps;
             this.configManager = configManager;
 
-            scoreImporter = new ScoreImporter(rulesets, beatmaps, storage, realm, api)
+            scoreImporter = new ScoreImporter(rulesets, beatmaps, storage, realm, api, configManager)
             {
                 PostNotification = obj =>
                 {

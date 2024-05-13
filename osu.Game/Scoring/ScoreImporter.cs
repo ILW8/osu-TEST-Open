@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.IO.Archives;
 using osu.Game.Rulesets;
@@ -17,6 +19,7 @@ using osu.Game.Scoring.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Overlays.Notifications;
 using Realms;
 
 namespace osu.Game.Scoring
@@ -28,19 +31,50 @@ namespace osu.Game.Scoring
         protected override string[] HashableFileTypes => new[] { ".osr" };
 
         private readonly RulesetStore rulesets;
+        private readonly OsuConfigManager? config;
         private readonly Func<BeatmapManager> beatmaps;
 
         private readonly IAPIProvider api;
 
-        public ScoreImporter(RulesetStore rulesets, Func<BeatmapManager> beatmaps, Storage storage, RealmAccess realm, IAPIProvider api)
+        public ScoreImporter(RulesetStore rulesets, Func<BeatmapManager> beatmaps, Storage storage, RealmAccess realm, IAPIProvider api, OsuConfigManager? config)
             : base(storage, realm)
         {
+            this.config = config;
             this.rulesets = rulesets;
             this.beatmaps = beatmaps;
             this.api = api;
         }
 
+        public override async Task<IEnumerable<Live<ScoreInfo>>> Import(ProgressNotification notification, ImportTask[] tasks, ImportParameters parameters = default)
+        {
+            try
+            {
+                return await base.Import(notification, tasks, parameters).ConfigureAwait(false);
+            }
+            catch (LegacyScoreDecoder.BeatmapNotFoundException notFound)
+            {
+                if (config?.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMissingBeatmaps).Value ?? false)
+                {
+                    notification.CompletionText = @"beatmap for replay not found, queued for download. 727.";
+                    notification.State = config?.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMissingBeatmaps).Value ?? false ? ProgressNotificationState.Completed : ProgressNotificationState.Cancelled;
+                }
+                else
+                {
+                    notification.Text = $@"Score '{notFound.Name}' failed to import: no corresponding beatmap with the hash '{notFound.Hash}' could be found.";
+                    notification.State = ProgressNotificationState.Cancelled;
+                }
+
+                return new List<Live<ScoreInfo>>();
+            }
+        }
+
         protected override ScoreInfo? CreateModel(ArchiveReader archive, ImportParameters parameters)
+        {
+            CreateModel(archive, parameters, out var scoreInfo);
+            return scoreInfo;
+        }
+
+        protected bool CreateModel(ArchiveReader archive, ImportParameters parameters, out ScoreInfo? scoreInfo)
         {
             string name = archive.Filenames.First(f => f.EndsWith(".osr", StringComparison.OrdinalIgnoreCase));
 
@@ -48,7 +82,8 @@ namespace osu.Game.Scoring
             {
                 try
                 {
-                    return new DatabasedLegacyScoreDecoder(rulesets, beatmaps()).Parse(stream).ScoreInfo;
+                    scoreInfo = new DatabasedLegacyScoreDecoder(rulesets, beatmaps()).Parse(stream, archive.Name).ScoreInfo;
+                    return true;
                 }
                 catch (LegacyScoreDecoder.BeatmapNotFoundException notFound)
                 {
@@ -62,12 +97,15 @@ namespace osu.Game.Scoring
                         api.Queue(req);
                     }
 
-                    return null;
+                    // scoreInfo = null;
+                    // return true;
+                    throw;
                 }
                 catch (Exception e)
                 {
                     Logger.Log($@"Failed to parse headers of score '{archive.Name}': {e}.", LoggingTarget.Database);
-                    return null;
+                    scoreInfo = null;
+                    return false;
                 }
             }
         }

@@ -13,10 +13,12 @@ using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
+using osu.Game.Configuration;
 using osu.Game.Extensions;
 using osu.Game.IO.Archives;
 using osu.Game.Models;
 using osu.Game.Overlays.Notifications;
+using osu.Game.Scoring.Legacy;
 using Realms;
 
 namespace osu.Game.Database
@@ -38,7 +40,7 @@ namespace osu.Game.Database
         /// The minimum number of items in a single import call in order for the import to be processed as a batch.
         /// Batch imports will apply optimisations preferring speed over consistency when detecting changes in already-imported items.
         /// </summary>
-        private const int minimum_items_considered_batch_import = 10;
+        protected const int MINIMUM_ITEMS_CONSIDERED_BATCH_IMPORT = 10;
 
         /// <summary>
         /// A singleton scheduler shared by all <see cref="RealmArchiveModelImporter{TModel}"/>.
@@ -95,7 +97,7 @@ namespace osu.Game.Database
             return Import(notification, tasks, parameters);
         }
 
-        public async Task<IEnumerable<Live<TModel>>> Import(ProgressNotification notification, ImportTask[] tasks, ImportParameters parameters = default)
+        public virtual async Task<IEnumerable<Live<TModel>>> Import(ProgressNotification notification, ImportTask[] tasks, ImportParameters parameters = default)
         {
             if (tasks.Length == 0)
             {
@@ -111,7 +113,7 @@ namespace osu.Game.Database
 
             var imported = new List<Live<TModel>>();
 
-            parameters.Batch |= tasks.Length >= minimum_items_considered_batch_import;
+            parameters.Batch |= tasks.Length >= MINIMUM_ITEMS_CONSIDERED_BATCH_IMPORT;
 
             await Task.WhenAll(tasks.Select(async task =>
             {
@@ -134,6 +136,10 @@ namespace osu.Game.Database
                 }
                 catch (OperationCanceledException)
                 {
+                }
+                catch (LegacyScoreDecoder.BeatmapNotFoundException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
@@ -235,6 +241,10 @@ namespace osu.Game.Database
                     return null;
             }
             catch (TaskCanceledException)
+            {
+                throw;
+            }
+            catch (LegacyScoreDecoder.BeatmapNotFoundException) // to allow downloading of beatmap and not show error message
             {
                 throw;
             }

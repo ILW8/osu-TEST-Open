@@ -32,7 +32,7 @@ namespace osu.Game.Scoring.Legacy
 
         private float beatmapOffset;
 
-        public Score Parse(Stream stream)
+        public Score Parse(Stream stream, string archiveName = "")
         {
             var score = new Score
             {
@@ -64,7 +64,7 @@ namespace osu.Game.Scoring.Legacy
                 workingBeatmap = GetBeatmap(beatmapHash);
 
                 if (workingBeatmap is DummyWorkingBeatmap)
-                    throw new BeatmapNotFoundException(beatmapHash);
+                    throw new BeatmapNotFoundException(beatmapHash, archiveName);
 
                 scoreInfo.User = new APIUser { Username = sr.ReadString() };
 
@@ -315,8 +315,14 @@ namespace osu.Game.Scoring.Legacy
         {
             public string Hash { get; }
 
-            public BeatmapNotFoundException(string hash)
+            /// <summary>
+            /// name of the archive that is missing a beatmap
+            /// </summary>
+            public string Name { get; }
+
+            public BeatmapNotFoundException(string hash, string archiveName = "")
             {
+                Name = archiveName == "" ? @"unknown" : archiveName;
                 Hash = hash;
             }
         }
