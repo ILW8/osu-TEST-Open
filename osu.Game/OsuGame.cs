@@ -919,7 +919,7 @@ namespace osu.Game
             ScoreDownloader.PostNotification = n => Notifications.Post(n);
 
             ScoreManager.PostNotification = n => Notifications.Post(n);
-            ScoreManager.PresentImport = items => PresentScore(items.First().Value);
+            ScoreManager.PresentImport = items => PresentScore(items.First().Value, ScorePresentType.Gameplay);
 
             MultiplayerClient.PostNotification = n => Notifications.Post(n);
             MultiplayerClient.PresentMatch = PresentMultiplayerMatch;
