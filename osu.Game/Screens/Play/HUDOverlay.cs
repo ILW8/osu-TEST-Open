@@ -134,14 +134,12 @@ namespace osu.Game.Screens.Play
                     : Empty(),
                 topRightElements = new FillFlowContainer
                 {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
                     AlwaysPresent = true,
                     Margin = new MarginPadding(10),
                     Spacing = new Vector2(10),
-                    AutoSizeAxes = Axes.Y,
-                    RelativeSizeAxes = Axes.X,
-                    Width = 1.0f,
+                    AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
                     Children = new Drawable[]
                     {
@@ -383,11 +381,9 @@ namespace osu.Game.Screens.Play
 
         protected ModDisplay CreateModsContainer() => new ModDisplay
         {
-            Anchor = Anchor.TopCentre,
-            Origin = Anchor.TopCentre,
-            Margin = new MarginPadding { Top = 32 },
-            Scale = new Vector2(1.15f),
-            ExpansionMode = ExpansionMode.AlwaysExpanded
+            Anchor = Anchor.TopRight,
+            Origin = Anchor.TopRight,
+            Margin = new MarginPadding { Top = 96 }
         };
 
         protected PlayerSettingsOverlay CreatePlayerSettingsOverlay() => new PlayerSettingsOverlay();
