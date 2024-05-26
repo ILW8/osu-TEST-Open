@@ -88,14 +88,12 @@ namespace osu.Game.Tournament.Screens.TeamWin
 
             mainContainer.Children = new Drawable[]
             {
-                new DrawableTeamFlag(match.Winner) // todo: this should probably be asynchronously preloaded as it fetches from the network now
+                new TriangleDrawableTeamFlag(match.Winner) // todo: this should probably be asynchronously preloaded as it fetches from the network now
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Position = new Vector2(-340, 42),
-                    Scale = new Vector2(2f),
-                    PlayerOffsetX = 72f,
-                    PlayerOffsetY = 0f,
+                    Position = new Vector2(-256, 42),
+                    Size = new Vector2(384, 384),
                 },
                 new FillFlowContainer
                 {

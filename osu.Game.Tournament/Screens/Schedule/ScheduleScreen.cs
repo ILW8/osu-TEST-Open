@@ -153,13 +153,13 @@ namespace osu.Game.Tournament.Screens.Schedule
                                 new ScheduleContainer("recent matches")
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Width = 0.4f,
+                                    Width = 0.5f,
                                     ChildrenEnumerable = recent.Select(p => new ScheduleMatch(p))
                                 },
                                 new ScheduleContainer("upcoming matches")
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Width = 0.6f,
+                                    Width = 0.5f,
                                     ChildrenEnumerable = upcoming.Select(p => new ScheduleMatch(p))
                                 },
                             }
