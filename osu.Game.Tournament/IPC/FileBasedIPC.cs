@@ -4,7 +4,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using JetBrains.Annotations;
 using Microsoft.Win32;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.ObjectExtensions;
