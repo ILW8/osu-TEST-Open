@@ -2,6 +2,7 @@ on:
   push:
     tags:
       - '**'
+  pull_request:
   workflow_dispatch:
 
 name: Build tagged releases
@@ -21,8 +22,6 @@ jobs:
       matrix:
         os:
           - linux-x64
-          - osx-arm64
-          - osx-x64
           - win-x64
     timeout-minutes: 60
     steps:
@@ -86,8 +85,6 @@ jobs:
           name: |
             win-x64
             linux-x64
-            osx-arm64
-            osx-x64
 
       - name: Release
         uses: softprops/action-gh-release@v2
