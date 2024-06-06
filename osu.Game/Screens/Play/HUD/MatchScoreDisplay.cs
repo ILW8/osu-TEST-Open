@@ -4,6 +4,7 @@
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -169,6 +170,8 @@ namespace osu.Game.Screens.Play.HUD
             public MatchScoreCounter()
             {
                 Margin = new MarginPadding { Top = bar_height, Horizontal = 10 };
+                // hardcoding to #000, this component isn't under `TournamentGame`.
+                Colour = Color4Extensions.FromHex("#000");
             }
 
             public bool Winning
@@ -191,6 +194,11 @@ namespace osu.Game.Screens.Play.HUD
 
         private partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
+            public MatchScoreDiffCounter()
+            {
+                Colour = Color4Extensions.FromHex("#000");
+            }
+
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
             {
                 s.Spacing = new Vector2(-2);

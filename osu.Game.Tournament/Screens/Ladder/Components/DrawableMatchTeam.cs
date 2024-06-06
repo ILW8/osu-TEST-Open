@@ -178,10 +178,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         {
             bool winner = completed.Value && isWinner?.Invoke() == true;
 
-            background.FadeColour(winner ? Color4.White : Color4Extensions.FromHex("#444"), winner ? 500 : 0, Easing.OutQuint);
+            background.FadeColour(winner ? TournamentGame.ELEMENT_BACKGROUND_COLOUR : Color4Extensions.FromHex("#444"), winner ? 500 : 0, Easing.OutQuint);
             backgroundRight.FadeColour(winner ? colourWinner : Color4Extensions.FromHex("#333"), winner ? 500 : 0, Easing.OutQuint);
 
-            AcronymText.Colour = winner ? Color4.Black : Color4.White;
+            AcronymText.Colour = winner ? TournamentGame.ELEMENT_FOREGROUND_COLOUR : TournamentGame.ELEMENT_BACKGROUND_COLOUR;
 
             scoreText.Font = scoreText.Font.With(weight: winner ? FontWeight.Bold : FontWeight.Regular);
         }

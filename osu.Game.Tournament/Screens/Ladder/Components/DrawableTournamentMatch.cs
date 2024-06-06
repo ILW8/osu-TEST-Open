@@ -85,7 +85,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                     {
                         RelativeSizeAxes = Axes.Both,
                         Alpha = 0,
-                        BorderColour = Color4.White,
+                        BorderColour = TournamentGame.ELEMENT_BACKGROUND_COLOUR,
                         BorderThickness = border_thickness,
                         Masking = true,
                         Child = new Box
