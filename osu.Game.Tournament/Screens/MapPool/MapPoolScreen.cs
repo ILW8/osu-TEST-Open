@@ -159,10 +159,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             if (!hasAllBans)
             {
-                // Ban phase: switch teams every second ban.
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                // Ban phase: switch teams every pick (ABAB for WLC)
+                nextColour = getOppositeTeamColour(lastPickColour);
             }
             else
             {
