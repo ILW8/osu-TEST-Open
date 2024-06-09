@@ -27,7 +27,8 @@ namespace osu.Game.Tournament.Components
                     Position = new Vector2(0, 0),
                     Size = new Vector2(1f / 3f, 1),
                     RelativeSizeAxes = Axes.Both,
-                    RelativePositionAxes = Axes.Both
+                    RelativePositionAxes = Axes.Both,
+                    Alpha = players.ElementAtOrDefault(0) != null ? 1 : 0
                 },
                 new UserTile
                 {
@@ -35,7 +36,8 @@ namespace osu.Game.Tournament.Components
                     Position = new Vector2(1f / 3f, 0),
                     Size = new Vector2(1f / 3f, 1),
                     RelativeSizeAxes = Axes.Both,
-                    RelativePositionAxes = Axes.Both
+                    RelativePositionAxes = Axes.Both,
+                    Alpha = players.ElementAtOrDefault(1) != null ? 1 : 0
                 },
                 new UserTile
                 {
@@ -43,7 +45,8 @@ namespace osu.Game.Tournament.Components
                     Position = new Vector2(2f / 3f, 0),
                     Size = new Vector2(1f / 3f, 1),
                     RelativeSizeAxes = Axes.Both,
-                    RelativePositionAxes = Axes.Both
+                    RelativePositionAxes = Axes.Both,
+                    Alpha = players.ElementAtOrDefault(2) != null ? 1 : 0
                 },
             };
         }
