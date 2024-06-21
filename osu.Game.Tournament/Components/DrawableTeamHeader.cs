@@ -12,7 +12,8 @@ namespace osu.Game.Tournament.Components
         {
             Background.Colour = TournamentGame.GetTeamColour(colour);
 
-            Text.Colour = TournamentGame.TEXT_COLOUR;
+            // PNL: white text for team header text
+            Text.Colour = TournamentGame.ELEMENT_FOREGROUND_COLOUR;
             Text.Text = $"Team {colour}".ToUpperInvariant();
             Text.Scale = new Vector2(0.6f);
         }
