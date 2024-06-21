@@ -28,6 +28,7 @@ namespace osu.Game.Tournament.Components
             AcronymText = new TournamentSpriteText
             {
                 Font = OsuFont.Torus.With(weight: FontWeight.Regular),
+                Colour = TournamentGame.TEXT_COLOUR
             };
         }
 

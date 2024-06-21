@@ -28,10 +28,10 @@ namespace osu.Game.Tournament
         public static readonly Color4 COLOUR_RED = new OsuColour().TeamColourRed;
         public static readonly Color4 COLOUR_BLUE = new OsuColour().TeamColourBlue;
 
-        public static readonly Color4 ELEMENT_BACKGROUND_COLOUR = Color4Extensions.FromHex("#fff");
-        public static readonly Color4 ELEMENT_FOREGROUND_COLOUR = Color4Extensions.FromHex("#000");
+        public static readonly Color4 ELEMENT_FOREGROUND_COLOUR = Color4Extensions.FromHex("#fff");
+        public static readonly Color4 ELEMENT_BACKGROUND_COLOUR = Color4Extensions.FromHex("#000");
 
-        public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#fff");
+        public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#000");
         private Drawable heightWarning = null!;
 
         private Bindable<WindowMode> windowMode = null!;

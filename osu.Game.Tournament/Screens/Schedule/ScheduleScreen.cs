@@ -14,7 +14,6 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Schedule
 {
@@ -72,7 +71,7 @@ namespace osu.Game.Tournament.Screens.Schedule
                                                 {
                                                     new Box
                                                     {
-                                                        Colour = Color4.White,
+                                                        Colour = TournamentGame.ELEMENT_BACKGROUND_COLOUR,
                                                         Size = new Vector2(50, 10),
                                                     },
                                                     new TournamentSpriteTextWithBackground("Schedule")
@@ -262,6 +261,7 @@ namespace osu.Game.Tournament.Screens.Schedule
             public ScheduleMatchDate(DateTimeOffset date, float textSize = OsuFont.DEFAULT_FONT_SIZE, bool italic = true)
                 : base(date, textSize, italic)
             {
+                Colour = TournamentGame.TEXT_COLOUR;
             }
 
             protected override string Format() => Date < DateTimeOffset.Now

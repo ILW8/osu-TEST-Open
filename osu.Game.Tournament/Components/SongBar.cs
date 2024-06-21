@@ -242,6 +242,7 @@ namespace osu.Game.Tournament.Components
                                                 X = -10,
                                                 Anchor = Anchor.CentreRight,
                                                 Origin = Anchor.CentreRight,
+                                                Colour = TournamentGame.ELEMENT_BACKGROUND_COLOUR
                                             },
                                         }
                                     },
@@ -283,6 +284,7 @@ namespace osu.Game.Tournament.Components
                         {
                             cp(s, false);
                             s.Spacing = new Vector2(-2, 0);
+                            Colour = TournamentGame.TEXT_COLOUR;
                         });
                     }
 
