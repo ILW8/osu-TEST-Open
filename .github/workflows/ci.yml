@@ -35,7 +35,7 @@ jobs:
 
       - name: Create publish package (push)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${{ github.sha }}" --self-contained -warnaserror osu.Desktop.slnf
+        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
 
       - name: Create publish package (tagged release)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
