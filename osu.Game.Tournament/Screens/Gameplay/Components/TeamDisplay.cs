@@ -49,7 +49,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Flag.Origin = anchor;
             Flag.Anchor = anchor;
 
-            Margin = new MarginPadding(20);
+            Margin = new MarginPadding
+            {
+                Top = 12,
+                Horizontal = 20,
+                Bottom = 20
+            };
 
             InternalChild = new Container
             {
