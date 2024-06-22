@@ -35,6 +35,10 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
 
+        private const int phase1_bans_required = 2;
+        private const int between_phases_picks_required = 4;
+        private const int phase2_bans_required = 2;
+
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
@@ -123,7 +127,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
         {
-            if (CurrentMatch.Value == null || CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) < 2)
+            if (!shouldPick())
                 return;
 
             // if bans have already been placed, beatmap changes result in a selection being made automatically
@@ -144,35 +148,43 @@ namespace osu.Game.Tournament.Screens.MapPool
             static Color4 setColour(bool active) => active ? Color4.White : Color4.Gray;
         }
 
+        /// <summary>
+        /// PNL: Split bans system. 1 ban per player as the first stage, players pick 4 maps (2 each), then another set of 1 ban per player
+        /// </summary>
+        /// <returns>Whether next map selection should be a pick (true) or a ban (false)</returns>
+        private bool shouldPick()
+        {
+            if (CurrentMatch.Value?.Round.Value == null)
+                return false;
+
+            int totalPicks = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Pick);
+            int totalBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban);
+            bool shouldPick = totalPicks < between_phases_picks_required ? totalBans >= phase1_bans_required : totalBans >= phase1_bans_required + phase2_bans_required;
+            return shouldPick;
+        }
+
         private void setNextMode()
         {
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
-
+            bool shouldPick = this.shouldPick();
             TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
-
             TeamColour nextColour;
 
-            bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
-
-            if (!hasAllBans)
+            if (shouldPick)
             {
-                // Ban phase: switch teams every second ban.
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
+                nextColour = pickType == ChoiceType.Pick ? getOppositeTeamColour(lastPickColour) : lastPickColour;
             }
             else
             {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                // Ban phase: switch teams every second ban.
+                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1 ? getOppositeTeamColour(lastPickColour) : lastPickColour;
             }
 
-            setMode(nextColour, hasAllBans ? ChoiceType.Pick : ChoiceType.Ban);
+            setMode(nextColour, shouldPick ? ChoiceType.Pick : ChoiceType.Ban);
+            return;
 
             TeamColour getOppositeTeamColour(TeamColour colour) => colour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
         }
