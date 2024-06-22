@@ -53,6 +53,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 },
                 new MatchHeader
                 {
+                    ShowLogo = false,
                     ShowScores = true,
                 },
                 mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>

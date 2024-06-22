@@ -78,6 +78,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         },
                         new MatchRoundDisplay
                         {
+                            Margin = new MarginPadding { Top = 72 },
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Scale = new Vector2(0.4f)
