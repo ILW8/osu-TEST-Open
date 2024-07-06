@@ -23,9 +23,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
     {
         private readonly BindableBool warmup = new BindableBool();
 
-        public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
+        public readonly Bindable<LegacyTourneyState> State = new Bindable<LegacyTourneyState>();
         private OsuButton warmupButton = null!;
-        private MatchIPCInfo ipc = null!;
+        private LegacyMatchIPCInfo ipc = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -36,7 +36,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private Drawable chroma = null!;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(LegacyMatchIPCInfo ipc)
         {
             this.ipc = ipc;
 
@@ -105,7 +105,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Toggle chat",
-                            Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
+                            Action = () => { State.Value = State.Value == LegacyTourneyState.Idle ? LegacyTourneyState.Playing : LegacyTourneyState.Idle; }
                         },
                         new SettingsSlider<int>
                         {
@@ -156,7 +156,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private TournamentMatchScoreDisplay scoreDisplay = null!;
 
-        private TourneyState lastState;
+        private LegacyTourneyState lastState;
         private MatchHeader header = null!;
 
         private void contract()
@@ -194,7 +194,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 scheduledScreenChange?.Cancel();
 
-                if (State.Value == TourneyState.Ranking)
+                if (State.Value == LegacyTourneyState.Ranking)
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
@@ -206,7 +206,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                 switch (State.Value)
                 {
-                    case TourneyState.Idle:
+                    case LegacyTourneyState.Idle:
                         contract();
 
                         if (LadderInfo.AutoProgressScreens.Value)
@@ -215,7 +215,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                             // if we've returned to idle and the last screen was ranking
                             // we should automatically proceed after a short delay
-                            if (lastState == TourneyState.Ranking && !warmup.Value)
+                            if (lastState == LegacyTourneyState.Ranking && !warmup.Value)
                             {
                                 if (CurrentMatch.Value?.Completed.Value == true)
                                     scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(TeamWinScreen)); }, delay_before_progression);
@@ -226,7 +226,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                         break;
 
-                    case TourneyState.Ranking:
+                    case LegacyTourneyState.Ranking:
                         scheduledContract = Scheduler.AddDelayed(contract, 10000);
                         break;
 

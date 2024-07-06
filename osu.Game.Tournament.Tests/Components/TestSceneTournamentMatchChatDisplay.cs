@@ -50,7 +50,7 @@ namespace osu.Game.Tournament.Tests.Components
         private LadderInfo ladderInfo = new LadderInfo();
 
         [Cached]
-        private MatchIPCInfo matchInfo = new MatchIPCInfo(); // hide parent
+        private LegacyMatchIPCInfo legacyMatchInfo = new LegacyMatchIPCInfo(); // hide parent
 
         private readonly TournamentMatchChatDisplay chatDisplay;
 

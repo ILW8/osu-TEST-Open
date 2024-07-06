@@ -3,7 +3,7 @@
 
 namespace osu.Game.Tournament.IPC
 {
-    public enum TourneyState
+    public enum LegacyTourneyState
     {
         Initialising,
         Idle,

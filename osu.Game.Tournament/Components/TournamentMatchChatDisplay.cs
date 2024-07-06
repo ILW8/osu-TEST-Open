@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo? ipc, IAPIProvider api)
+        private void load(LegacyMatchIPCInfo? ipc, IAPIProvider api)
         {
             if (ipc != null)
             {

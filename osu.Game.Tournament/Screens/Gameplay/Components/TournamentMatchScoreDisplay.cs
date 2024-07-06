@@ -10,7 +10,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class TournamentMatchScoreDisplay : MatchScoreDisplay
     {
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(LegacyMatchIPCInfo ipc)
         {
             Team1Score.BindTo(ipc.Score1);
             Team2Score.BindTo(ipc.Score2);

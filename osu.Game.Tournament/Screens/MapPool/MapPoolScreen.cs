@@ -38,7 +38,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(LegacyMatchIPCInfo ipc)
         {
             InternalChildren = new Drawable[]
             {

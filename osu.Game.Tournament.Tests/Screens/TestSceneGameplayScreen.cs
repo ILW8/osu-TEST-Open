@@ -33,14 +33,14 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
-        public void TestStartupState([Values] TourneyState state)
+        public void TestStartupState([Values] LegacyTourneyState state)
         {
             AddStep("set state", () => IPCInfo.State.Value = state);
             createScreen();
         }
 
         [Test]
-        public void TestStartupStateNoCurrentMatch([Values] TourneyState state)
+        public void TestStartupStateNoCurrentMatch([Values] LegacyTourneyState state)
         {
             AddStep("set null current", () => Ladder.CurrentMatch.Value = null);
             AddStep("set state", () => IPCInfo.State.Value = state);

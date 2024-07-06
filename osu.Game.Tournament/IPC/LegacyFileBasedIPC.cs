@@ -19,7 +19,7 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC
 {
-    public partial class FileBasedIPC : MatchIPCInfo
+    public partial class LegacyFileBasedIPC : LegacyMatchIPCInfo
     {
         public Storage? IPCStorage { get; private set; }
 
@@ -132,7 +132,7 @@ namespace osu.Game.Tournament.IPC
                             using (var stream = IPCStorage.GetStream(file_ipc_state_filename))
                             using (var sr = new StreamReader(stream))
                             {
-                                State.Value = Enum.Parse<TourneyState>(sr.ReadLine().AsNonNull());
+                                State.Value = Enum.Parse<LegacyTourneyState>(sr.ReadLine().AsNonNull());
                             }
                         }
                         catch (Exception)

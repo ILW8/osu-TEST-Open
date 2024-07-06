@@ -26,7 +26,7 @@ namespace osu.Game.Tournament.Tests
         protected LadderInfo Ladder { get; private set; } = new LadderInfo();
 
         [Cached]
-        protected MatchIPCInfo IPCInfo { get; private set; } = new MatchIPCInfo();
+        protected LegacyMatchIPCInfo IPCInfo { get; private set; } = new LegacyMatchIPCInfo();
 
         [Resolved]
         private RulesetStore rulesetStore { get; set; } = null!;

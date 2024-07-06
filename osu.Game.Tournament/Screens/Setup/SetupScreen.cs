@@ -28,7 +28,7 @@ namespace osu.Game.Tournament.Screens.Setup
         private ResolutionSelector resolution = null!;
 
         [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
+        private LegacyMatchIPCInfo ipc { get; set; } = null!;
 
         [Resolved]
         private StableInfo stableInfo { get; set; } = null!;
@@ -77,7 +77,7 @@ namespace osu.Game.Tournament.Screens.Setup
 
         private void reload()
         {
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var fileBasedIpc = ipc as LegacyFileBasedIPC;
             fillFlow.Children = new Drawable[]
             {
                 new ActionableInfo

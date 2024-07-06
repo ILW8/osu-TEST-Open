@@ -25,7 +25,7 @@ namespace osu.Game.Tournament.Screens.Setup
         private TournamentSceneManager? sceneManager { get; set; }
 
         [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
+        private LegacyMatchIPCInfo ipc { get; set; } = null!;
 
         private OsuDirectorySelector directorySelector = null!;
         private DialogOverlay? overlay;
@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Screens.Setup
         [BackgroundDependencyLoader(true)]
         private void load(Storage storage, OsuColour colours)
         {
-            var initialStorage = (ipc as FileBasedIPC)?.IPCStorage ?? storage;
+            var initialStorage = (ipc as LegacyFileBasedIPC)?.IPCStorage ?? storage;
             string? initialPath = new DirectoryInfo(initialStorage.GetFullPath(string.Empty)).Parent?.FullName;
 
             AddRangeInternal(new Drawable[]
@@ -127,7 +127,7 @@ namespace osu.Game.Tournament.Screens.Setup
         protected virtual void ChangePath()
         {
             string target = directorySelector.CurrentPath.Value.FullName;
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var fileBasedIpc = ipc as LegacyFileBasedIPC;
             Logger.Log($"Changing Stable CE location to {target}");
 
             if (!fileBasedIpc?.SetIPCLocation(target) ?? true)
@@ -144,7 +144,7 @@ namespace osu.Game.Tournament.Screens.Setup
 
         protected virtual void AutoDetect()
         {
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var fileBasedIpc = ipc as LegacyFileBasedIPC;
 
             if (!fileBasedIpc?.AutoDetectIPCLocation() ?? true)
             {
