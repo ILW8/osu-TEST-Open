@@ -43,15 +43,12 @@ namespace osu.Game.TournamentIpc
                         return;
 
                     using (var chatIpcStream = tournamentStorage.CreateFileSafely(file_ipc_chat_filename))
+                    using (var chatIpcStreamWriter = new StreamWriter(chatIpcStream))
                     {
-                        var sw = new StreamWriter(chatIpcStream);
-
                         foreach (var message in chatMessages)
                         {
-                            sw.Write($"{message.Timestamp.ToUnixTimeMilliseconds()},{message.Sender.Username},{message.Sender.Id},{message.Content}\n");
+                            chatIpcStreamWriter.Write($"{message.Timestamp.ToUnixTimeMilliseconds()},{message.Sender.Username},{message.Sender.Id},{message.Content}\n");
                         }
-
-                        sw.Close();
                     }
 
                     dirty = false;
