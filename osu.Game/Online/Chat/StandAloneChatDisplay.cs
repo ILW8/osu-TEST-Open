@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -15,6 +16,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Chat;
 using osu.Game.Resources.Localisation.Web;
+using osu.Game.TournamentIpc;
 using osuTK.Graphics;
 using osuTK.Input;
 
@@ -27,6 +29,10 @@ namespace osu.Game.Online.Chat
     {
         [Cached]
         public readonly Bindable<Channel> Channel = new Bindable<Channel>();
+
+        [Resolved(canBeNull: true)]
+        [CanBeNull]
+        protected TournamentFileBasedIPC TournamentIpc { get; private set; }
 
         protected readonly ChatTextBox TextBox;
 
@@ -106,7 +112,11 @@ namespace osu.Game.Online.Chat
             TextBox.Text = string.Empty;
         }
 
-        protected virtual ChatLine CreateMessage(Message message) => new StandAloneMessage(message);
+        protected virtual ChatLine CreateMessage(Message message)
+        {
+            TournamentIpc?.AddChatMessage(message);
+            return new StandAloneMessage(message);
+        }
 
         private void channelChanged(ValueChangedEvent<Channel> e)
         {
@@ -119,6 +129,7 @@ namespace osu.Game.Online.Chat
 
             TextBox?.Current.BindTo(e.NewValue.TextBoxMessage);
 
+            TournamentIpc?.ClearChatMessages();
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };

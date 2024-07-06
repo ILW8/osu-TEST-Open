@@ -21,6 +21,7 @@ using osu.Game.IO;
 using osu.Game.IPC;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Performance;
+using osu.Game.TournamentIpc;
 using osu.Game.Utils;
 
 namespace osu.Desktop
@@ -29,6 +30,11 @@ namespace osu.Desktop
     {
         private OsuSchemeLinkIPCChannel? osuSchemeLinkIPCChannel;
         private ArchiveImportIPCChannel? archiveImportIPCChannel;
+
+        private DependencyContainer dependencies = null!;
+
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+            => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
         [Cached(typeof(IHighPerformanceSessionManager))]
         private readonly HighPerformanceSessionManager highPerformanceSessionManager = new HighPerformanceSessionManager();
@@ -146,6 +152,13 @@ namespace osu.Desktop
 
             osuSchemeLinkIPCChannel = new OsuSchemeLinkIPCChannel(Host, this);
             archiveImportIPCChannel = new ArchiveImportIPCChannel(Host, this);
+
+            // file-based IPC should only be available on desktop. Makes no sense elsewhere.
+            LoadComponentAsync(new TournamentFileBasedIPC(), loaded =>
+            {
+                Add(loaded);
+                dependencies.CacheAs(loaded);
+            });
         }
 
         public override void SetHost(GameHost host)
