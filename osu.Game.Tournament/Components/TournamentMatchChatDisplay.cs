@@ -5,6 +5,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays.Chat;
@@ -35,7 +36,7 @@ namespace osu.Game.Tournament.Components
         [BackgroundDependencyLoader]
         private void load(LegacyMatchIPCInfo? ipc, IAPIProvider api)
         {
-            if (ipc != null)
+            if (!ladderInfo.UseLazerIpc.Value && ipc != null)
             {
                 chatChannel.BindTo(ipc.ChatChannel);
                 chatChannel.BindValueChanged(c =>
@@ -65,7 +66,11 @@ namespace osu.Game.Tournament.Components
                     manager.JoinChannel(channel);
                     manager.CurrentChannel.Value = channel;
                 }, true);
+                return;
             }
+
+            // todo: lazer ipc
+            Logger.Log(@"doing _something_ for lazer ipc chat");
         }
 
         public void Expand() => this.FadeIn(300);

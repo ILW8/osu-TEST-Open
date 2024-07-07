@@ -45,8 +45,22 @@ namespace osu.Game.Tournament.IPC
         [BackgroundDependencyLoader]
         private void load()
         {
-            string? stablePath = stableInfo.StablePath ?? findStablePath();
-            initialiseIPCStorage(stablePath);
+            ladder.UseLazerIpc.BindValueChanged(vce =>
+            {
+                switch (vce.NewValue)
+                {
+                    case true:
+                        scheduled?.Cancel();
+                        break;
+
+                    case false:
+                    {
+                        string? stablePath = stableInfo.StablePath ?? findStablePath();
+                        initialiseIPCStorage(stablePath);
+                        break;
+                    }
+                }
+            }, true);
         }
 
         private Storage? initialiseIPCStorage(string? path)
@@ -67,7 +81,7 @@ namespace osu.Game.Tournament.IPC
                 const string file_ipc_scores_filename = "ipc-scores.txt";
                 const string file_ipc_channel_filename = "ipc-channel.txt";
 
-                if (IPCStorage.Exists(file_ipc_filename))
+                if (IPCStorage.Exists(file_ipc_filename) && !ladder.UseLazerIpc.Value)
                 {
                     scheduled = Scheduler.AddDelayed(delegate
                     {
