@@ -29,6 +29,11 @@ namespace osu.Game.Tournament
     [Cached(typeof(TournamentGameBase))]
     public partial class TournamentGameBase : OsuGameBase
     {
+        public TournamentGameBase()
+            : base(true)
+        {
+        }
+
         public const string BRACKET_FILENAME = @"bracket.json";
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
