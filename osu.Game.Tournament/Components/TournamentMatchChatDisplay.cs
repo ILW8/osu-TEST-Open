@@ -5,7 +5,6 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
-using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays.Chat;
@@ -17,6 +16,7 @@ namespace osu.Game.Tournament.Components
     public partial class TournamentMatchChatDisplay : StandAloneChatDisplay
     {
         private readonly Bindable<string> chatChannel = new Bindable<string>();
+        private readonly BindableList<Message> lazerIpcChatMessages = new BindableList<Message>();
 
         private ChannelManager? manager;
 
@@ -34,43 +34,74 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(LegacyMatchIPCInfo? ipc, IAPIProvider api)
+        private void load(LegacyMatchIPCInfo? legacyIpc, MatchIPCInfo? lazerIpc, IAPIProvider api)
         {
-            if (!ladderInfo.UseLazerIpc.Value && ipc != null)
+            if (lazerIpc != null)
+                lazerIpcChatMessages.BindTo(lazerIpc.ChatMessages);
+
+            ladderInfo.UseLazerIpc.BindValueChanged(useLazerIpcValueChanged =>
             {
-                chatChannel.BindTo(ipc.ChatChannel);
-                chatChannel.BindValueChanged(c =>
+                switch (useLazerIpcValueChanged.NewValue)
                 {
-                    if (string.IsNullOrWhiteSpace(c.NewValue))
-                        return;
-
-                    int id = int.Parse(c.NewValue);
-
-                    if (id <= 0) return;
-
-                    if (manager == null)
+                    case false:
                     {
-                        AddInternal(manager = new ChannelManager(api));
-                        Channel.BindTo(manager.CurrentChannel);
+                        lazerIpcChatMessages.UnbindEvents();
+
+                        if (legacyIpc == null) return;
+
+                        chatChannel.BindTo(legacyIpc.ChatChannel);
+                        chatChannel.BindValueChanged(c =>
+                        {
+                            if (string.IsNullOrWhiteSpace(c.NewValue))
+                                return;
+
+                            int id = int.Parse(c.NewValue);
+
+                            if (id <= 0) return;
+
+                            if (manager == null)
+                            {
+                                AddInternal(manager = new ChannelManager(api));
+                            }
+
+                            Channel.BindTo(manager.CurrentChannel);
+
+                            foreach (var ch in manager.JoinedChannels.ToList())
+                                manager.LeaveChannel(ch);
+
+                            var channel = new Channel
+                            {
+                                Id = id,
+                                Type = ChannelType.Public
+                            };
+
+                            manager.JoinChannel(channel);
+                            manager.CurrentChannel.Value = channel;
+                        }, true);
+                        break;
                     }
 
-                    foreach (var ch in manager.JoinedChannels.ToList())
-                        manager.LeaveChannel(ch);
-
-                    var channel = new Channel
+                    case true:
                     {
-                        Id = id,
-                        Type = ChannelType.Public
-                    };
+                        chatChannel.UnbindAll();
+                        Channel.UnbindBindings();
+                        manager?.Dispose();
+                        Channel.Value = new Channel();
 
-                    manager.JoinChannel(channel);
-                    manager.CurrentChannel.Value = channel;
-                }, true);
-                return;
-            }
+                        lazerIpcChatMessages.BindCollectionChanged((_, collectionChangedEventArgs) =>
+                        {
+                            if (collectionChangedEventArgs.NewItems == null || collectionChangedEventArgs.NewItems.Count == 0)
+                            {
+                                Channel.Value = new Channel();
+                                return;
+                            }
 
-            // todo: lazer ipc
-            Logger.Log(@"doing _something_ for lazer ipc chat");
+                            Channel.Value.AddNewMessages(collectionChangedEventArgs.NewItems.OfType<Message>().ToArray());
+                        }, true);
+                        break;
+                    }
+                }
+            }, true);
         }
 
         public void Expand() => this.FadeIn(300);

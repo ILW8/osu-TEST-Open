@@ -117,7 +117,7 @@ namespace osu.Game.Overlays.Chat
 
         protected virtual DaySeparator CreateDaySeparator(DateTimeOffset time) => new DaySeparator(time);
 
-        private void newMessagesArrived(IEnumerable<Message> newMessages) => Schedule(() =>
+        private void newMessagesArrived(IEnumerable<Message> messages) => Schedule(newMessages =>
         {
             if (newMessages.Min(m => m.Id) < chatLines.Max(c => c.Message.Id))
             {
@@ -128,7 +128,7 @@ namespace osu.Game.Overlays.Chat
             }
 
             // Add up to last Channel.MAX_HISTORY messages
-            var displayMessages = newMessages.Skip(Math.Max(0, newMessages.Count() - Channel.MAX_HISTORY));
+            var displayMessages = newMessages.Skip(Math.Max(0, newMessages.Count - Channel.MAX_HISTORY));
 
             Message lastMessage = chatLines.LastOrDefault()?.Message;
 
@@ -158,7 +158,7 @@ namespace osu.Game.Overlays.Chat
                 scroll.ScrollToEnd();
 
             processMessageHighlighting();
-        });
+        }, messages.ToList());
 
         private void pendingMessageResolved(Message existing, Message updated) => Schedule(() =>
         {

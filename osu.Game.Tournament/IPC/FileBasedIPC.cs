@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.IO;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -13,6 +14,7 @@ using osu.Framework.Threading;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Chat;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.Models;
@@ -37,7 +39,7 @@ namespace osu.Game.Tournament.IPC
 
         public Bindable<TourneyState> State { get; } = new Bindable<TourneyState>();
 
-        public Bindable<string> ChatChannel { get; } = new Bindable<string>();
+        public BindableList<Message> ChatMessages { get; } = new BindableList<Message>();
         public BindableLong Score1 { get; } = new BindableLong();
         public BindableLong Score2 { get; } = new BindableLong();
     }
@@ -116,6 +118,53 @@ namespace osu.Game.Tournament.IPC
                     catch
                     {
                         // file might be in use
+                    }
+
+                    try
+                    {
+                        using (var stream = IPCStorage.GetStream(IpcFiles.CHAT))
+                        using (var sr = new StreamReader(stream))
+                        {
+                            if (sr.Peek() == -1)
+                            {
+                                ChatMessages.Clear();
+                            }
+
+                            bool isFirstLine = true;
+
+                            while (sr.ReadLine() is { } line)
+                            {
+                                string[] parts = line.Split(',');
+                                if (parts.Length < 4) continue;
+
+                                bool parseOk = long.TryParse(parts[0], out long ts);
+                                parseOk &= int.TryParse(parts[2], out int uid);
+                                if (!parseOk) continue;
+
+                                if (isFirstLine)
+                                {
+                                    isFirstLine = false;
+                                    ChatMessages.RemoveAll(msg => msg.Timestamp.ToUnixTimeMilliseconds() < ts);
+                                }
+
+                                if ((ChatMessages.LastOrDefault()?.Timestamp.ToUnixTimeMilliseconds() ?? 0) >= ts) continue;
+
+                                Logger.Log($"added chat message {line}", LoggingTarget.Runtime, LogLevel.Debug);
+                                ChatMessages.Add(new Message
+                                {
+                                    Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(ts),
+                                    Sender = new APIUser
+                                    {
+                                        Id = uid,
+                                        Username = parts[1]
+                                    },
+                                    Content = string.Join(",", parts.Skip(3))
+                                });
+                            }
+                        }
+                    }
+                    catch
+                    {
                     }
                     // int beatmapId = int.Parse(sr.ReadLine().AsNonNull());
                     // int mods = int.Parse(sr.ReadLine().AsNonNull());
