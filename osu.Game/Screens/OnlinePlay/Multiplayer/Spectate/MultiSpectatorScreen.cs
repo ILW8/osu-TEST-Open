@@ -77,7 +77,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private void load()
         {
             FillFlowContainer leaderboardFlow;
-            Container scoreDisplayContainer;
+            // Container scoreDisplayContainer;
 
             InternalChildren = new Drawable[]
             {
@@ -86,17 +86,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     Child = new GridContainer
                     {
                         RelativeSizeAxes = Axes.Both,
-                        RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                        // RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
                         Content = new[]
                         {
-                            new Drawable[]
-                            {
-                                scoreDisplayContainer = new Container
-                                {
-                                    RelativeSizeAxes = Axes.X,
-                                    AutoSizeAxes = Axes.Y
-                                },
-                            },
+                            // new Drawable[]
+                            // {
+                            //     scoreDisplayContainer = new Container
+                            //     {
+                            //         RelativeSizeAxes = Axes.X,
+                            //         AutoSizeAxes = Axes.Y
+                            //     },
+                            // },
                             new Drawable[]
                             {
                                 new GridContainer
@@ -132,30 +132,30 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             for (int i = 0; i < Users.Count; i++)
                 grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock()));
 
-            LoadComponentAsync(leaderboard = new MultiSpectatorLeaderboard(users)
-            {
-                Expanded = { Value = true },
-            }, _ =>
-            {
-                foreach (var instance in instances)
-                    leaderboard.AddClock(instance.UserId, instance.SpectatorPlayerClock);
-
-                leaderboardFlow.Insert(0, leaderboard);
-
-                if (leaderboard.TeamScores.Count == 2)
-                {
-                    LoadComponentAsync(new MatchScoreDisplay
-                    {
-                        Team1Score = { BindTarget = leaderboard.TeamScores.First().Value },
-                        Team2Score = { BindTarget = leaderboard.TeamScores.Last().Value },
-                    }, scoreDisplayContainer.Add);
-                }
-            });
-
-            LoadComponentAsync(new GameplayChatDisplay(room)
-            {
-                Expanded = { Value = true },
-            }, chat => leaderboardFlow.Insert(1, chat));
+            // LoadComponentAsync(leaderboard = new MultiSpectatorLeaderboard(users)
+            // {
+            //     Expanded = { Value = true },
+            // }, _ =>
+            // {
+            //     foreach (var instance in instances)
+            //         leaderboard.AddClock(instance.UserId, instance.SpectatorPlayerClock);
+            //
+            //     leaderboardFlow.Insert(0, leaderboard);
+            //
+            //     if (leaderboard.TeamScores.Count == 2)
+            //     {
+            //         LoadComponentAsync(new MatchScoreDisplay
+            //         {
+            //             Team1Score = { BindTarget = leaderboard.TeamScores.First().Value },
+            //             Team2Score = { BindTarget = leaderboard.TeamScores.Last().Value },
+            //         }, scoreDisplayContainer.Add);
+            //     }
+            // });
+            //
+            // LoadComponentAsync(new GameplayChatDisplay(room)
+            // {
+            //     Expanded = { Value = true },
+            // }, chat => leaderboardFlow.Insert(1, chat));
         }
 
         protected override void LoadComplete()
