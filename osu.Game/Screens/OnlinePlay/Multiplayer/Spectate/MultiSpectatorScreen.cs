@@ -14,8 +14,8 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.Play;
-using osu.Game.Screens.Play.HUD;
 using osu.Game.Screens.Spectate;
+using osu.Game.TournamentIpc;
 using osu.Game.Users;
 using osuTK;
 
@@ -53,7 +53,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private MasterGameplayClockContainer masterClockContainer = null!;
         private SpectatorSyncManager syncManager = null!;
         private PlayerGrid grid = null!;
-        private MultiSpectatorLeaderboard leaderboard = null!;
+        private TournamentSpectatorStatisticsTracker statisticsTracker = null!;
         private PlayerArea? currentAudioSource;
 
         private readonly Room room;
@@ -76,7 +76,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         [BackgroundDependencyLoader]
         private void load()
         {
-            FillFlowContainer leaderboardFlow;
+            // FillFlowContainer leaderboardFlow;
             // Container scoreDisplayContainer;
 
             InternalChildren = new Drawable[]
@@ -107,7 +107,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                                     {
                                         new Drawable[]
                                         {
-                                            leaderboardFlow = new FillFlowContainer
+                                            // leaderboardFlow = new FillFlowContainer
+                                            new FillFlowContainer
                                             {
                                                 Anchor = Anchor.CentreLeft,
                                                 Origin = Anchor.CentreLeft,
@@ -131,6 +132,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             for (int i = 0; i < Users.Count; i++)
                 grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock()));
+
+            LoadComponentAsync(statisticsTracker = new TournamentSpectatorStatisticsTracker(users), _ =>
+            {
+                foreach (var instance in instances)
+                    statisticsTracker.AddClock(instance.UserId, instance.SpectatorPlayerClock);
+
+                AddInternal(statisticsTracker);
+            });
 
             // LoadComponentAsync(leaderboard = new MultiSpectatorLeaderboard(users)
             // {
