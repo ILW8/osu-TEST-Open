@@ -8,6 +8,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Chat;
 
@@ -30,6 +31,10 @@ namespace osu.Game.TournamentIpc
         private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
 
         private readonly BindableList<Message> chatMessages = new BindableList<Message>();
+
+        private long[] pendingScores = [];
+
+        private ScheduledDelegate? flushScoresDelegate;
 
         [BackgroundDependencyLoader]
         private void load(Storage storage)
@@ -67,6 +72,9 @@ namespace osu.Game.TournamentIpc
                     mainIpcStreamWriter.Write($"{vce.NewValue.BeatmapInfo.OnlineID}\n");
                 }
             });
+
+            flushScoresDelegate?.Cancel();
+            flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, 200, true);
         }
 
         public void AddChatMessage(Message message)
@@ -77,6 +85,28 @@ namespace osu.Game.TournamentIpc
         public void ClearChatMessages()
         {
             chatMessages.Clear();
+        }
+
+        public void UpdateTeamScores(long[] scores)
+        {
+            pendingScores = scores;
+        }
+
+        private void flushPendingScoresToDisk()
+        {
+            if (pendingScores.Length == 0)
+                return;
+
+            using (var scoresIpc = tournamentStorage.CreateFileSafely(IpcFiles.SCORES))
+            using (var scoresIpcWriter = new StreamWriter(scoresIpc))
+            {
+                foreach (long score in pendingScores)
+                {
+                    scoresIpcWriter.Write($"{score}\n");
+                }
+            }
+
+            pendingScores = [];
         }
     }
 }

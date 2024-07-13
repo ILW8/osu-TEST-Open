@@ -34,6 +34,9 @@ namespace osu.Game.TournamentIpc
         [Resolved]
         private SpectatorClient spectatorClient { get; set; } = null!;
 
+        [Resolved(canBeNull: true)]
+        protected TournamentFileBasedIPC? TournamentIpc { get; private set; }
+
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
@@ -77,8 +80,9 @@ namespace osu.Game.TournamentIpc
                 }
             }
 
-            // still needed?
-            userLookupCache.GetUsersAsync(playingUsers.Select(u => u.UserID).ToArray(), cancellationToken);
+            TournamentIpc?.UpdateTeamScores(TeamScores.Values.Select(bindableLong => bindableLong.Value).ToArray());
+
+            // userLookupCache.GetUsersAsync(playingUsers.Select(u => u.UserID).ToArray(), cancellationToken)
             // .ContinueWith(task =>
             // {
             //     Schedule(() =>
@@ -132,6 +136,8 @@ namespace osu.Game.TournamentIpc
             {
                 TeamScores[teamScore.Key].Value = teamScore.Value;
             }
+
+            TournamentIpc?.UpdateTeamScores(teamScores.Values.ToArray());
         }
 
         public void AddClock(int userId, IClock clock)
