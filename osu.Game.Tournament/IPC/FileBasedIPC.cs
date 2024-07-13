@@ -166,6 +166,20 @@ namespace osu.Game.Tournament.IPC
                     catch
                     {
                     }
+
+                    try
+                    {
+                        using var stream = IPCStorage.GetStream(IpcFiles.SCORES);
+                        using var sr = new StreamReader(stream);
+
+                        Score1.Value = long.Parse(sr.ReadLine().AsNonNull());
+                        Score2.Value = long.Parse(sr.ReadLine().AsNonNull());
+                    }
+                    catch
+                    {
+                        Logger.Log("uh oh, couldn't read scores");
+                        // file might be busy
+                    }
                     // int beatmapId = int.Parse(sr.ReadLine().AsNonNull());
                     // int mods = int.Parse(sr.ReadLine().AsNonNull());
                     //
