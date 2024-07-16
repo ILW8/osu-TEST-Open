@@ -52,13 +52,13 @@ namespace osu.Game.Tournament.Tests.Screens
                 Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
 
                 for (int i = 0; i < 4; i++)
-                    addBeatmap();
+                    addBeatmap("NM", $"NM map #{i}");
                 for (int i = 0; i < 2; i++)
-                    addBeatmap("HD");
+                    addBeatmap("HD", $"HD map #{i}");
                 for (int i = 0; i < 2; i++)
-                    addBeatmap("HR");
+                    addBeatmap("HR", $"HR map #{i}");
                 for (int i = 0; i < 3; i++)
-                    addBeatmap("DT");
+                    addBeatmap("DT", $"DT map #{i}");
             });
 
             AddStep("reset state", resetState);
@@ -350,11 +350,11 @@ namespace osu.Game.Tournament.Tests.Screens
                 () => Ladder.CurrentMatch.Value!.PicksBans.Select(pb => (pb.Type, pb.Team)).Last(),
                 () => Is.EqualTo((expectedChoice, expectedColour)));
 
-        private void addBeatmap(string mods = "NM")
+        private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
             Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Add(new RoundBeatmap
             {
-                Beatmap = CreateSampleBeatmap(),
+                Beatmap = CreateSampleBeatmap(titleOverride),
                 Mods = mods
             });
         }
