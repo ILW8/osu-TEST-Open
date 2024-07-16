@@ -45,6 +45,26 @@ namespace osu.Game.Tournament.Tests.Screens
         });
 
         [Test]
+        public void TestLazerGrandArena()
+        {
+            AddStep("load first weekend maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 4; i++)
+                    addBeatmap();
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HD");
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HR");
+                for (int i = 0; i < 3; i++)
+                    addBeatmap("DT");
+            });
+
+            AddStep("reset state", resetState);
+        }
+
+        [Test]
         public void TestFewMaps()
         {
             AddStep("load few maps", () =>
