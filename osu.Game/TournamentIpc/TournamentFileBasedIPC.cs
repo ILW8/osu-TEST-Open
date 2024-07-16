@@ -11,6 +11,7 @@ using osu.Framework.Platform;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Multiplayer;
 
 namespace osu.Game.TournamentIpc
 {
@@ -29,6 +30,11 @@ namespace osu.Game.TournamentIpc
 
         [Resolved]
         private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
+
+        private MultiplayerClient? multiplayerClient;
+
+        public Bindable<TourneyState> TourneyState { get; private set; } = new Bindable<TourneyState>();
+        private MultiplayerRoomState? lastRoomState = null;
 
         private readonly BindableList<Message> chatMessages = new BindableList<Message>();
 
@@ -73,6 +79,14 @@ namespace osu.Game.TournamentIpc
                 }
             });
 
+            TourneyState.BindValueChanged(vce =>
+            {
+                using var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.STATE);
+                using var mainIpcStreamWriter = new StreamWriter(mainIpc);
+
+                mainIpcStreamWriter.Write($"{(int)vce.NewValue}\n");
+            });
+
             flushScoresDelegate?.Cancel();
             flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, 200, true);
         }
@@ -90,6 +104,47 @@ namespace osu.Game.TournamentIpc
         public void UpdateTeamScores(long[] scores)
         {
             pendingScores = scores;
+        }
+
+        public void RegisterMultiplayerRoomClient(MultiplayerClient multiplayerClient)
+        {
+            if (this.multiplayerClient != null)
+                this.multiplayerClient.RoomUpdated -= onRoomUpdated;
+
+            this.multiplayerClient = multiplayerClient;
+            this.multiplayerClient.RoomUpdated += onRoomUpdated;
+            onRoomUpdated();
+        }
+
+        private void onRoomUpdated()
+        {
+            var newRoomState = multiplayerClient?.Room?.State ?? MultiplayerRoomState.Closed;
+
+            // if (lastRoomState == newRoomState)
+            //     return;
+            //
+            // lastRoomState = newRoomState;
+
+            switch (newRoomState)
+            {
+                case MultiplayerRoomState.WaitingForLoad:
+                case MultiplayerRoomState.Playing:
+                    TourneyState.Value = TournamentIpc.TourneyState.Playing;
+                    break;
+
+                default:
+                    // there is at least one user in results screen
+                    if (multiplayerClient?.Room?.Users.FirstOrDefault(u => u.State == MultiplayerUserState.Results) != null
+                        && multiplayerClient?.LocalUser?.State != MultiplayerUserState.Idle
+                        && TourneyState.Value != TournamentIpc.TourneyState.Lobby)
+                    {
+                        TourneyState.Value = TournamentIpc.TourneyState.Ranking;
+                        break;
+                    }
+
+                    TourneyState.Value = TournamentIpc.TourneyState.Lobby;
+                    break;
+            }
         }
 
         private void flushPendingScoresToDisk()

@@ -6,6 +6,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
@@ -15,6 +16,7 @@ using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
+using osu.Game.TournamentIpc;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay
@@ -213,9 +215,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(MapPoolScreen)); }, delayBeforeProgression);
         }
 
-        // kind of ugly and paste from updateStateLegacy
+        // kind of an ugly copy and paste from updateStateLegacy
         private void updateStateLazer()
         {
+            Logger.Log($"lazer ipc state changed: {LazerState.Value}");
+
             try
             {
                 scheduledScreenChange?.Cancel();
