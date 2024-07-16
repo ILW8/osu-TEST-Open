@@ -22,14 +22,6 @@ using osu.Game.TournamentIpc;
 
 namespace osu.Game.Tournament.IPC
 {
-    public enum TourneyState
-    {
-        Lobby,
-        Gameplay,
-        Playing,
-        Ranking
-    }
-
     public partial class MatchIPCInfo : Component
     {
         public Bindable<TournamentBeatmap?> Beatmap { get; } = new Bindable<TournamentBeatmap?>();
@@ -76,6 +68,7 @@ namespace osu.Game.Tournament.IPC
             {
                 scheduled = Scheduler.AddDelayed(delegate
                 {
+                    // beatmap
                     try
                     {
                         using (var stream = IPCStorage.GetStream(IpcFiles.BEATMAP))
@@ -120,6 +113,7 @@ namespace osu.Game.Tournament.IPC
                         // file might be in use
                     }
 
+                    // chat
                     try
                     {
                         using (var stream = IPCStorage.GetStream(IpcFiles.CHAT))
@@ -167,48 +161,34 @@ namespace osu.Game.Tournament.IPC
                     {
                     }
 
+                    // scores
                     try
                     {
                         using var stream = IPCStorage.GetStream(IpcFiles.SCORES);
                         using var sr = new StreamReader(stream);
 
+                        // we expect exactly two values in this file, always
                         Score1.Value = long.Parse(sr.ReadLine().AsNonNull());
                         Score2.Value = long.Parse(sr.ReadLine().AsNonNull());
                     }
                     catch
                     {
-                        Logger.Log("uh oh, couldn't read scores");
                         // file might be busy
                     }
-                    // int beatmapId = int.Parse(sr.ReadLine().AsNonNull());
-                    // int mods = int.Parse(sr.ReadLine().AsNonNull());
-                    //
-                    // if (lastBeatmapId != beatmapId)
-                    // {
-                    //     beatmapLookupRequest?.Cancel();
-                    //
-                    //     lastBeatmapId = beatmapId;
-                    //
-                    //     var existing = ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
-                    //
-                    //     if (existing != null)
-                    //         Beatmap.Value = existing.Beatmap;
-                    //     else
-                    //     {
-                    //         beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
-                    //         beatmapLookupRequest.Success += b =>
-                    //         {
-                    //             if (lastBeatmapId == beatmapId)
-                    //                 Beatmap.Value = new TournamentBeatmap(b);
-                    //         };
-                    //         beatmapLookupRequest.Failure += _ =>
-                    //         {
-                    //             if (lastBeatmapId == beatmapId)
-                    //                 Beatmap.Value = null;
-                    //         };
-                    //         API.Queue(beatmapLookupRequest);
-                    //     }
-                    // }
+
+                    // state
+                    try
+                    {
+                        using var stream = IPCStorage.GetStream(IpcFiles.STATE);
+                        using var sr = new StreamReader(stream);
+
+                        State.Value = Enum.Parse<TourneyState>(sr.ReadLine().AsNonNull());
+                    }
+                    catch
+                    {
+                        Logger.Log($"couldnt read ipc");
+                        // file might be busy
+                    }
                 }, 250, true);
             }
         }
