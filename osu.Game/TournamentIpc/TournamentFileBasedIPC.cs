@@ -33,8 +33,8 @@ namespace osu.Game.TournamentIpc
 
         private MultiplayerClient? multiplayerClient;
 
-        public Bindable<TourneyState> TourneyState { get; private set; } = new Bindable<TourneyState>();
-        private MultiplayerRoomState? lastRoomState = null;
+        public Bindable<TourneyState> TourneyState { get; } = new Bindable<TourneyState>();
+        // private MultiplayerRoomState? lastRoomState = null;
 
         private readonly BindableList<Message> chatMessages = new BindableList<Message>();
 
