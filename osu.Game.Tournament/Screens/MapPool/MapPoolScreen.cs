@@ -22,7 +22,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 {
     public partial class MapPoolScreen : TournamentMatchScreen
     {
-        private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
+        private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> availableMapsFlows = null!;
+        private FillFlowContainer<TournamentBeatmapPanel> pickedMapsFlow = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -53,13 +54,27 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
-                mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                availableMapsFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                 {
                     Y = 160,
+                    Anchor = Anchor.TopLeft,
                     Spacing = new Vector2(10, 10),
                     Direction = FillDirection.Vertical,
                     RelativeSizeAxes = Axes.X,
+                    Width = 0.5f,
                     AutoSizeAxes = Axes.Y,
+                },
+                pickedMapsFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                {
+                    Y = 160,
+                    X = 0.5f,
+                    Anchor = Anchor.TopLeft,
+                    RelativePositionAxes = Axes.X,
+                    Width = 0.5f,
+                    Spacing = new Vector2(10, 5),
+                    Direction = FillDirection.Full,
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y
                 },
                 new ControlPanel
                 {
@@ -126,7 +141,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             base.LoadComplete();
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
-            splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
+            splitMapPoolByMods.BindValueChanged(_ => updatePoolDisplay());
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
@@ -192,7 +207,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            var maps = mapFlows.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
+            var maps = availableMapsFlows.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
             var map = maps.FirstOrDefault(m => m != null);
 
             if (map != null)
@@ -210,6 +225,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     }
                 }
 
+                updatePickedDisplay();
                 return true;
             }
 
@@ -263,29 +279,54 @@ namespace osu.Game.Tournament.Screens.MapPool
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             base.CurrentMatchChanged(match);
-            updateDisplay();
+            updatePoolDisplay();
+            updatePickedDisplay();
         }
 
-        private void updateDisplay()
+        private void updatePickedDisplay()
         {
-            mapFlows.Clear();
+            if (CurrentMatch.Value?.Round.Value == null)
+                return;
+
+            // remove extra panels
+            pickedMapsFlow.RemoveAll(panel => CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.Type == ChoiceType.Pick && panel.Beatmap?.OnlineID == p.BeatmapID) == null, true);
+
+            // add mising panels
+            var missingPanels = CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Pick && pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == b.BeatmapID) == null);
+
+            foreach (var pickban in missingPanels)
+            {
+                var map = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.ID == pickban.BeatmapID);
+
+                if (map != null)
+                {
+                    pickedMapsFlow.Add(new TournamentBeatmapPanel(map.Beatmap, map.Mods)
+                    {
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        Height = 42,
+                    });
+                }
+            }
+        }
+
+        private void updatePoolDisplay()
+        {
+            availableMapsFlows.Clear();
 
             if (CurrentMatch.Value == null)
                 return;
-
-            int totalRows = 0;
 
             if (CurrentMatch.Value.Round.Value != null)
             {
                 FillFlowContainer<TournamentBeatmapPanel>? currentFlow = null;
                 string? currentMods = null;
-                int flowCount = 0;
 
                 foreach (var b in CurrentMatch.Value.Round.Value.Beatmaps)
                 {
                     if (currentFlow == null || (LadderInfo.SplitMapPoolByMods.Value && currentMods != b.Mods))
                     {
-                        mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                        availableMapsFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                         {
                             Spacing = new Vector2(10, 5),
                             Direction = FillDirection.Full,
@@ -294,15 +335,6 @@ namespace osu.Game.Tournament.Screens.MapPool
                         });
 
                         currentMods = b.Mods;
-
-                        totalRows++;
-                        flowCount = 0;
-                    }
-
-                    if (++flowCount > 2)
-                    {
-                        totalRows++;
-                        flowCount = 1;
                     }
 
                     currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
@@ -314,11 +346,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 }
             }
 
-            mapFlows.Padding = new MarginPadding(5)
-            {
-                // remove horizontal padding to increase flow width to 3 panels
-                Horizontal = totalRows > 9 ? 0 : 100
-            };
+            availableMapsFlows.Padding = new MarginPadding(5);
         }
     }
 }
