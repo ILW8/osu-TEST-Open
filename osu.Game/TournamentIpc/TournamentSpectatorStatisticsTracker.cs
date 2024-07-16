@@ -137,7 +137,9 @@ namespace osu.Game.TournamentIpc
                 TeamScores[teamScore.Key].Value = teamScore.Value;
             }
 
-            TournamentIpc?.UpdateTeamScores(teamScores.Values.ToArray());
+            TournamentIpc?.UpdateTeamScores(teamScores.OrderBy(score => score.Key)
+                                                      .Select(score => score.Value)
+                                                      .ToArray());
         }
 
         public void AddClock(int userId, IClock clock)

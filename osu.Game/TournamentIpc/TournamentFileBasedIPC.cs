@@ -97,10 +97,16 @@ namespace osu.Game.TournamentIpc
             if (pendingScores.Length == 0)
                 return;
 
+            var scoresToWrite = pendingScores.ToList();
+
+            // ensure there is always at least 2 scores to write
+            if (scoresToWrite.Count == 1)
+                scoresToWrite.Add(0);
+
             using (var scoresIpc = tournamentStorage.CreateFileSafely(IpcFiles.SCORES))
             using (var scoresIpcWriter = new StreamWriter(scoresIpc))
             {
-                foreach (long score in pendingScores)
+                foreach (long score in scoresToWrite)
                 {
                     scoresIpcWriter.Write($"{score}\n");
                 }
