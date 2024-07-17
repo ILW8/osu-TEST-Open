@@ -197,6 +197,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledScreenChange?.Cancel();
             team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
             team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
+
+            // for some reason this is required to make the revert to default button work correctly
+            team1ScoreOverride.Current.Default = 0;
+            team2ScoreOverride.Current.Default = 0;
         }
 
         private ScheduledDelegate? scheduledScreenChange;
