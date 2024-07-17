@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
@@ -38,6 +39,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
 
+        private SpriteIcon currentMapIndicator = null!;
+
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
@@ -61,20 +64,27 @@ namespace osu.Game.Tournament.Screens.MapPool
                     Spacing = new Vector2(10, 10),
                     Direction = FillDirection.Vertical,
                     RelativeSizeAxes = Axes.X,
-                    Width = 0.5f,
+                    Width = 0.65f,
                     AutoSizeAxes = Axes.Y,
                 },
                 pickedMapsFlow = new FillFlowContainer<TournamentBeatmapPanel>
                 {
                     Y = 160,
-                    X = 0.5f,
+                    X = 0.65f,
                     Anchor = Anchor.TopLeft,
                     RelativePositionAxes = Axes.X,
-                    Width = 0.5f,
+                    Width = 0.35f,
                     Spacing = new Vector2(10, 5),
                     Direction = FillDirection.Full,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y
+                },
+                currentMapIndicator = new SpriteIcon
+                {
+                    Icon = FontAwesome.Solid.AngleDoubleRight,
+                    Width = 16f,
+                    Height = 16f,
+                    Alpha = 0
                 },
                 new ControlPanel
                 {
@@ -149,14 +159,36 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
-
-            if (CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) < totalBansRequired)
+            if (pickedMapsFlow.Count == 0)
                 return;
 
-            // if bans have already been placed, beatmap changes result in a selection being made automatically
-            if (beatmap.NewValue?.OnlineID > 0)
-                addForBeatmap(beatmap.NewValue.OnlineID);
+            if (beatmap.NewValue?.OnlineID == null)
+                return;
+
+            // pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == beatmap.NewValue.OnlineID)?.CurrentIndicator
+            //               .FadeOutFromOne(500)
+            //               .Loop(0, 10)
+            //               .Then(4500).FadeIn();
+
+            var currentPanel = pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == beatmap.NewValue.OnlineID);
+
+            if (currentPanel != null)
+            {
+                var parentSpacePosition = currentPanel.ToSpaceOfOtherDrawable(currentPanel.OriginPosition, Parent!);
+                var offsetPosition = parentSpacePosition +
+                                     new Vector2(-currentPanel.DrawWidth / 2 - currentMapIndicator.DrawWidth / 2 - 16,
+                                         currentPanel.DrawHeight / 2 - currentMapIndicator.DrawHeight / 2);
+
+                if (currentMapIndicator.Alpha == 0)
+                {
+                    currentMapIndicator.MoveTo(offsetPosition);
+                    currentMapIndicator.FadeInFromZero(500);
+                }
+                else
+                {
+                    currentMapIndicator.MoveTo(offsetPosition, 700, Easing.InOutExpo);
+                }
+            }
         }
 
         private void setMode(TeamColour colour, ChoiceType choiceType)
@@ -356,7 +388,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
                         Height = 42,
-                        Width = 320,
+                        Width = 400,
                     });
                 }
             }
