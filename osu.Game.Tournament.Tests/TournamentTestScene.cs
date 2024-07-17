@@ -157,12 +157,12 @@ namespace osu.Game.Tournament.Tests
             }
         };
 
-        public static TournamentBeatmap CreateSampleBeatmap() =>
+        public static TournamentBeatmap CreateSampleBeatmap(string? title = null) =>
             new TournamentBeatmap
             {
                 Metadata = new BeatmapMetadata
                 {
-                    Title = "Test Title",
+                    Title = title ?? "Test Title",
                     Artist = "Test Artist",
                 },
                 OnlineID = RNG.Next(0, 1000000),

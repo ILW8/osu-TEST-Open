@@ -45,6 +45,26 @@ namespace osu.Game.Tournament.Tests.Screens
         });
 
         [Test]
+        public void TestLazerGrandArena()
+        {
+            AddStep("load first weekend maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 4; i++)
+                    addBeatmap("NM", $"NM map #{i}");
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HD", $"HD map #{i}");
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HR", $"HR map #{i}");
+                for (int i = 0; i < 3; i++)
+                    addBeatmap("DT", $"DT map #{i}");
+            });
+
+            AddStep("reset state", resetState);
+        }
+
+        [Test]
         public void TestFewMaps()
         {
             AddStep("load few maps", () =>
@@ -330,11 +350,13 @@ namespace osu.Game.Tournament.Tests.Screens
                 () => Ladder.CurrentMatch.Value!.PicksBans.Select(pb => (pb.Type, pb.Team)).Last(),
                 () => Is.EqualTo((expectedChoice, expectedColour)));
 
-        private void addBeatmap(string mods = "NM")
+        private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
+            var newBeatmap = CreateSampleBeatmap(titleOverride);
             Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Add(new RoundBeatmap
             {
-                Beatmap = CreateSampleBeatmap(),
+                Beatmap = newBeatmap,
+                ID = newBeatmap.OnlineID,
                 Mods = mods
             });
         }
