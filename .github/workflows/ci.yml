@@ -2,11 +2,12 @@ on:
   push:
     tags:
       - '**'
+  pull_request:
   workflow_dispatch:
 
-name: Build tagged releases
+name: Build local release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 permissions:
@@ -21,8 +22,6 @@ jobs:
       matrix:
         os:
           - linux-x64
-          - osx-arm64
-          - osx-x64
           - win-x64
     timeout-minutes: 60
     steps:
@@ -36,7 +35,7 @@ jobs:
 
       - name: Create publish package (push)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${{ github.sha }}" --self-contained -warnaserror osu.Desktop.slnf
+        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
 
       - name: Create publish package (tagged release)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -86,8 +85,6 @@ jobs:
           name: |
             win-x64
             linux-x64
-            osx-arm64
-            osx-x64
 
       - name: Release
         uses: softprops/action-gh-release@v2
