@@ -172,35 +172,29 @@ namespace osu.Game.Tournament.Screens.MapPool
             static Color4 setColour(bool active) => active ? Color4.White : Color4.Gray;
         }
 
+        // LGA bans (week 1)
+        // The first player (A) will ban one beatmap, followed by the second player (B) also banning a beatmap: AB
+        // Players will pick two beatmaps respecting the following order: BAAB
+        // Both players will ban two maps, as such: ABBA
+        // The last beatmap remaining in the pool will be used as the 5th pick for the match.
         private void setNextMode()
         {
+            const int bans_phase1 = 2;
+            const int picks_phase1 = 4;
+
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
-
             TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
 
-            TeamColour nextColour;
+            bool shouldBan = CurrentMatch.Value.PicksBans.Count is < bans_phase1 or >= bans_phase1 + picks_phase1;
 
-            bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
+            // look: it started off as an ok ternary, but then it got out of hand...
+            TeamColour nextColour = (CurrentMatch.Value.PicksBans.Count % 2 == 1 && (shouldBan || pickType != ChoiceType.Ban)) || (shouldBan && pickType == ChoiceType.Pick)
+                                        ? getOppositeTeamColour(lastPickColour)
+                                        : lastPickColour;
 
-            if (!hasAllBans)
-            {
-                // Ban phase: switch teams every second ban.
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-            else
-            {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-
-            setMode(nextColour, hasAllBans ? ChoiceType.Pick : ChoiceType.Ban);
+            setMode(nextColour, shouldBan ? ChoiceType.Ban : ChoiceType.Pick);
 
             TeamColour getOppositeTeamColour(TeamColour colour) => colour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
         }
@@ -289,18 +283,38 @@ namespace osu.Game.Tournament.Screens.MapPool
                 return;
 
             // remove extra panels
-            pickedMapsFlow.RemoveAll(panel => CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.Type == ChoiceType.Pick && panel.Beatmap?.OnlineID == p.BeatmapID) == null, true);
+            pickedMapsFlow.RemoveAll(panel => CurrentMatch.Value.PicksBans.All(p => panel.Beatmap?.OnlineID != p.BeatmapID), true);
 
-            // add mising panels
-            var missingPanels = CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Pick && pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == b.BeatmapID) == null);
+            // add missing panels
+            var missingBeatmaps = CurrentMatch.Value.PicksBans
+                                              .Where(pickBan
+                                                  => pickBan.Type == ChoiceType.Pick
+                                                     && pickedMapsFlow.All(panel => panel.Beatmap?.OnlineID != pickBan.BeatmapID)
+                                              );
 
-            foreach (var pickban in missingPanels)
+            foreach (var missingBeatmap in missingBeatmaps)
             {
-                var map = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.ID == pickban.BeatmapID);
+                var map = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.ID == missingBeatmap.BeatmapID);
 
                 if (map != null)
                 {
                     pickedMapsFlow.Add(new TournamentBeatmapPanel(map.Beatmap, map.Mods)
+                    {
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        Height = 42,
+                    });
+                }
+            }
+
+            // add last decider panel if only one map is left untouched
+            if (CurrentMatch.Value.Round.Value.Beatmaps.Count == CurrentMatch.Value.PicksBans.Count + 1)
+            {
+                var lastBeatmap = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => CurrentMatch.Value.PicksBans.All(p => p.BeatmapID != b.ID));
+
+                if (lastBeatmap != null)
+                {
+                    pickedMapsFlow.Add(new TournamentBeatmapPanel(lastBeatmap.Beatmap, lastBeatmap.Mods)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
@@ -342,6 +356,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
                         Height = 42,
+                        Width = 320,
                     });
                 }
             }
