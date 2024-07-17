@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -57,28 +58,88 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
-                availableMapsFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                new GridContainer
                 {
-                    Y = 160,
+                    Y = 170,
+                    X = 0f,
                     Anchor = Anchor.TopLeft,
-                    Spacing = new Vector2(10, 10),
-                    Direction = FillDirection.Vertical,
-                    RelativeSizeAxes = Axes.X,
+                    RelativePositionAxes = Axes.X,
                     Width = 0.65f,
+                    RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    RowDimensions = new[]
+                    {
+                        new Dimension(GridSizeMode.AutoSize)
+                    },
+                    Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Padding = new MarginPadding { Vertical = 4 },
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 18),
+                                Text = "Pool"
+                            },
+                        },
+                        new Drawable[]
+                        {
+                            availableMapsFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                            {
+                                Anchor = Anchor.TopLeft,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+
+                                Spacing = new Vector2(10, 10),
+                                Direction = FillDirection.Vertical,
+                            },
+                        }
+                    }
                 },
-                pickedMapsFlow = new FillFlowContainer<TournamentBeatmapPanel>
+
+                new GridContainer
                 {
-                    Y = 160,
+                    Y = 170,
                     X = 0.65f,
                     Anchor = Anchor.TopLeft,
                     RelativePositionAxes = Axes.X,
                     Width = 0.35f,
-                    Spacing = new Vector2(10, 5),
-                    Direction = FillDirection.Full,
                     RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y
+                    AutoSizeAxes = Axes.Y,
+                    RowDimensions = new[]
+                    {
+                        new Dimension(GridSizeMode.AutoSize)
+                    },
+                    Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Padding = new MarginPadding { Vertical = 4 },
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 18),
+                                Text = "Drafted order"
+                            },
+                        },
+                        new Drawable[]
+                        {
+                            pickedMapsFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                            {
+                                Anchor = Anchor.TopLeft,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+
+                                Spacing = new Vector2(10, 5),
+                                Direction = FillDirection.Full,
+                            },
+                        }
+                    }
                 },
+
                 currentMapIndicator = new SpriteIcon
                 {
                     Icon = FontAwesome.Solid.AngleDoubleRight,
