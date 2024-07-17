@@ -28,6 +28,9 @@ namespace osu.Game.Tournament.Tests
         [Cached]
         protected LegacyMatchIPCInfo IPCInfo { get; private set; } = new LegacyMatchIPCInfo();
 
+        [Cached]
+        protected MatchIPCInfo LazerIPCInfo { get; private set; } = new MatchIPCInfo();
+
         [Resolved]
         private RulesetStore rulesetStore { get; set; } = null!;
 
@@ -54,7 +57,12 @@ namespace osu.Game.Tournament.Tests
         [SetUpSteps]
         public virtual void SetUpSteps()
         {
-            AddStep("set current match", () => Ladder.CurrentMatch.Value = match);
+            AddStep("set current match", () =>
+            {
+                match.Team1Score.Value = 0;
+                match.Team2Score.Value = 0;
+                Ladder.CurrentMatch.Value = match;
+            });
         }
 
         public static TournamentMatch CreateSampleMatch() => new TournamentMatch

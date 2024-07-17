@@ -164,6 +164,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "Use cumulative score",
+                    Description = "Instead of a single point per map won, a team's points value tracks the total score achieved on each map.",
+                    Current = LadderInfo.CumulativeScore
+                }
             };
         }
 

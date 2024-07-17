@@ -228,10 +228,18 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (lazerIpc.Score1.Value > lazerIpc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
+                    if (LadderInfo.CumulativeScore.Value)
+                    {
+                        CurrentMatch.Value.Team1Score.Value += lazerIpc.Score1.Value;
+                        CurrentMatch.Value.Team2Score.Value += lazerIpc.Score2.Value;
+                    }
                     else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    {
+                        if (lazerIpc.Score1.Value > lazerIpc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (LazerState.Value)

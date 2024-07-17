@@ -10,6 +10,7 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Screens.Gameplay;
 using osu.Game.Tournament.Screens.Gameplay.Components;
+using osu.Game.TournamentIpc;
 
 namespace osu.Game.Tournament.Tests.Screens
 {
@@ -30,6 +31,44 @@ namespace osu.Game.Tournament.Tests.Screens
 
             toggleWarmup();
             checkScoreVisibility(false);
+        }
+
+        [Test]
+        public void TestScoreAdd()
+        {
+            AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
+
+            createScreen();
+            toggleWarmup();
+
+            AddStep("set state: lobby", () => LazerIPCInfo.State.Value = TourneyState.Lobby);
+
+            AddStep("set state: playing", () => LazerIPCInfo.State.Value = TourneyState.Playing);
+            AddStep("add score", () =>
+            {
+                LazerIPCInfo.Score1.Value = 127_727;
+                LazerIPCInfo.Score2.Value = 63_727;
+            });
+            AddStep("set state: ranking", () => LazerIPCInfo.State.Value = TourneyState.Ranking);
+        }
+
+        [Test]
+        public void TestScoreAddCumulative()
+        {
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+
+            createScreen();
+            toggleWarmup();
+
+            AddStep("set state: lobby", () => LazerIPCInfo.State.Value = TourneyState.Lobby);
+
+            AddStep("set state: playing", () => LazerIPCInfo.State.Value = TourneyState.Playing);
+            AddStep("add score", () =>
+            {
+                LazerIPCInfo.Score1.Value = 127_727;
+                LazerIPCInfo.Score2.Value = 63_727;
+            });
+            AddStep("set state: ranking", () => LazerIPCInfo.State.Value = TourneyState.Ranking);
         }
 
         [Test]

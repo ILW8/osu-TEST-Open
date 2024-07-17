@@ -17,7 +17,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
-        private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
+        private readonly Bindable<long?> currentTeamScore = new Bindable<long?>();
 
         private TeamDisplay? teamDisplay;
 

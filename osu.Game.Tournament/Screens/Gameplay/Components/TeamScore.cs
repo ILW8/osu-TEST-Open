@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
@@ -17,10 +18,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamScore : CompositeDrawable
     {
-        private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
+        private readonly Bindable<long?> currentTeamScore = new Bindable<long?>();
         private readonly StarCounter counter;
+        private Bindable<bool> useCumulativeScore = null!;
 
-        public TeamScore(Bindable<int?> score, TeamColour colour, int count)
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
+
+        public TeamScore(Bindable<long?> score, TeamColour colour, int count)
         {
             bool flip = colour == TeamColour.Blue;
             var anchor = flip ? Anchor.TopRight : Anchor.TopLeft;
@@ -37,7 +42,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentTeamScore.BindTo(score);
         }
 
-        private void scoreChanged(ValueChangedEvent<int?> score) => counter.Current = score.NewValue ?? 0;
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            useCumulativeScore = ladder.CumulativeScore.GetBoundCopy();
+            useCumulativeScore.BindValueChanged(v => counter.Alpha = v.NewValue ? 0 : 1, true);
+        }
+
+        private void scoreChanged(ValueChangedEvent<long?> score) => counter.Current = score.NewValue ?? 0;
 
         public partial class TeamScoreStarCounter : StarCounter
         {
