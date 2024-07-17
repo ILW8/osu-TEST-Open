@@ -14,6 +14,7 @@ namespace osu.Game.Tournament.Screens
     public abstract partial class BeatmapInfoScreen : TournamentMatchScreen
     {
         protected readonly SongBar SongBar;
+        private readonly IBindable<TournamentBeatmap?> beatmap = new Bindable<TournamentBeatmap?>();
 
         protected BeatmapInfoScreen()
         {
@@ -26,10 +27,18 @@ namespace osu.Game.Tournament.Screens
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(LegacyMatchIPCInfo legacyIpc, MatchIPCInfo lazerIpc, LadderInfo ladder)
         {
-            ipc.Beatmap.BindValueChanged(beatmapChanged, true);
-            ipc.Mods.BindValueChanged(modsChanged, true);
+            ladder.UseLazerIpc.BindValueChanged(
+                vce =>
+                {
+                    beatmap.UnbindAll();
+                    beatmap.BindTo(vce.NewValue ? lazerIpc.Beatmap : legacyIpc.Beatmap);
+                },
+                true);
+
+            beatmap.BindValueChanged(beatmapChanged, true);
+            legacyIpc.Mods.BindValueChanged(modsChanged, true);
         }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)

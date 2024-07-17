@@ -4,24 +4,41 @@
 using System;
 using System.IO;
 using System.Linq;
-using Microsoft.Win32;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
+using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
-using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Chat;
 using osu.Game.Rulesets;
+using osu.Game.Tournament.IO;
 using osu.Game.Tournament.Models;
+using osu.Game.TournamentIpc;
 
 namespace osu.Game.Tournament.IPC
 {
+    public partial class MatchIPCInfo : Component
+    {
+        public Bindable<TournamentBeatmap?> Beatmap { get; } = new Bindable<TournamentBeatmap?>();
+
+        // let's ignore mods for now
+        // public Bindable<LegacyMods> Mods { get; } = new Bindable<LegacyMods>();
+
+        public Bindable<TourneyState> State { get; } = new Bindable<TourneyState>();
+
+        public BindableList<Message> ChatMessages { get; } = new BindableList<Message>();
+        public BindableLong Score1 { get; } = new BindableLong();
+        public BindableLong Score2 { get; } = new BindableLong();
+    }
+
     public partial class FileBasedIPC : MatchIPCInfo
     {
-        public Storage? IPCStorage { get; private set; }
+        public Storage IPCStorage { get; private set; } = null!;
 
         [Resolved]
         protected IAPIProvider API { get; private set; } = null!;
@@ -29,239 +46,151 @@ namespace osu.Game.Tournament.IPC
         [Resolved]
         protected IRulesetStore Rulesets { get; private set; } = null!;
 
-        [Resolved]
-        private GameHost host { get; set; } = null!;
+        // [Resolved]
+        // private GameHost host { get; set; } = null!;
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
-
-        [Resolved]
-        private StableInfo stableInfo { get; set; } = null!;
 
         private int lastBeatmapId;
         private ScheduledDelegate? scheduled;
         private GetBeatmapRequest? beatmapLookupRequest;
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(TournamentStorage tournamentStorage)
         {
-            string? stablePath = stableInfo.StablePath ?? findStablePath();
-            initialiseIPCStorage(stablePath);
-        }
+            IPCStorage = tournamentStorage.AllTournaments;
+            Logger.Log($"ipc storage path: {IPCStorage.GetFullPath(string.Empty)}");
+            string thestr = IPCStorage.Exists("ipc.txt") ? "file ipc.txt found in game storage yay" : "no ipc.txt found in game storage, uh oh";
+            Logger.Log(thestr, LoggingTarget.Runtime, LogLevel.Debug);
 
-        private Storage? initialiseIPCStorage(string? path)
-        {
-            scheduled?.Cancel();
-
-            IPCStorage = null;
-
-            try
+            if (IPCStorage.Exists("ipc.txt") && ladder.UseLazerIpc.Value)
             {
-                if (string.IsNullOrEmpty(path))
-                    return null;
-
-                IPCStorage = new DesktopStorage(path, host as DesktopGameHost);
-
-                const string file_ipc_filename = "ipc.txt";
-                const string file_ipc_state_filename = "ipc-state.txt";
-                const string file_ipc_scores_filename = "ipc-scores.txt";
-                const string file_ipc_channel_filename = "ipc-channel.txt";
-
-                if (IPCStorage.Exists(file_ipc_filename))
+                scheduled = Scheduler.AddDelayed(delegate
                 {
-                    scheduled = Scheduler.AddDelayed(delegate
+                    // beatmap
+                    try
                     {
-                        try
+                        using (var stream = IPCStorage.GetStream(IpcFiles.BEATMAP))
+                        using (var sr = new StreamReader(stream))
                         {
-                            using (var stream = IPCStorage.GetStream(file_ipc_filename))
-                            using (var sr = new StreamReader(stream))
+                            int beatmapId = int.Parse(sr.ReadLine().AsNonNull());
+
+                            if (lastBeatmapId != beatmapId)
                             {
-                                int beatmapId = int.Parse(sr.ReadLine().AsNonNull());
-                                int mods = int.Parse(sr.ReadLine().AsNonNull());
+                                beatmapLookupRequest?.Cancel();
 
-                                if (lastBeatmapId != beatmapId)
+                                lastBeatmapId = beatmapId;
+
+                                var existing = ladder
+                                               .CurrentMatch.Value
+                                               ?.Round.Value
+                                               ?.Beatmaps
+                                               .FirstOrDefault(b => b.ID == beatmapId);
+
+                                if (existing != null)
+                                    Beatmap.Value = existing.Beatmap;
+                                else
                                 {
-                                    beatmapLookupRequest?.Cancel();
-
-                                    lastBeatmapId = beatmapId;
-
-                                    var existing = ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
-
-                                    if (existing != null)
-                                        Beatmap.Value = existing.Beatmap;
-                                    else
+                                    beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
+                                    beatmapLookupRequest.Success += b =>
                                     {
-                                        beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
-                                        beatmapLookupRequest.Success += b =>
-                                        {
-                                            if (lastBeatmapId == beatmapId)
-                                                Beatmap.Value = new TournamentBeatmap(b);
-                                        };
-                                        beatmapLookupRequest.Failure += _ =>
-                                        {
-                                            if (lastBeatmapId == beatmapId)
-                                                Beatmap.Value = null;
-                                        };
-                                        API.Queue(beatmapLookupRequest);
-                                    }
+                                        if (lastBeatmapId == beatmapId)
+                                            Beatmap.Value = new TournamentBeatmap(b);
+                                    };
+                                    beatmapLookupRequest.Failure += _ =>
+                                    {
+                                        if (lastBeatmapId == beatmapId)
+                                            Beatmap.Value = null;
+                                    };
+                                    API.Queue(beatmapLookupRequest);
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // file might be in use
+                    }
+
+                    // chat
+                    try
+                    {
+                        using (var stream = IPCStorage.GetStream(IpcFiles.CHAT))
+                        using (var sr = new StreamReader(stream))
+                        {
+                            if (sr.Peek() == -1)
+                            {
+                                ChatMessages.Clear();
+                            }
+
+                            bool isFirstLine = true;
+
+                            while (sr.ReadLine() is { } line)
+                            {
+                                string[] parts = line.Split(',');
+                                if (parts.Length < 4) continue;
+
+                                bool parseOk = long.TryParse(parts[0], out long ts);
+                                parseOk &= int.TryParse(parts[2], out int uid);
+                                if (!parseOk) continue;
+
+                                if (isFirstLine)
+                                {
+                                    isFirstLine = false;
+                                    ChatMessages.RemoveAll(msg => msg.Timestamp.ToUnixTimeMilliseconds() < ts);
                                 }
 
-                                Mods.Value = (LegacyMods)mods;
+                                if ((ChatMessages.LastOrDefault()?.Timestamp.ToUnixTimeMilliseconds() ?? 0) >= ts) continue;
+
+                                Logger.Log($"added chat message {line}", LoggingTarget.Runtime, LogLevel.Debug);
+                                ChatMessages.Add(new Message
+                                {
+                                    Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(ts),
+                                    Sender = new APIUser
+                                    {
+                                        Id = uid,
+                                        Username = parts[1]
+                                    },
+                                    Content = string.Join(",", parts.Skip(3))
+                                });
                             }
                         }
-                        catch
-                        {
-                            // file might be in use.
-                        }
+                    }
+                    catch
+                    {
+                    }
 
-                        try
-                        {
-                            using (var stream = IPCStorage.GetStream(file_ipc_channel_filename))
-                            using (var sr = new StreamReader(stream))
-                            {
-                                ChatChannel.Value = sr.ReadLine().AsNonNull();
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            // file might be in use.
-                        }
+                    // scores
+                    try
+                    {
+                        using var stream = IPCStorage.GetStream(IpcFiles.SCORES);
+                        using var sr = new StreamReader(stream);
 
-                        try
-                        {
-                            using (var stream = IPCStorage.GetStream(file_ipc_state_filename))
-                            using (var sr = new StreamReader(stream))
-                            {
-                                State.Value = Enum.Parse<TourneyState>(sr.ReadLine().AsNonNull());
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            // file might be in use.
-                        }
+                        // we expect exactly two values in this file, always
+                        Score1.Value = long.Parse(sr.ReadLine().AsNonNull());
+                        Score2.Value = long.Parse(sr.ReadLine().AsNonNull());
+                    }
+                    catch
+                    {
+                        // file might be busy
+                    }
 
-                        try
-                        {
-                            using (var stream = IPCStorage.GetStream(file_ipc_scores_filename))
-                            using (var sr = new StreamReader(stream))
-                            {
-                                Score1.Value = int.Parse(sr.ReadLine().AsNonNull());
-                                Score2.Value = int.Parse(sr.ReadLine().AsNonNull());
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            // file might be in use.
-                        }
-                    }, 250, true);
-                }
+                    // state
+                    try
+                    {
+                        using var stream = IPCStorage.GetStream(IpcFiles.STATE);
+                        using var sr = new StreamReader(stream);
+
+                        State.Value = Enum.Parse<TourneyState>(sr.ReadLine().AsNonNull());
+                    }
+                    catch
+                    {
+                        Logger.Log($"couldnt read ipc");
+                        // file might be busy
+                    }
+                }, 250, true);
             }
-            catch (Exception e)
-            {
-                Logger.Error(e, "Stable installation could not be found; disabling file based IPC");
-            }
-
-            return IPCStorage;
-        }
-
-        /// <summary>
-        /// Manually sets the path to the directory used for inter-process communication with a cutting-edge install.
-        /// </summary>
-        /// <param name="path">Path to the IPC directory</param>
-        /// <returns>Whether the supplied path was a valid IPC directory.</returns>
-        public bool SetIPCLocation(string? path)
-        {
-            if (path == null || !ipcFileExistsInDirectory(path))
-                return false;
-
-            var newStorage = initialiseIPCStorage(stableInfo.StablePath = path);
-            if (newStorage == null)
-                return false;
-
-            stableInfo.SaveChanges();
-            return true;
-        }
-
-        /// <summary>
-        /// Tries to automatically detect the path to the directory used for inter-process communication
-        /// with a cutting-edge install.
-        /// </summary>
-        /// <returns>Whether an IPC directory was successfully auto-detected.</returns>
-        public bool AutoDetectIPCLocation() => SetIPCLocation(findStablePath());
-
-        private static bool ipcFileExistsInDirectory(string? p) => p != null && File.Exists(Path.Combine(p, "ipc.txt"));
-
-        private string? findStablePath()
-        {
-            string? stableInstallPath = findFromEnvVar() ??
-                                        findFromRegistry() ??
-                                        findFromLocalAppData() ??
-                                        findFromDotFolder();
-
-            Logger.Log($"Stable path for tourney usage: {stableInstallPath}");
-            return stableInstallPath;
-        }
-
-        private string? findFromEnvVar()
-        {
-            try
-            {
-                Logger.Log("Trying to find stable with environment variables");
-                string? stableInstallPath = Environment.GetEnvironmentVariable("OSU_STABLE_PATH");
-
-                if (ipcFileExistsInDirectory(stableInstallPath))
-                    return stableInstallPath!;
-            }
-            catch
-            {
-            }
-
-            return null;
-        }
-
-        private string? findFromLocalAppData()
-        {
-            Logger.Log("Trying to find stable in %LOCALAPPDATA%");
-            string stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"osu!");
-
-            if (ipcFileExistsInDirectory(stableInstallPath))
-                return stableInstallPath;
-
-            return null;
-        }
-
-        private string? findFromDotFolder()
-        {
-            Logger.Log("Trying to find stable in dotfolders");
-            string stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".osu");
-
-            if (ipcFileExistsInDirectory(stableInstallPath))
-                return stableInstallPath;
-
-            return null;
-        }
-
-        private string? findFromRegistry()
-        {
-            Logger.Log("Trying to find stable in registry");
-
-            try
-            {
-                string? stableInstallPath;
-
-#pragma warning disable CA1416
-                using (RegistryKey? key = Registry.ClassesRoot.OpenSubKey("osu"))
-                    stableInstallPath = key?.OpenSubKey(@"shell\open\command")?.GetValue(string.Empty)?.ToString()?.Split('"')[1].Replace("osu!.exe", "");
-#pragma warning restore CA1416
-
-                if (ipcFileExistsInDirectory(stableInstallPath))
-                    return stableInstallPath;
-            }
-            catch
-            {
-            }
-
-            return null;
         }
     }
 }

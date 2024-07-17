@@ -27,6 +27,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
 
+        private Bindable<TournamentBeatmap?> beatmap { get; set; } = new Bindable<TournamentBeatmap?>();
+
         private TeamColour pickColour;
         private ChoiceType pickType;
 
@@ -38,7 +40,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(LegacyMatchIPCInfo legacyIpc, MatchIPCInfo lazerIpc)
         {
             InternalChildren = new Drawable[]
             {
@@ -108,7 +110,13 @@ namespace osu.Game.Tournament.Screens.MapPool
                 }
             };
 
-            ipc.Beatmap.BindValueChanged(beatmapChanged);
+            LadderInfo.UseLazerIpc.BindValueChanged(vce =>
+            {
+                beatmap.UnbindAll();
+                beatmap.BindTo(vce.NewValue ? lazerIpc.Beatmap : legacyIpc.Beatmap);
+            }, true);
+
+            beatmap.BindValueChanged(beatmapChanged, true);
         }
 
         private Bindable<bool>? splitMapPoolByMods;

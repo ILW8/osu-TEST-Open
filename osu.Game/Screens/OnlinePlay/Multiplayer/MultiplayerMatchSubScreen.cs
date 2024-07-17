@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -31,6 +32,7 @@ using osu.Game.Screens.OnlinePlay.Multiplayer.Match.Playlist;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Participants;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play.HUD;
+using osu.Game.TournamentIpc;
 using osu.Game.Users;
 using osuTK;
 using ParticipantsList = osu.Game.Screens.OnlinePlay.Multiplayer.Participants.ParticipantsList;
@@ -50,6 +52,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved(canBeNull: true)]
         private OsuGame game { get; set; }
 
+        [Resolved(canBeNull: true)]
+        [CanBeNull]
+        protected TournamentFileBasedIPC TournamentIpc { get; private set; }
+
         private AddItemButton addItemButton;
 
         public MultiplayerMatchSubScreen(Room room)
@@ -68,6 +74,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
             client.LoadRequested += onLoadRequested;
             client.RoomUpdated += onRoomUpdated;
+
+            TournamentIpc?.RegisterMultiplayerRoomClient(client);
 
             if (!client.IsConnected.Value)
                 handleRoomLost();
@@ -248,6 +256,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private IDialogOverlay dialogOverlay { get; set; }
 
         private bool exitConfirmed;
+
+        public override void OnResuming(ScreenTransitionEvent e)
+        {
+            // this is a bit of a hack.
+            // wanted to use roomUpdated from multiplayer client for all state updates, but it does not fire between spectator screen and roomsubscreen since there isn't any room update
+            if (TournamentIpc != null)
+                TournamentIpc.TourneyState.Value = TourneyState.Lobby;
+            base.OnResuming(e);
+        }
 
         public override bool OnExiting(ScreenExitEvent e)
         {

@@ -11,8 +11,8 @@ namespace osu.Game.Tournament.Tests.Components
 {
     public partial class TestSceneMatchScoreDisplay : TournamentTestScene
     {
-        [Cached(Type = typeof(MatchIPCInfo))]
-        private MatchIPCInfo matchInfo = new MatchIPCInfo();
+        [Cached(Type = typeof(LegacyMatchIPCInfo))]
+        private LegacyMatchIPCInfo legacyMatchInfo = new LegacyMatchIPCInfo();
 
         public TestSceneMatchScoreDisplay()
         {
@@ -31,9 +31,9 @@ namespace osu.Game.Tournament.Tests.Components
             {
                 int amount = (int)((RNG.NextDouble() - 0.5) * 10000);
                 if (amount < 0)
-                    matchInfo.Score1.Value -= amount;
+                    legacyMatchInfo.Score1.Value -= amount;
                 else
-                    matchInfo.Score2.Value += amount;
+                    legacyMatchInfo.Score2.Value += amount;
             }, 100, true);
         }
     }

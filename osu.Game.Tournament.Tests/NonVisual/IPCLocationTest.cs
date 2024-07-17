@@ -34,9 +34,9 @@ namespace osu.Game.Tournament.Tests.NonVisual
                 {
                     var osu = LoadTournament(host);
                     TournamentStorage storage = (TournamentStorage)osu.Dependencies.Get<Storage>();
-                    FileBasedIPC? ipc = null;
+                    LegacyFileBasedIPC? ipc = null;
 
-                    WaitForOrAssert(() => (ipc = osu.Dependencies.Get<MatchIPCInfo>() as FileBasedIPC)?.IsLoaded == true, @"ipc could not be populated in a reasonable amount of time");
+                    WaitForOrAssert(() => (ipc = osu.Dependencies.Get<LegacyMatchIPCInfo>() as LegacyFileBasedIPC)?.IsLoaded == true, @"ipc could not be populated in a reasonable amount of time");
 
                     Assert.True(ipc!.SetIPCLocation(testStableInstallDirectory));
                     Assert.True(storage.AllTournaments.Exists("stable.json"));

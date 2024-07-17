@@ -26,9 +26,10 @@ namespace osu.Game.Tournament.Screens.Setup
 
         private LoginOverlay? loginOverlay;
         private ResolutionSelector resolution = null!;
+        private ActionableInfo stableIpcPicker = null!;
 
         [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
+        private LegacyMatchIPCInfo ipc { get; set; } = null!;
 
         [Resolved]
         private StableInfo stableInfo { get; set; } = null!;
@@ -73,14 +74,31 @@ namespace osu.Game.Tournament.Screens.Setup
             api.LocalUser.BindValueChanged(_ => Schedule(reload));
             stableInfo.OnStableInfoSaved += () => Schedule(reload);
             reload();
+
+            LadderInfo.UseLazerIpc.BindValueChanged(vce =>
+            {
+                if (vce.NewValue)
+                {
+                    stableIpcPicker.FadeOut(250);
+                    return;
+                }
+
+                stableIpcPicker.FadeIn(250);
+            }, true);
         }
 
         private void reload()
         {
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var fileBasedIpc = ipc as LegacyFileBasedIPC;
             fillFlow.Children = new Drawable[]
             {
-                new ActionableInfo
+                new LabelledSwitchButton
+                {
+                    Label = "Use Lazer IPC",
+                    Description = "Turn this off if using legacy IPC source with an osu! stable tournament client",
+                    Current = LadderInfo.UseLazerIpc,
+                },
+                stableIpcPicker = new ActionableInfo
                 {
                     Label = "Current IPC source",
                     ButtonText = "Change source",

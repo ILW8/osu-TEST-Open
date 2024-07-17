@@ -29,11 +29,17 @@ namespace osu.Game.Tournament
     [Cached(typeof(TournamentGameBase))]
     public partial class TournamentGameBase : OsuGameBase
     {
+        public TournamentGameBase()
+            : base(true)
+        {
+        }
+
         public const string BRACKET_FILENAME = @"bracket.json";
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
         private DependencyContainer dependencies = null!;
-        private FileBasedIPC ipc = null!;
+        private LegacyFileBasedIPC ipc = null!;
+        private FileBasedIPC lazerIpc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -194,8 +200,11 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+                dependencies.CacheAs<LegacyMatchIPCInfo>(ipc = new LegacyFileBasedIPC());
                 Add(ipc);
+
+                dependencies.CacheAs<MatchIPCInfo>(lazerIpc = new FileBasedIPC());
+                Add(lazerIpc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
 

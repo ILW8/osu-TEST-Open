@@ -245,11 +245,19 @@ namespace osu.Game
         /// </remarks>
         protected virtual int UnhandledExceptionsBeforeCrash => DebugUtils.IsDebugBuild ? 0 : 1;
 
+        protected bool SkipHubConnections = false;
+
         public OsuGameBase()
         {
             Name = GAME_NAME;
 
             allowableExceptions = UnhandledExceptionsBeforeCrash;
+        }
+
+        public OsuGameBase(bool skipHubConnections)
+            : this()
+        {
+            SkipHubConnections = skipHubConnections;
         }
 
         [BackgroundDependencyLoader]
@@ -367,9 +375,12 @@ namespace osu.Game
             if (API is APIAccess apiAccess)
                 base.Content.Add(apiAccess);
 
-            base.Content.Add(SpectatorClient);
-            base.Content.Add(MultiplayerClient);
-            base.Content.Add(metadataClient);
+            if (!SkipHubConnections)
+            {
+                base.Content.Add(SpectatorClient);
+                base.Content.Add(MultiplayerClient);
+                base.Content.Add(metadataClient);
+            }
 
             base.Content.Add(rulesetConfigCache);
 
