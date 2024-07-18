@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -266,6 +267,31 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     {
                         CurrentMatch.Value.Team1Score.Value += lazerIpc.Score1.Value;
                         CurrentMatch.Value.Team2Score.Value += lazerIpc.Score2.Value;
+
+                        int mapId = lazerIpc.Beatmap.Value?.OnlineID ?? 0;
+
+                        if (mapId > 0)
+                        {
+                            int pickBansCount = LadderInfo.CurrentMatch.Value?.PicksBans.Count ?? 0;
+                            int poolSize = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.Count ?? -1;
+
+                            bool eligibleForWin = pickBansCount + 1 == poolSize;
+
+                            Logger.Log($"{nameof(updateStateLazer)}: pickban#: {pickBansCount} | poolSize: {poolSize} | can win?: {eligibleForWin}");
+
+                            if (eligibleForWin)
+                            {
+                                // we have a decider map
+                                var deciderMap = CurrentMatch.Value.Round.Value?.Beatmaps
+                                                             .FirstOrDefault(b => CurrentMatch.Value.PicksBans.All(p => p.BeatmapID != b.ID));
+
+                                Logger.Log($"{nameof(updateStateLazer)}: on decider map?: {deciderMap != null}");
+
+                                // mark match as completed, as we've played the decider map
+                                if (deciderMap?.ID == mapId)
+                                    CurrentMatch.Value.Completed.Value = true;
+                            }
+                        }
                     }
                     else
                     {

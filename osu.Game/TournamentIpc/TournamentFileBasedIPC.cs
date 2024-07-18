@@ -79,13 +79,16 @@ namespace osu.Game.TournamentIpc
                 }
             });
 
+            Logger.Log($"watching for tourney state changes");
+
             TourneyState.BindValueChanged(vce =>
             {
                 using var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.STATE);
                 using var mainIpcStreamWriter = new StreamWriter(mainIpc);
 
+                Logger.Log($"tourney state changed to: {vce.NewValue}");
                 mainIpcStreamWriter.Write($"{(int)vce.NewValue}\n");
-            });
+            }, true);
 
             flushScoresDelegate?.Cancel();
             flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, 200, true);
@@ -138,6 +141,7 @@ namespace osu.Game.TournamentIpc
                         && multiplayerClient?.LocalUser?.State != MultiplayerUserState.Idle
                         && TourneyState.Value != TournamentIpc.TourneyState.Lobby)
                     {
+                        Logger.Log($"(room updated) tourney state changed to: {TournamentIpc.TourneyState.Ranking}");
                         TourneyState.Value = TournamentIpc.TourneyState.Ranking;
                         break;
                     }
