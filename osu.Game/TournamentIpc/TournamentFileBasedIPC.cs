@@ -9,7 +9,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
-using osu.Game.Beatmaps;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 
