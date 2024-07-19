@@ -7,7 +7,6 @@ using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 {
@@ -82,7 +81,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             var facade = new Facade();
             facadeContainer.Add(facade);
 
-            var cell = new Cell(index, content, facade) { ToggleMaximisationState = toggleMaximisationState };
+            var cell = new Cell(index, content, facade) { ToggleMaximisationState = _ => { } };
 
             cellContainer.Add(cell);
         }
@@ -91,37 +90,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// The content added to this grid.
         /// </summary>
         public IEnumerable<Drawable> Content => cellContainer.OrderBy(c => c.FacadeIndex).Select(c => c.Content);
-
-        // A depth value that gets decremented every time a new instance is maximised in order to reduce underlaps.
-        private float maximisedInstanceDepth;
-
-        private void toggleMaximisationState(Cell target)
-        {
-            return;
-
-            // in the case the target is the already maximised cell (or there is only one cell), no cell should be maximised.
-            bool hasMaximised = !target.IsMaximised && cellContainer.Count > 1;
-
-            // Iterate through all cells to ensure only one is maximised at any time.
-            foreach (var cell in cellContainer.ToList())
-            {
-                if (hasMaximised && cell == target)
-                {
-                    // Transfer cell to the maximised facade.
-                    cell.SetFacade(MaximisedFacade, true);
-                    cellContainer.ChangeChildDepth(cell, maximisedInstanceDepth -= 0.001f);
-                }
-                else
-                {
-                    // Transfer cell back to its original facade.
-                    cell.SetFacade(facadeContainer[cell.FacadeIndex], false);
-                }
-
-                cell.FadeColour(hasMaximised && cell != target ? Color4.Gray : Color4.White, ANIMATION_DELAY, Easing.OutQuint);
-            }
-
-            facadeContainer.ScaleTo(hasMaximised ? 0.95f : 1, ANIMATION_DELAY, Easing.OutQuint);
-        }
 
         protected override void Update()
         {
