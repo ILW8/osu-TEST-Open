@@ -23,7 +23,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         public const int MAX_PLAYERS = 2;
 
-        private const float player_spacing = 0;
+        private const float player_spacing = 1;
 
         /// <summary>
         /// The currently-maximised facade.
@@ -97,6 +97,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private void toggleMaximisationState(Cell target)
         {
+            return;
+
             // in the case the target is the already maximised cell (or there is only one cell), no cell should be maximised.
             bool hasMaximised = !target.IsMaximised && cellContainer.Count > 1;
 
