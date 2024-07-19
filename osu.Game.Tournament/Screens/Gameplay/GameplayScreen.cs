@@ -31,6 +31,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private OsuButton warmupButton = null!;
         private SettingsLongNumberBox team1ScoreOverride = null!;
         private SettingsLongNumberBox team2ScoreOverride = null!;
+        private OsuCheckbox matchCompleteOverride = null!;
         private LegacyMatchIPCInfo legacyIpc = null!;
         private MatchIPCInfo lazerIpc = null!;
 
@@ -140,7 +141,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             RelativeSizeAxes = Axes.None,
                             Width = 200,
                             Current = { Default = 0 }
-                        }
+                        },
+                        matchCompleteOverride = new OsuCheckbox
+                        {
+                            LabelText = "match complete?",
+                        },
                     }
                 }
             });
@@ -152,18 +157,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
-            //
-            // team1ScoreOverride.Current.BindValueChanged(_ =>
-            // {
-            //     if (LadderInfo.CurrentMatch.Value != null)
-            //         LadderInfo.CurrentMatch.Value.Team1Score.Value = team1ScoreOverride.Current.Value;
-            // });
-            //
-            // team2ScoreOverride.Current.BindValueChanged(_ =>
-            // {
-            //     if (LadderInfo.CurrentMatch.Value != null)
-            //         LadderInfo.CurrentMatch.Value.Team2Score.Value = team2ScoreOverride.Current.Value;
-            // });
         }
 
         protected override void LoadComplete()
@@ -198,6 +191,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledScreenChange?.Cancel();
             team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
             team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
+            matchCompleteOverride.Current.BindTo(match.NewValue.Completed);
 
             // for some reason this is required to make the revert to default button work correctly
             team1ScoreOverride.Current.Default = 0;
