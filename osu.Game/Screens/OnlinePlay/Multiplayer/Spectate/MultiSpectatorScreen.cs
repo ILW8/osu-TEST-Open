@@ -289,6 +289,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         public override bool ShowBackButton => false;
 
+        public override bool CursorVisible => false;
+
         public override bool OnBackButton()
         {
             if (multiplayerClient.Room == null)
