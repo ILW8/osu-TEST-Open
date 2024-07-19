@@ -51,7 +51,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 InternalChild = Content = content;
 
                 Masking = true;
-                CornerRadius = 5;
+                CornerRadius = 0;
             }
 
             protected override void Update()

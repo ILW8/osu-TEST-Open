@@ -19,12 +19,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public const float ANIMATION_DELAY = 400;
 
         /// <summary>
-        /// A temporary limitation on the number of players, because only layouts up to 16 players are supported for a single screen.
-        /// Todo: Can be removed in the future with scrolling support + performance improvements.
+        /// LGA: 1v1 tournament
         /// </summary>
-        public const int MAX_PLAYERS = 16;
+        public const int MAX_PLAYERS = 2;
 
-        private const float player_spacing = 6;
+        private const float player_spacing = 1;
 
         /// <summary>
         /// The currently-maximised facade.
@@ -98,6 +97,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private void toggleMaximisationState(Cell target)
         {
+            return;
+
             // in the case the target is the already maximised cell (or there is only one cell), no cell should be maximised.
             bool hasMaximised = !target.IsMaximised && cellContainer.Count > 1;
 

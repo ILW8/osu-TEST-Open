@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.Play;
@@ -59,18 +60,27 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private readonly Room room;
         private readonly MultiplayerRoomUser[] users;
 
+        private static MultiplayerRoomUser[] sortUsersByTeam(MultiplayerRoomUser[] users)
+        {
+            // check if users have team info, otherwise leave unchanged
+            if ((users.FirstOrDefault()?.MatchState as TeamVersusUserState)?.TeamID == null)
+                return users;
+
+            return users.OrderBy(u => (u.MatchState as TeamVersusUserState)!.TeamID).ToArray();
+        }
+
         /// <summary>
         /// Creates a new <see cref="MultiSpectatorScreen"/>.
         /// </summary>
         /// <param name="room">The room.</param>
         /// <param name="users">The players to spectate.</param>
         public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users)
-            : base(users.Select(u => u.UserID).ToArray())
+            : base(sortUsersByTeam(users).Select(u => u.UserID).ToArray())
         {
             this.room = room;
-            this.users = users;
+            this.users = sortUsersByTeam(users);
 
-            instances = new PlayerArea[Users.Count];
+            instances = new PlayerArea[UserIds.Count];
         }
 
         [BackgroundDependencyLoader]
@@ -130,8 +140,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 }
             };
 
-            for (int i = 0; i < Users.Count; i++)
-                grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock()));
+            for (int i = 0; i < Math.Min(PlayerGrid.MAX_PLAYERS, UserIds.Count); i++)
+                grid.Add(instances[i] = new PlayerArea(UserIds[i], syncManager.CreateManagedClock()));
 
             LoadComponentAsync(statisticsTracker = new TournamentSpectatorStatisticsTracker(users), _ =>
             {
@@ -276,6 +286,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             instance.FadeColour(colours.Gray4, 400, Easing.OutQuint);
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
+
+        public override bool ShowBackButton => false;
 
         public override bool OnBackButton()
         {
