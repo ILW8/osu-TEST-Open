@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -28,6 +29,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public readonly Bindable<LegacyTourneyState> LegacyState = new Bindable<LegacyTourneyState>();
         public readonly Bindable<TourneyState> LazerState = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
+        private SettingsLongNumberBox team1ScoreOverride = null!;
+        private SettingsLongNumberBox team2ScoreOverride = null!;
+        private OsuCheckbox matchCompleteOverride = null!;
         private LegacyMatchIPCInfo legacyIpc = null!;
         private MatchIPCInfo lazerIpc = null!;
 
@@ -124,6 +128,24 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        team1ScoreOverride = new SettingsLongNumberBox
+                        {
+                            LabelText = "Team red score override",
+                            RelativeSizeAxes = Axes.None,
+                            Width = 200,
+                            Current = { Default = 0 }
+                        },
+                        team2ScoreOverride = new SettingsLongNumberBox
+                        {
+                            LabelText = "Team blue score override",
+                            RelativeSizeAxes = Axes.None,
+                            Width = 200,
+                            Current = { Default = 0 }
+                        },
+                        matchCompleteOverride = new OsuCheckbox
+                        {
+                            LabelText = "match complete?",
+                        },
                     }
                 }
             });
@@ -167,6 +189,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
+            team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
+            team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
+            matchCompleteOverride.Current.BindTo(match.NewValue.Completed);
+
+            // for some reason this is required to make the revert to default button work correctly
+            team1ScoreOverride.Current.Default = 0;
+            team2ScoreOverride.Current.Default = 0;
         }
 
         private ScheduledDelegate? scheduledScreenChange;
@@ -228,10 +257,43 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (lazerIpc.Score1.Value > lazerIpc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
+                    if (LadderInfo.CumulativeScore.Value)
+                    {
+                        CurrentMatch.Value.Team1Score.Value += lazerIpc.Score1.Value;
+                        CurrentMatch.Value.Team2Score.Value += lazerIpc.Score2.Value;
+
+                        int mapId = lazerIpc.Beatmap.Value?.OnlineID ?? 0;
+
+                        if (mapId > 0)
+                        {
+                            int pickBansCount = LadderInfo.CurrentMatch.Value?.PicksBans.Count ?? 0;
+                            int poolSize = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.Count ?? -1;
+
+                            bool eligibleForWin = pickBansCount + 1 == poolSize;
+
+                            Logger.Log($"{nameof(updateStateLazer)}: pickban#: {pickBansCount} | poolSize: {poolSize} | can win?: {eligibleForWin}");
+
+                            if (eligibleForWin)
+                            {
+                                // we have a decider map
+                                var deciderMap = CurrentMatch.Value.Round.Value?.Beatmaps
+                                                             .FirstOrDefault(b => CurrentMatch.Value.PicksBans.All(p => p.BeatmapID != b.ID));
+
+                                Logger.Log($"{nameof(updateStateLazer)}: on decider map?: {deciderMap != null}");
+
+                                // mark match as completed, as we've played the decider map
+                                if (deciderMap?.ID == mapId)
+                                    CurrentMatch.Value.Completed.Value = true;
+                            }
+                        }
+                    }
                     else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    {
+                        if (lazerIpc.Score1.Value > lazerIpc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (LazerState.Value)

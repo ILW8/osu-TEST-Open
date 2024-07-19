@@ -75,7 +75,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             client.LoadRequested += onLoadRequested;
             client.RoomUpdated += onRoomUpdated;
 
-            TournamentIpc?.RegisterMultiplayerRoomClient(client);
+            if (TournamentIpc != null)
+            {
+                TournamentIpc.RegisterMultiplayerRoomClient(client);
+                Logger.Log($"({nameof(MultiplayerMatchSubScreen)}) tourney state changed to: {TourneyState.Lobby}");
+                TournamentIpc.TourneyState.Value = TourneyState.Lobby;
+                TournamentIpc.TourneyState.TriggerChange();
+            }
 
             if (!client.IsConnected.Value)
                 handleRoomLost();

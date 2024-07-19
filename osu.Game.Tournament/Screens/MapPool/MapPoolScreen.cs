@@ -226,29 +226,22 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (beatmap.NewValue?.OnlineID == null)
                 return;
 
-            // pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == beatmap.NewValue.OnlineID)?.CurrentIndicator
-            //               .FadeOutFromOne(500)
-            //               .Loop(0, 10)
-            //               .Then(4500).FadeIn();
-
             var currentPanel = pickedMapsFlow.FirstOrDefault(p => p.Beatmap?.OnlineID == beatmap.NewValue.OnlineID);
+            if (currentPanel == null) return;
 
-            if (currentPanel != null)
+            var parentSpacePosition = currentPanel.ToSpaceOfOtherDrawable(currentPanel.OriginPosition, Parent!);
+            var offsetPosition = parentSpacePosition +
+                                 new Vector2(-currentPanel.DrawWidth / 2 - currentMapIndicator.DrawWidth / 2 - 16,
+                                     currentPanel.DrawHeight / 2 - currentMapIndicator.DrawHeight / 2);
+
+            if (currentMapIndicator.Alpha == 0)
             {
-                var parentSpacePosition = currentPanel.ToSpaceOfOtherDrawable(currentPanel.OriginPosition, Parent!);
-                var offsetPosition = parentSpacePosition +
-                                     new Vector2(-currentPanel.DrawWidth / 2 - currentMapIndicator.DrawWidth / 2 - 16,
-                                         currentPanel.DrawHeight / 2 - currentMapIndicator.DrawHeight / 2);
-
-                if (currentMapIndicator.Alpha == 0)
-                {
-                    currentMapIndicator.MoveTo(offsetPosition);
-                    currentMapIndicator.FadeInFromZero(500);
-                }
-                else
-                {
-                    currentMapIndicator.MoveTo(offsetPosition, 700, Easing.InOutExpo);
-                }
+                currentMapIndicator.MoveTo(offsetPosition);
+                currentMapIndicator.FadeInFromZero(500);
+            }
+            else
+            {
+                currentMapIndicator.MoveTo(offsetPosition, 700, Easing.InOutExpo);
             }
         }
 

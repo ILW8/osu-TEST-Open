@@ -30,7 +30,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private Box background = null!;
         private Box backgroundRight = null!;
 
-        private readonly Bindable<int?> score = new Bindable<int?>();
+        private readonly Bindable<long?> score = new Bindable<long?>();
         private readonly BindableBool completed = new BindableBool();
 
         private Color4 colourWinner;

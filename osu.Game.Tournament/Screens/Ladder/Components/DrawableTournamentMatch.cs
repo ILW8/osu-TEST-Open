@@ -236,6 +236,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         {
             if (Match.Round.Value == null) return;
 
+            if (ladderInfo?.CumulativeScore.Value == true)
+                return;
+
             int instantWinAmount = Match.Round.Value.BestOf.Value / 2;
 
             Match.Completed.Value = Match.Round.Value.BestOf.Value > 0

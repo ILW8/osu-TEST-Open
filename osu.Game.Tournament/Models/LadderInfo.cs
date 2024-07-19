@@ -46,5 +46,7 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
+
+        public Bindable<bool> CumulativeScore = new BindableBool();
     }
 }

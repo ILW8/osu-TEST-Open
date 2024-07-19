@@ -8,6 +8,72 @@ using osu.Framework.Graphics.UserInterface;
 
 namespace osu.Game.Overlays.Settings
 {
+    internal partial class OutlinedNumberBox : OutlinedTextBox
+    {
+        protected override bool AllowIme => false;
+
+        protected override bool CanAddCharacter(char character) => char.IsAsciiDigit(character);
+
+        public new void NotifyInputError() => base.NotifyInputError();
+    }
+
+    public partial class SettingsLongNumberBox : SettingsItem<long?>
+    {
+        protected override Drawable CreateControl() => new NumberControl
+        {
+            RelativeSizeAxes = Axes.X,
+        };
+
+        private sealed partial class NumberControl : CompositeDrawable, IHasCurrentValue<long?>
+        {
+            private readonly BindableWithCurrent<long?> current = new BindableWithCurrent<long?>();
+
+            public Bindable<long?> Current
+            {
+                get => current.Current;
+                set => current.Current = value;
+            }
+
+            public NumberControl()
+            {
+                AutoSizeAxes = Axes.Y;
+
+                OutlinedNumberBox numberBox;
+
+                InternalChildren = new[]
+                {
+                    numberBox = new OutlinedNumberBox
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        CommitOnFocusLost = true
+                    }
+                };
+
+                numberBox.Current.BindValueChanged(e =>
+                {
+                    if (string.IsNullOrEmpty(e.NewValue))
+                    {
+                        Current.Value = null;
+                        return;
+                    }
+
+                    if (long.TryParse(e.NewValue, out long intVal))
+                        Current.Value = intVal;
+                    else
+                        numberBox.NotifyInputError();
+
+                    // trigger Current again to either restore the previous text box value, or to reformat the new value via .ToString().
+                    Current.TriggerChange();
+                });
+
+                Current.BindValueChanged(e =>
+                {
+                    numberBox.Current.Value = e.NewValue?.ToString();
+                });
+            }
+        }
+    }
+
     public partial class SettingsNumberBox : SettingsItem<int?>
     {
         protected override Drawable CreateControl() => new NumberControl
@@ -62,15 +128,6 @@ namespace osu.Game.Overlays.Settings
                     numberBox.Current.Value = e.NewValue?.ToString();
                 });
             }
-        }
-
-        private partial class OutlinedNumberBox : OutlinedTextBox
-        {
-            protected override bool AllowIme => false;
-
-            protected override bool CanAddCharacter(char character) => char.IsAsciiDigit(character);
-
-            public new void NotifyInputError() => base.NotifyInputError();
         }
     }
 }
