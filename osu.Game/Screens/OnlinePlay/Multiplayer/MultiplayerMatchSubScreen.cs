@@ -81,6 +81,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 Logger.Log($"({nameof(MultiplayerMatchSubScreen)}) tourney state changed to: {TourneyState.Lobby}");
                 TournamentIpc.TourneyState.Value = TourneyState.Lobby;
                 TournamentIpc.TourneyState.TriggerChange();
+
+                SelectedItem.BindValueChanged(vce =>
+                {
+                    TournamentIpc.UpdateActiveBeatmap(vce.NewValue?.Beatmap.OnlineID ?? 0);
+                });
             }
 
             if (!client.IsConnected.Value)

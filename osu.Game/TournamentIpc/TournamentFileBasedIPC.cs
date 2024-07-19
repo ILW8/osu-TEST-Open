@@ -28,9 +28,6 @@ namespace osu.Game.TournamentIpc
     {
         private Storage tournamentStorage = null!;
 
-        [Resolved]
-        private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
-
         private MultiplayerClient? multiplayerClient;
 
         public Bindable<TourneyState> TourneyState { get; } = new Bindable<TourneyState>();
@@ -70,15 +67,6 @@ namespace osu.Game.TournamentIpc
                 Logger.Log($@"[FileIPC] Wrote {changedEventArgs.NewItems.Count} message(s) to file");
             }, true);
 
-            workingBeatmap.BindValueChanged(vce =>
-            {
-                using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
-                using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
-                {
-                    mainIpcStreamWriter.Write($"{vce.NewValue.BeatmapInfo.OnlineID}\n");
-                }
-            });
-
             Logger.Log($"watching for tourney state changes");
 
             TourneyState.BindValueChanged(vce =>
@@ -107,6 +95,15 @@ namespace osu.Game.TournamentIpc
         public void UpdateTeamScores(long[] scores)
         {
             pendingScores = scores;
+        }
+
+        public void UpdateActiveBeatmap(int beatmapId)
+        {
+            using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
+            using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
+            {
+                mainIpcStreamWriter.Write($"{beatmapId}\n");
+            }
         }
 
         public void RegisterMultiplayerRoomClient(MultiplayerClient multiplayerClient)
