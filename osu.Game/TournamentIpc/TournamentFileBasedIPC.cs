@@ -9,7 +9,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
-using osu.Game.Beatmaps;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 
@@ -27,9 +26,6 @@ namespace osu.Game.TournamentIpc
     public partial class TournamentFileBasedIPC : Component
     {
         private Storage tournamentStorage = null!;
-
-        [Resolved]
-        private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
 
         private MultiplayerClient? multiplayerClient;
 
@@ -70,15 +66,6 @@ namespace osu.Game.TournamentIpc
                 Logger.Log($@"[FileIPC] Wrote {changedEventArgs.NewItems.Count} message(s) to file");
             }, true);
 
-            workingBeatmap.BindValueChanged(vce =>
-            {
-                using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
-                using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
-                {
-                    mainIpcStreamWriter.Write($"{vce.NewValue.BeatmapInfo.OnlineID}\n");
-                }
-            });
-
             Logger.Log($"watching for tourney state changes");
 
             TourneyState.BindValueChanged(vce =>
@@ -107,6 +94,15 @@ namespace osu.Game.TournamentIpc
         public void UpdateTeamScores(long[] scores)
         {
             pendingScores = scores;
+        }
+
+        public void UpdateActiveBeatmap(int beatmapId)
+        {
+            using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
+            using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
+            {
+                mainIpcStreamWriter.Write($"{beatmapId}\n");
+            }
         }
 
         public void RegisterMultiplayerRoomClient(MultiplayerClient multiplayerClient)
