@@ -19,12 +19,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public const float ANIMATION_DELAY = 400;
 
         /// <summary>
-        /// A temporary limitation on the number of players, because only layouts up to 16 players are supported for a single screen.
-        /// Todo: Can be removed in the future with scrolling support + performance improvements.
+        /// LGA: 1v1 tournament
         /// </summary>
-        public const int MAX_PLAYERS = 16;
+        public const int MAX_PLAYERS = 2;
 
-        private const float player_spacing = 6;
+        private const float player_spacing = 0;
 
         /// <summary>
         /// The currently-maximised facade.
