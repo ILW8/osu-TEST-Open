@@ -87,7 +87,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
                 workingBeatmap.BindValueChanged(vce =>
                 {
-                    if (SelectedItem.Value.Beatmap.OnlineID != vce.NewValue.Beatmap.BeatmapInfo.OnlineID)
+                    int? playlistSelectedItem = SelectedItem.Value?.Beatmap.OnlineID;
+                    int gamewideBeatmap = vce.NewValue.Beatmap.BeatmapInfo.OnlineID;
+                    if (playlistSelectedItem != gamewideBeatmap) // if selected is null, comparison will always fail
                         return;
 
                     TournamentIpc.UpdateActiveBeatmap(SelectedItem.Value.Beatmap.OnlineID);
