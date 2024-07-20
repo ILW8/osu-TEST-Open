@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -38,12 +39,9 @@ namespace osu.Game.TournamentIpc
 
         private ScheduledDelegate? flushScoresDelegate;
 
-        [BackgroundDependencyLoader]
-        private void load(Storage storage)
+        private void updateChatMessages(object? sender, NotifyCollectionChangedEventArgs changedEventArgs)
         {
-            tournamentStorage = storage.GetStorageForDirectory(@"tournaments");
-
-            chatMessages.BindCollectionChanged((_, changedEventArgs) =>
+            try
             {
                 // truncate file on disk
                 if (changedEventArgs.NewItems == null || changedEventArgs.NewItems.Count == 0)
@@ -64,17 +62,38 @@ namespace osu.Game.TournamentIpc
                 }
 
                 Logger.Log($@"[FileIPC] Wrote {changedEventArgs.NewItems.Count} message(s) to file");
-            }, true);
+            }
+            catch
+            {
+                Logger.Log("failed writing chat messages to ipc file, trying again in 50ms");
+                Scheduler.AddDelayed(() => updateChatMessages(sender, changedEventArgs), 50);
+            }
+        }
 
-            Logger.Log($"watching for tourney state changes");
+        [BackgroundDependencyLoader]
+        private void load(Storage storage)
+        {
+            tournamentStorage = storage.GetStorageForDirectory(@"tournaments");
+
+            chatMessages.BindCollectionChanged(updateChatMessages, true);
+
+            Logger.Log(@"started watching for tourney state changes");
 
             TourneyState.BindValueChanged(vce =>
             {
-                using var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.STATE);
-                using var mainIpcStreamWriter = new StreamWriter(mainIpc);
+                try
+                {
+                    using var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.STATE);
+                    using var mainIpcStreamWriter = new StreamWriter(mainIpc);
 
-                Logger.Log($"tourney state changed to: {vce.NewValue}");
-                mainIpcStreamWriter.Write($"{(int)vce.NewValue}\n");
+                    Logger.Log($"tourney state changed to: {vce.NewValue}");
+                    mainIpcStreamWriter.Write($"{(int)vce.NewValue}\n");
+                }
+                catch
+                {
+                    Logger.Log("failed writing tourney state to ipc file, trying again in 50ms");
+                    Scheduler.AddDelayed(() => TourneyState.TriggerChange(), 50);
+                }
             }, true);
 
             flushScoresDelegate?.Cancel();
@@ -100,10 +119,18 @@ namespace osu.Game.TournamentIpc
         {
             Logger.Log($"new active beatmap: {beatmapId}");
 
-            using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
-            using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
+            try
             {
-                mainIpcStreamWriter.Write($"{beatmapId}\n");
+                using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
+                using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
+                {
+                    mainIpcStreamWriter.Write($"{beatmapId}\n");
+                }
+            }
+            catch
+            {
+                Logger.Log("failed writing updated beatmap id to ipc file, trying again in 50ms");
+                Scheduler.AddDelayed(() => UpdateActiveBeatmap(beatmapId), 50);
             }
         }
 
@@ -160,16 +187,23 @@ namespace osu.Game.TournamentIpc
             if (scoresToWrite.Count == 1)
                 scoresToWrite.Add(0);
 
-            using (var scoresIpc = tournamentStorage.CreateFileSafely(IpcFiles.SCORES))
-            using (var scoresIpcWriter = new StreamWriter(scoresIpc))
+            try
             {
-                foreach (long score in scoresToWrite)
+                using (var scoresIpc = tournamentStorage.CreateFileSafely(IpcFiles.SCORES))
+                using (var scoresIpcWriter = new StreamWriter(scoresIpc))
                 {
-                    scoresIpcWriter.Write($"{score}\n");
+                    foreach (long score in scoresToWrite)
+                    {
+                        scoresIpcWriter.Write($"{score}\n");
+                    }
                 }
-            }
 
-            pendingScores = [];
+                pendingScores = [];
+            }
+            catch
+            {
+                // file might be busy
+            }
         }
     }
 }
