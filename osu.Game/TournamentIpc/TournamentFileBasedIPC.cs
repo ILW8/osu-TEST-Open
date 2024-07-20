@@ -98,6 +98,8 @@ namespace osu.Game.TournamentIpc
 
         public void UpdateActiveBeatmap(int beatmapId)
         {
+            Logger.Log($"new active beatmap: {beatmapId}");
+
             using (var mainIpc = tournamentStorage.CreateFileSafely(IpcFiles.BEATMAP))
             using (var mainIpcStreamWriter = new StreamWriter(mainIpc))
             {
