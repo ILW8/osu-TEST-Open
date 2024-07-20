@@ -157,7 +157,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentTeamScore.BindValueChanged(_ =>
             {
                 cumulativeScoreCounter.Current.Value = currentTeamScore.Value ?? 0;
-            });
+            }, true);
         }
 
         protected override void LoadComplete()
