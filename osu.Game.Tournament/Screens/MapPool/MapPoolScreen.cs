@@ -16,6 +16,7 @@ using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay;
 using osu.Game.Tournament.Screens.Gameplay.Components;
+using osu.Game.TournamentIpc;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -30,7 +31,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
 
-        private Bindable<TournamentBeatmap?> beatmap { get; set; } = new Bindable<TournamentBeatmap?>();
+        private Bindable<TournamentBeatmap?> beatmap { get; } = new Bindable<TournamentBeatmap?>();
+        private Bindable<TourneyState> lazerState { get; } = new Bindable<TourneyState>();
 
         private TeamColour pickColour;
         private ChoiceType pickType;
@@ -200,9 +202,22 @@ namespace osu.Game.Tournament.Screens.MapPool
             {
                 beatmap.UnbindAll();
                 beatmap.BindTo(vce.NewValue ? lazerIpc.Beatmap : legacyIpc.Beatmap);
+
+                if (LadderInfo.CumulativeScore.Value)
+                {
+                    lazerState.UnbindAll();
+                    lazerState.BindTo(lazerIpc.State);
+                }
             }, true);
 
             beatmap.BindValueChanged(beatmapChanged, true);
+            lazerState.BindValueChanged(vce =>
+            {
+                if (vce.NewValue != TourneyState.Playing || !LadderInfo.AutoProgressScreens.Value) return;
+
+                scheduledScreenChange?.Cancel();
+                scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 150);
+            });
         }
 
         private Bindable<bool>? splitMapPoolByMods;
