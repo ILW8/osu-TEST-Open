@@ -189,8 +189,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
+            team1ScoreOverride.Current.UnbindBindings();
             team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
+            team2ScoreOverride.Current.UnbindBindings();
             team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
+            matchCompleteOverride.Current.UnbindBindings();
             matchCompleteOverride.Current.BindTo(match.NewValue.Completed);
 
             // for some reason this is required to make the revert to default button work correctly
