@@ -110,7 +110,7 @@ namespace osu.Desktop
             var hostOptions = new HostOptions
             {
                 IPCPort = !tournamentClient ? OsuGame.IPC_PORT : null,
-                FriendlyGameName = OsuGameBase.GAME_NAME,
+                FriendlyGameName = !tournamentClient ? OsuGameBase.GAME_NAME : $"{OsuGameBase.GAME_NAME} - Tournament Client",
             };
 
             using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))
