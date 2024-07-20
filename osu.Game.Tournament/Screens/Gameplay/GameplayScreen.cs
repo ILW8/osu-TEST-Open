@@ -133,6 +133,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             LabelText = "Team red score override",
                             RelativeSizeAxes = Axes.None,
                             Width = 200,
+                            ShowsDefaultIndicator = false,
                             Current = { Default = 0 }
                         },
                         team2ScoreOverride = new SettingsLongNumberBox
@@ -140,6 +141,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             LabelText = "Team blue score override",
                             RelativeSizeAxes = Axes.None,
                             Width = 200,
+                            ShowsDefaultIndicator = false,
                             Current = { Default = 0 }
                         },
                         matchCompleteOverride = new OsuCheckbox
@@ -189,13 +191,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
+            team1ScoreOverride.Current.UnbindBindings();
             team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
+            team2ScoreOverride.Current.UnbindBindings();
             team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
-            matchCompleteOverride.Current.BindTo(match.NewValue.Completed);
 
-            // for some reason this is required to make the revert to default button work correctly
-            team1ScoreOverride.Current.Default = 0;
-            team2ScoreOverride.Current.Default = 0;
+            if (match.OldValue != null)
+                matchCompleteOverride.Current.UnbindFrom(match.OldValue.Completed);
+            matchCompleteOverride.Current.BindTo(match.NewValue.Completed);
         }
 
         private ScheduledDelegate? scheduledScreenChange;
