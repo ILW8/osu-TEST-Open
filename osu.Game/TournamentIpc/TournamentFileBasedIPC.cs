@@ -162,9 +162,7 @@ namespace osu.Game.TournamentIpc
 
                 default:
                     // there is at least one user in results screen
-                    if (multiplayerClient?.Room?.Users.FirstOrDefault(u => u.State == MultiplayerUserState.Results) != null
-                        && multiplayerClient?.LocalUser?.State != MultiplayerUserState.Idle
-                        && TourneyState.Value != TournamentIpc.TourneyState.Lobby)
+                    if (TourneyState.Value != TournamentIpc.TourneyState.Lobby)
                     {
                         Logger.Log($"(room updated) tourney state changed to: {TournamentIpc.TourneyState.Ranking}");
                         TourneyState.Value = TournamentIpc.TourneyState.Ranking;

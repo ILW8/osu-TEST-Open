@@ -216,7 +216,13 @@ namespace osu.Game.Tournament.Screens.MapPool
                 if (vce.NewValue != TourneyState.Playing || !LadderInfo.AutoProgressScreens.Value) return;
 
                 scheduledScreenChange?.Cancel();
-                scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 150);
+                scheduledScreenChange = Scheduler.AddDelayed(() =>
+                {
+                    // scheduled screen change could be preempted by manual scene switch, then running when transitioning back from gameplay
+                    if (lazerState.Value != TourneyState.Playing) return;
+
+                    sceneManager?.SetScreen(typeof(GameplayScreen));
+                }, 150);
             });
         }
 

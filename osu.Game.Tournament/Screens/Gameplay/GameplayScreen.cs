@@ -310,7 +310,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             // if we've returned to idle and the last screen was ranking
                             // we should automatically proceed after a short delay
-                            advanceAfterRanking(500);
+                            advanceAfterRanking(50);
                         }
 
                         break;
