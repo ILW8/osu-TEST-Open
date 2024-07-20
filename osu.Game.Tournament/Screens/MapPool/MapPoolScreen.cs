@@ -340,7 +340,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             setNextMode();
 
-            if (LadderInfo.AutoProgressScreens.Value)
+            if (LadderInfo.AutoProgressScreens.Value && LadderInfo.CumulativeScore.Value == false)
             {
                 if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(i => i.Type == ChoiceType.Pick))
                 {
