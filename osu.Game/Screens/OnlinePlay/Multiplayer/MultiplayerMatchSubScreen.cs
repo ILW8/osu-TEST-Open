@@ -56,6 +56,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [CanBeNull]
         protected TournamentFileBasedIPC TournamentIpc { get; private set; }
 
+        [Resolved]
+        private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
+
         private AddItemButton addItemButton;
 
         public MultiplayerMatchSubScreen(Room room)
@@ -82,9 +85,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 TournamentIpc.TourneyState.Value = TourneyState.Lobby;
                 TournamentIpc.TourneyState.TriggerChange();
 
-                SelectedItem.BindValueChanged(vce =>
+                workingBeatmap.BindValueChanged(vce =>
                 {
-                    TournamentIpc.UpdateActiveBeatmap(vce.NewValue?.Beatmap.OnlineID ?? 0);
+                    if (SelectedItem.Value.Beatmap.OnlineID != vce.NewValue.Beatmap.BeatmapInfo.OnlineID)
+                        return;
+
+                    TournamentIpc.UpdateActiveBeatmap(SelectedItem.Value.Beatmap.OnlineID);
                 });
             }
 
@@ -369,6 +375,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             {
                 handleRoomLost();
                 return;
+            }
+
+            if (client.LocalUser?.State != null)
+            {
+                Logger.Log($"local user state: {client.LocalUser.State}");
             }
 
             updateCurrentItem();
