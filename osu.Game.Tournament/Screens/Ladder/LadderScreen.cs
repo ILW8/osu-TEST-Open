@@ -5,11 +5,14 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Lines;
+using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors;
@@ -27,6 +30,15 @@ namespace osu.Game.Tournament.Screens.Ladder
         protected LadderDragContainer ScrollContent = null!;
 
         protected Container Content = null!;
+
+        private SettingsLongNumberBox team1ScoreOverride = null!;
+        private SettingsLongNumberBox team2ScoreOverride = null!;
+        private OsuCheckbox matchCompleteOverride = null!;
+
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
+
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         [BackgroundDependencyLoader]
         private void load()
@@ -69,6 +81,33 @@ namespace osu.Game.Tournament.Screens.Ladder
                 }
             };
 
+            AddInternal(new ControlPanel
+            {
+                Children = new Drawable[]
+                {
+                    team1ScoreOverride = new SettingsLongNumberBox
+                    {
+                        LabelText = "Team red score override",
+                        RelativeSizeAxes = Axes.None,
+                        Width = 200,
+                        ShowsDefaultIndicator = false,
+                        Current = { Default = 0 }
+                    },
+                    team2ScoreOverride = new SettingsLongNumberBox
+                    {
+                        LabelText = "Team blue score override",
+                        RelativeSizeAxes = Axes.None,
+                        Width = 200,
+                        ShowsDefaultIndicator = false,
+                        Current = { Default = 0 }
+                    },
+                    matchCompleteOverride = new OsuCheckbox
+                    {
+                        LabelText = "match complete?",
+                    },
+                }
+            });
+
             void addMatch(TournamentMatch match) =>
                 MatchesContainer.Add(new DrawableTournamentMatch(match, this is LadderEditorScreen)
                 {
@@ -104,6 +143,27 @@ namespace osu.Game.Tournament.Screens.Ladder
 
                 layout.Invalidate();
             };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            currentMatch.BindTo(ladder.CurrentMatch);
+            currentMatch.BindValueChanged(vce =>
+            {
+                team1ScoreOverride.Current.UnbindBindings();
+                team2ScoreOverride.Current.UnbindBindings();
+                if (vce.OldValue != null)
+                    matchCompleteOverride.Current.UnbindFrom(vce.OldValue.Completed);
+
+                if (vce.NewValue != null)
+                {
+                    team1ScoreOverride.Current.BindTo(vce.NewValue.Team1Score);
+                    team2ScoreOverride.Current.BindTo(vce.NewValue.Team2Score);
+                    matchCompleteOverride.Current.BindTo(vce.NewValue.Completed);
+                }
+            }, true);
         }
 
         private readonly Cached layout = new Cached();
