@@ -21,8 +21,8 @@ namespace osu.Game.Screens.Play.HUD
     /// </summary>
     public partial class ComboBreakLayer : CompositeDrawable
     {
-        private const float max_alpha = 0.4f;
-        private const int fade_time = 400;
+        private const float max_alpha = 0.65f;
+        private const int fade_time = 500;
         private const float gradient_size = 0.3f;
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace osu.Game.Screens.Play.HUD
             if (newCombo < oldCombo - 1 && oldCombo >= minimum_combo_threshold && newCombo < minimum_combo_threshold)
             {
                 // flash here
-                boxes.FadeInFromZero(50).Then().FadeOut(500, Easing.Out);
+                boxes.FadeOut().Then().FadeTo(max_alpha, 50).Then().FadeOut(fade_time, Easing.Out);
                 Logger.Log(@$"old: {oldCombo}, new: {newCombo} flashing combo break boxes!");
             }
 
