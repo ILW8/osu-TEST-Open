@@ -73,10 +73,10 @@ namespace osu.Game.TournamentIpc
                     var teamScoreBindable = new BindableLong();
                     TeamScores.Add(team, teamScoreBindable);
 
-                    teamScoreBindable.BindValueChanged(vce =>
-                    {
-                        Logger.Log($"team {team} has new score: {vce.NewValue}");
-                    });
+                    // teamScoreBindable.BindValueChanged(vce =>
+                    // {
+                    //     Logger.Log($"team {team} has new score: {vce.NewValue}");
+                    // });
                 }
             }
 
