@@ -94,7 +94,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 RelativeSizeAxes = Axes.Both,
                 Child = stack = new OsuScreenStack
                 {
-                    Name = nameof(PlayerArea),
+                    Name = $"OsuScreenStack: {nameof(PlayerArea)}",
                 }
             };
 
