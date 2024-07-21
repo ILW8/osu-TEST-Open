@@ -48,7 +48,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                Blending = BlendingParameters.Additive,
+                Blending = BlendingParameters.Mixture,
                 Spacing = new Vector2(5, 0),
                 Font = OsuFont.Default.With(size: 20, weight: FontWeight.Bold),
             };
@@ -62,6 +62,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         /// </remarks>
         public virtual void PlayAnimation()
         {
+            if (Result != HitResult.Perfect && Result != HitResult.Great)
+            {
+                JudgementText.Font = OsuFont.Default.With(size: 32, weight: FontWeight.Bold);
+            }
+
             if (Result == HitResult.IgnoreMiss || Result == HitResult.LargeTickMiss)
             {
                 this.RotateTo(-45);
@@ -85,10 +90,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             }
             else
             {
-                this.FadeOutFromOne(800);
+                this.FadeOutFromOne(800, Easing.InQuint);
 
                 JudgementText
-                    .FadeInFromZero(300, Easing.OutQuint)
+                    .FadeInFromZero(100, Easing.OutQuint)
                     .ScaleTo(Vector2.One)
                     .ScaleTo(new Vector2(1.2f), 1800, Easing.OutQuint);
             }
