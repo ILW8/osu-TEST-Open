@@ -62,6 +62,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         /// </remarks>
         public virtual void PlayAnimation()
         {
+            if (Result != HitResult.Perfect && Result != HitResult.Great)
+            {
+                JudgementText.Font = OsuFont.Default.With(size: 32, weight: FontWeight.Bold);
+            }
+
             if (Result == HitResult.IgnoreMiss || Result == HitResult.LargeTickMiss)
             {
                 this.RotateTo(-45);
