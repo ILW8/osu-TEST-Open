@@ -48,7 +48,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                Blending = BlendingParameters.Additive,
+                Blending = BlendingParameters.Mixture,
                 Spacing = new Vector2(5, 0),
                 Font = OsuFont.Default.With(size: 20, weight: FontWeight.Bold),
             };
