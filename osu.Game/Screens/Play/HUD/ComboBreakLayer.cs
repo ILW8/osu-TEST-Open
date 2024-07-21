@@ -28,7 +28,7 @@ namespace osu.Game.Screens.Play.HUD
         /// <summary>
         /// The minimum combo that needs to be reached before combo break overlay flashes red on combo break.
         /// </summary>
-        private const int minimum_combo_threshold = 8;
+        private const int minimum_combo_threshold = 16;
 
         private readonly Container boxes;
 
@@ -75,7 +75,8 @@ namespace osu.Game.Screens.Play.HUD
 
         private void onComboUpdated(int newCombo)
         {
-            if (newCombo < oldCombo && oldCombo >= minimum_combo_threshold && newCombo < minimum_combo_threshold)
+            // oldCombo - 1 because sometimes combo gets rewound?
+            if (newCombo < oldCombo - 1 && oldCombo >= minimum_combo_threshold && newCombo < minimum_combo_threshold)
             {
                 // flash here
                 boxes.FadeInFromZero(50).Then().FadeOut(500, Easing.Out);
