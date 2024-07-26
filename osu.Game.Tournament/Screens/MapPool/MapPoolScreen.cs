@@ -234,6 +234,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updatePoolDisplay());
+
+            setMode(TeamColour.Red, ChoiceType.Ban);
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
@@ -284,26 +286,51 @@ namespace osu.Game.Tournament.Screens.MapPool
         // Players will pick two beatmaps respecting the following order: BAAB
         // Both players will ban two maps, as such: ABBA
         // The last beatmap remaining in the pool will be used as the 5th pick for the match.
+        //
+        // LGA bans (week 2)
+        // The first player (A) will ban one beatmap, followed by the second player (B) also banning a beatmap: AB (1)
+        // Players will pick two beatmaps respecting the following order: BAAB (2)
+        // Both players will ban two beatmaps, as such: ABBA (3)
+        // Both players will pick one beatmap: AB (4)
+        // Both players will ban one beatmap: BA (5)
+        // The last beatmap remaining in the pool will be used as the 7th pick for the match. (6)
+        // Exceptionally, for the Losers' Bracket Finals and Grand Finals, steps 5 and 6 will not be applied, and the last pick will be an osu! original beatmap, to be released at match time.
+        //
+        // Ban  AB
+        // pick BAAB
+        // ban  ABBA
+        // pick AB
+        // ban  BA
+        //
+        // boils down to ABBAAB(BA) then ABBAABBA
         private void setNextMode()
         {
-            const int bans_phase1 = 2;
-            const int picks_phase1 = 4;
+            bool[] shouldBanAtCount =
+            {
+                true, true,
+                false, false, false, false,
+                true, true, true, true,
+                false, false,
+                true, true
+            };
+
+            TeamColour[] teamColourOrder =
+            {
+                TeamColour.Red, TeamColour.Blue,
+                TeamColour.Blue, TeamColour.Red, TeamColour.Red, TeamColour.Blue,
+                TeamColour.Red, TeamColour.Blue, TeamColour.Blue, TeamColour.Red,
+                TeamColour.Red, TeamColour.Blue,
+                TeamColour.Blue, TeamColour.Red
+            };
 
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
-
-            bool shouldBan = CurrentMatch.Value.PicksBans.Count is < bans_phase1 or >= bans_phase1 + picks_phase1;
-
-            // look: it started off as an ok ternary, but then it got out of hand...
-            TeamColour nextColour = (CurrentMatch.Value.PicksBans.Count % 2 == 1 && (shouldBan || pickType != ChoiceType.Ban)) || (shouldBan && pickType == ChoiceType.Pick)
-                                        ? getOppositeTeamColour(lastPickColour)
-                                        : lastPickColour;
+            int pickedAndBannedCount = CurrentMatch.Value.PicksBans.Count;
+            bool shouldBan = pickedAndBannedCount < shouldBanAtCount.Length && shouldBanAtCount[pickedAndBannedCount];
+            TeamColour nextColour = pickedAndBannedCount < teamColourOrder.Length ? teamColourOrder[pickedAndBannedCount] : TeamColour.Red;
 
             setMode(nextColour, shouldBan ? ChoiceType.Ban : ChoiceType.Pick);
-
-            TeamColour getOppositeTeamColour(TeamColour colour) => colour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
