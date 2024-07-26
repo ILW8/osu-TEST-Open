@@ -22,7 +22,7 @@ namespace osu.Game.Screens.Play.HUD
     public partial class ComboBreakLayer : CompositeDrawable
     {
         private const float max_alpha = 0.65f;
-        private const int fade_time = 500;
+        private const int fade_time = 750;
         private const float gradient_size = 0.3f;
 
         /// <summary>
