@@ -65,6 +65,49 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
+        public void TestLazerGrandArenaWeek2PickBan()
+        {
+            AddStep("load 15 maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 15; i++)
+                    addBeatmap();
+            });
+
+            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMods.Value = false);
+
+            // AddStep("start bans from blue team", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Ban").TriggerClick());
+
+            int pickBanIndex = 0;
+
+            // ban AB
+            AddRepeatStep("first ban phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            checkTotalPickBans(2);
+            checkLastPick(ChoiceType.Ban, TeamColour.Blue);
+
+            // pick BAAB
+            AddRepeatStep("first pick phase", () => clickBeatmapPanel(pickBanIndex++), 4);
+            checkTotalPickBans(6);
+            checkLastPick(ChoiceType.Pick, TeamColour.Blue);
+
+            // ban ABBA
+            AddRepeatStep("second ban phase", () => clickBeatmapPanel(pickBanIndex++), 4);
+            checkTotalPickBans(10);
+            checkLastPick(ChoiceType.Ban, TeamColour.Red);
+
+            // pick AB
+            AddRepeatStep("second pick phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            checkTotalPickBans(12);
+            checkLastPick(ChoiceType.Pick, TeamColour.Blue);
+
+            // ban BA
+            AddRepeatStep("last pick phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            checkTotalPickBans(14);
+            checkLastPick(ChoiceType.Ban, TeamColour.Red);
+        }
+
+        [Test]
         public void TestFewMaps()
         {
             AddStep("load few maps", () =>
