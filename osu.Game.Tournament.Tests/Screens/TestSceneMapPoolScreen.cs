@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
@@ -62,6 +63,91 @@ namespace osu.Game.Tournament.Tests.Screens
             });
 
             AddStep("reset state", resetState);
+        }
+
+        [Test]
+        public void TestLazerGrandArenaWeek2PickBan()
+        {
+            AddStep("load 15 maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 15; i++)
+                    addBeatmap();
+            });
+
+            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMods.Value = false);
+
+            int pickBanIndex = 0;
+
+            // ban AB
+            AddRepeatStep("first ban phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            // checkTotalPickBans(2);
+            // checkLastPick(ChoiceType.Ban, TeamColour.Blue);
+
+            // pick BAAB
+            AddRepeatStep("first pick phase", () => clickBeatmapPanel(pickBanIndex++), 4);
+            // checkTotalPickBans(6);
+            // checkLastPick(ChoiceType.Pick, TeamColour.Blue);
+
+            AddAssert("pick order has 4 maps", () => screen.ChildrenOfType<FillFlowContainer<TournamentBeatmapPanel>>().Last().Count == 4);
+
+            // ban ABBA
+            AddRepeatStep("second ban phase", () => clickBeatmapPanel(pickBanIndex++), 4);
+            // checkTotalPickBans(10);
+            // checkLastPick(ChoiceType.Ban, TeamColour.Red);
+
+            // pick AB
+            AddRepeatStep("second pick phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            // checkTotalPickBans(12);
+            // checkLastPick(ChoiceType.Pick, TeamColour.Blue);
+
+            AddAssert("pick order has 6 maps", () => screen.ChildrenOfType<FillFlowContainer<TournamentBeatmapPanel>>().Last().Count == 6);
+
+            // ban BA
+            AddRepeatStep("last pick phase", () => clickBeatmapPanel(pickBanIndex++), 2);
+            // checkTotalPickBans(14);
+            // checkLastPick(ChoiceType.Ban, TeamColour.Red);
+
+            AddAssert("picks and bans order conform to LGA week 2",
+                () =>
+                {
+                    var expected = new List<(ChoiceType Type, TeamColour Colour)>
+                    {
+                        (ChoiceType.Ban, TeamColour.Red),
+                        (ChoiceType.Ban, TeamColour.Blue),
+
+                        (ChoiceType.Pick, TeamColour.Blue),
+                        (ChoiceType.Pick, TeamColour.Red),
+                        (ChoiceType.Pick, TeamColour.Red),
+                        (ChoiceType.Pick, TeamColour.Blue),
+
+                        (ChoiceType.Ban, TeamColour.Red),
+                        (ChoiceType.Ban, TeamColour.Blue),
+                        (ChoiceType.Ban, TeamColour.Blue),
+                        (ChoiceType.Ban, TeamColour.Red),
+
+                        (ChoiceType.Pick, TeamColour.Red),
+                        (ChoiceType.Pick, TeamColour.Blue),
+
+                        (ChoiceType.Ban, TeamColour.Blue),
+                        (ChoiceType.Ban, TeamColour.Red),
+                    };
+
+                    var picksBans = Ladder.CurrentMatch.Value!.PicksBans;
+                    if (picksBans.Count != expected.Count)
+                        return false;
+
+                    for (int i = 0; i < expected.Count; i++)
+                    {
+                        if (picksBans[i].Type != expected[i].Type || picksBans[i].Team != expected[i].Colour)
+                            return false;
+                    }
+
+                    return true;
+                });
+
+            AddAssert("pick order has 7 maps", () => screen.ChildrenOfType<FillFlowContainer<TournamentBeatmapPanel>>().Last().Count == 7);
         }
 
         [Test]
