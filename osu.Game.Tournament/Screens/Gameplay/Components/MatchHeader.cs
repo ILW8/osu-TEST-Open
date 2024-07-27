@@ -33,6 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
         private MatchCumulativeScoreDiffCounter cumulativeScoreDiffCounter = null!;
+        private FillFlowContainer cumulativeScoreDiffCounterContainer = null!;
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<long?> team1Score = new Bindable<long?>();
         private readonly Bindable<long?> team2Score = new Bindable<long?>();
@@ -111,7 +112,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Origin = Anchor.TopCentre,
                             Scale = new Vector2(0.4f)
                         },
-                        new FillFlowContainer
+                        cumulativeScoreDiffCounterContainer = new FillFlowContainer
                         {
                             Direction = FillDirection.Horizontal,
                             Anchor = Anchor.TopCentre,
@@ -207,7 +208,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             teamDisplay1.ShowScore = showScores;
             teamDisplay2.ShowScore = showScores;
-            cumulativeScoreDiffCounter.FadeTo(showScores ? 1 : 0, 200);
+            cumulativeScoreDiffCounterContainer.FadeTo(showScores ? 1 : 0, 200);
 
             logo.Alpha = showLogo ? 1 : 0;
         }
