@@ -112,6 +112,49 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Scale = new Vector2(0.4f)
+                        },
+                        cumulativeScoreDiffCounterContainer = new FillFlowContainer
+                        {
+                            Direction = FillDirection.Horizontal,
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Spacing = new Vector2(16),
+                            Children = new Drawable[]
+                            {
+                                leftWinningTriangle = new SpriteIcon
+                                {
+                                    Icon = FontAwesome.Solid.ChevronLeft,
+                                    Width = 12,
+                                    Height = 12,
+                                    Margin = new MarginPadding
+                                    {
+                                        Vertical = 7
+                                    },
+                                    Alpha = 0,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    AlwaysPresent = true
+                                },
+                                cumulativeScoreDiffCounter = new MatchCumulativeScoreDiffCounter
+                                {
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                },
+                                rightWinningTriangle = new SpriteIcon
+                                {
+                                    Icon = FontAwesome.Solid.ChevronRight,
+                                    Width = 12,
+                                    Height = 12,
+                                    Margin = new MarginPadding
+                                    {
+                                        Vertical = 7
+                                    },
+                                    Alpha = 0,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    AlwaysPresent = true
+                                },
+                            }
                         }
                     }
                 },
@@ -125,50 +168,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.TopRight,
                 },
-                cumulativeScoreDiffCounterContainer = new FillFlowContainer
-                {
-                    Direction = FillDirection.Horizontal,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Spacing = new Vector2(16),
-                    Y = 72,
-                    Children = new Drawable[]
-                    {
-                        leftWinningTriangle = new SpriteIcon
-                        {
-                            Icon = FontAwesome.Solid.ChevronLeft,
-                            Width = 12,
-                            Height = 12,
-                            Margin = new MarginPadding
-                            {
-                                Vertical = 7
-                            },
-                            Alpha = 0,
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                            AlwaysPresent = true
-                        },
-                        cumulativeScoreDiffCounter = new MatchCumulativeScoreDiffCounter
-                        {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                        },
-                        rightWinningTriangle = new SpriteIcon
-                        {
-                            Icon = FontAwesome.Solid.ChevronRight,
-                            Width = 12,
-                            Height = 12,
-                            Margin = new MarginPadding
-                            {
-                                Vertical = 7
-                            },
-                            Alpha = 0,
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                            AlwaysPresent = true
-                        },
-                    }
-                }
             };
         }
 
