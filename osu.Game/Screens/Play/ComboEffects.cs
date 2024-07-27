@@ -5,11 +5,17 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Game.Audio;
 using osu.Game.Configuration;
+using osu.Game.Graphics;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Skinning;
+using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play
 {
@@ -23,16 +29,51 @@ namespace osu.Game.Screens.Play
 
         private double? firstBreakTime;
 
+        private readonly Container boxes;
+        private const float max_alpha = 0.65f;
+        private const int fade_time = 750;
+        private const float gradient_size = 0.3f;
+
         public ComboEffects(ScoreProcessor processor)
         {
             this.processor = processor;
+
+            RelativeSizeAxes = Axes.Both;
+            InternalChildren = new Drawable[]
+            {
+                boxes = new Container
+                {
+                    Alpha = 0,
+                    Blending = BlendingParameters.Additive,
+                    RelativeSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = ColourInfo.GradientHorizontal(Color4.White, Color4.White.Opacity(0)),
+                            Width = gradient_size,
+                        },
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Width = gradient_size,
+                            Colour = ColourInfo.GradientHorizontal(Color4.White.Opacity(0), Color4.White),
+                            Anchor = Anchor.TopRight,
+                            Origin = Anchor.TopRight,
+                        },
+                    }
+                },
+            };
         }
 
         [BackgroundDependencyLoader]
-        private void load(OsuConfigManager config)
+        private void load(OsuConfigManager config, OsuColour color)
         {
-            InternalChild = comboBreakSample = new SkinnableSound(new SampleInfo("Gameplay/combobreak"));
+            AddInternal(comboBreakSample = new SkinnableSound(new SampleInfo("Gameplay/combobreak")));
             alwaysPlayFirst = config.GetBindable<bool>(OsuSetting.AlwaysPlayFirstComboBreak);
+
+            boxes.Colour = color.Red;
         }
 
         protected override void LoadComplete()
@@ -66,6 +107,7 @@ namespace osu.Game.Screens.Play
                     return;
 
                 comboBreakSample?.Play();
+                boxes.FadeOut().Then().FadeTo(max_alpha, 50).Then().FadeOut(fade_time, Easing.Out);
             }
         }
     }
