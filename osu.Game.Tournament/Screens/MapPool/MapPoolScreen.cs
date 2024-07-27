@@ -407,6 +407,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             base.CurrentMatchChanged(match);
+            pickedMapsFlow.Clear();
+            currentMapIndicator.FadeOut();
             updatePoolDisplay();
             updatePickedDisplay();
         }
