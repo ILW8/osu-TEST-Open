@@ -318,7 +318,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             {
                 TeamColour.Red, TeamColour.Blue,
                 TeamColour.Blue, TeamColour.Red, TeamColour.Red, TeamColour.Blue,
-                TeamColour.Red, TeamColour.Blue, TeamColour.Blue, TeamColour.Red,
+                TeamColour.Blue, TeamColour.Red, TeamColour.Red, TeamColour.Blue,
                 TeamColour.Red, TeamColour.Blue,
                 TeamColour.Blue, TeamColour.Red
             };
