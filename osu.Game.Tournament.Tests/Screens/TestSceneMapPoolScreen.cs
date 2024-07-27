@@ -36,8 +36,8 @@ namespace osu.Game.Tournament.Tests.Screens
             Ladder.SplitMapPoolByMods.Value = true;
 
             Ladder.CurrentMatch.Value = new TournamentMatch();
+            Ladder.Matches.First().PicksBans.Clear();
             Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            Ladder.CurrentMatch.Value.PicksBans.Clear();
         }
 
         [SetUp]
@@ -63,6 +63,55 @@ namespace osu.Game.Tournament.Tests.Screens
             });
 
             AddStep("reset state", resetState);
+        }
+
+        [Test]
+        public void TestMapIndicatorVisibility()
+        {
+            AddStep("load 15 maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 15; i++)
+                    addBeatmap();
+            });
+
+            AddStep("use lazer ipc", () => Ladder.UseLazerIpc.Value = true);
+
+            AddStep("reset state", resetState);
+
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
+            AddStep("pick first map", () => clickBeatmapPanel(0));
+            AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick first map", () => clickBeatmapPanel(1));
+
+            AddStep("update current beatmap", () =>
+            {
+                var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(
+                    b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(1).Beatmap!.OnlineID == b.Beatmap!.OnlineID
+                ).Beatmap;
+                LazerIPCInfo.Beatmap.Value = newTournamentBeatmap;
+            });
+
+            AddStep("reset state", resetState);
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
+            AddStep("pick first map", () => clickBeatmapPanel(0));
+            AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick first map", () => clickBeatmapPanel(1));
+            AddStep("update current beatmap", () =>
+            {
+                var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(
+                    b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(0).Beatmap!.OnlineID == b.Beatmap!.OnlineID
+                ).Beatmap;
+                LazerIPCInfo.Beatmap.Value = newTournamentBeatmap;
+            });
+            AddStep("update current beatmap", () =>
+            {
+                var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(
+                    b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(1).Beatmap!.OnlineID == b.Beatmap!.OnlineID
+                ).Beatmap;
+                LazerIPCInfo.Beatmap.Value = newTournamentBeatmap;
+            });
         }
 
         [Test]

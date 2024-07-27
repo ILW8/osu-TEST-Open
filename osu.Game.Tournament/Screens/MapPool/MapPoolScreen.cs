@@ -200,12 +200,12 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             LadderInfo.UseLazerIpc.BindValueChanged(vce =>
             {
-                beatmap.UnbindAll();
+                beatmap.UnbindBindings();
                 beatmap.BindTo(vce.NewValue ? lazerIpc.Beatmap : legacyIpc.Beatmap);
 
                 if (LadderInfo.CumulativeScore.Value)
                 {
-                    lazerState.UnbindAll();
+                    lazerState.UnbindBindings();
                     lazerState.BindTo(lazerIpc.State);
                 }
             }, true);
@@ -407,6 +407,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             base.CurrentMatchChanged(match);
+            pickedMapsFlow.Clear();
+            currentMapIndicator.FadeOut();
             updatePoolDisplay();
             updatePickedDisplay();
         }
