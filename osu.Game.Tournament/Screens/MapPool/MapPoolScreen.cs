@@ -200,12 +200,12 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             LadderInfo.UseLazerIpc.BindValueChanged(vce =>
             {
-                beatmap.UnbindAll();
+                beatmap.UnbindBindings();
                 beatmap.BindTo(vce.NewValue ? lazerIpc.Beatmap : legacyIpc.Beatmap);
 
                 if (LadderInfo.CumulativeScore.Value)
                 {
-                    lazerState.UnbindAll();
+                    lazerState.UnbindBindings();
                     lazerState.BindTo(lazerIpc.State);
                 }
             }, true);
