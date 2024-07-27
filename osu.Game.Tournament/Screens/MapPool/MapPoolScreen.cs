@@ -297,10 +297,10 @@ namespace osu.Game.Tournament.Screens.MapPool
         // Exceptionally, for the Losers' Bracket Finals and Grand Finals, steps 5 and 6 will not be applied, and the last pick will be an osu! original beatmap, to be released at match time.
         //
         // Ban  AB
-        // pick BAAB
-        // ban  ABBA
-        // pick AB
-        // ban  BA
+        // Pick BAAB
+        // Ban  BAAB
+        // Pick AB
+        // Ban  BA
         //
         // boils down to ABBAAB(BA) then ABBAABBA
         private void setNextMode()

@@ -171,10 +171,10 @@ namespace osu.Game.Tournament.Tests.Screens
                         (ChoiceType.Pick, TeamColour.Red),
                         (ChoiceType.Pick, TeamColour.Blue),
 
-                        (ChoiceType.Ban, TeamColour.Red),
-                        (ChoiceType.Ban, TeamColour.Blue),
                         (ChoiceType.Ban, TeamColour.Blue),
                         (ChoiceType.Ban, TeamColour.Red),
+                        (ChoiceType.Ban, TeamColour.Red),
+                        (ChoiceType.Ban, TeamColour.Blue),
 
                         (ChoiceType.Pick, TeamColour.Red),
                         (ChoiceType.Pick, TeamColour.Blue),
