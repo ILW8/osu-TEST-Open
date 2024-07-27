@@ -163,8 +163,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                 {
                     case ArmedState.Hit:
                         // Fade out time is at a maximum of 800. Must match `DrawableHitCircle`'s arbitrary lifetime spec.
-                        const double fade_out_time = 800;
-                        const double flash_in_duration = 150;
+                        const double fade_out_time = 500;
+                        const double flash_in_duration = 100;
                         const double resize_duration = 400;
 
                         const float shrink_size = 0.8f;
@@ -214,7 +214,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                         if (configHitLighting.Value)
                         {
                             flash.HitLighting = true;
-                            flash.FadeTo(1, flash_in_duration, Easing.OutQuint);
+                            flash.FadeTo(0.6f, flash_in_duration, Easing.OutQuint);
 
                             this.FadeOut(fade_out_time, Easing.OutQuad);
                         }
