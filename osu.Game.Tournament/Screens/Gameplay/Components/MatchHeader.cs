@@ -37,6 +37,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<long?> team1Score = new Bindable<long?>();
         private readonly Bindable<long?> team2Score = new Bindable<long?>();
+        private Bindable<bool> useCumulativeScore = null!;
         private SpriteIcon leftWinningTriangle = null!;
         private SpriteIcon rightWinningTriangle = null!;
 
@@ -77,8 +78,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
         {
+            useCumulativeScore = ladder.CumulativeScore.GetBoundCopy();
             currentMatch.BindTo(ladder.CurrentMatch);
-            currentMatch.BindValueChanged(matchChanged, true);
 
             team1Score.BindValueChanged(_ => updateScoreDelta());
             team2Score.BindValueChanged(_ => updateScoreDelta());
@@ -202,14 +203,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            updateDisplay();
+            currentMatch.BindValueChanged(matchChanged, true);
+            useCumulativeScore.BindValueChanged(_ => updateDisplay(), true);
         }
 
         private void updateDisplay()
         {
             teamDisplay1.ShowScore = showScores;
             teamDisplay2.ShowScore = showScores;
-            cumulativeScoreDiffCounterContainer.FadeTo(showScores ? 1 : 0, 200);
+            cumulativeScoreDiffCounterContainer.FadeTo(showScores && useCumulativeScore.Value ? 1 : 0, 200);
 
             logo.Alpha = showLogo ? 1 : 0;
         }
