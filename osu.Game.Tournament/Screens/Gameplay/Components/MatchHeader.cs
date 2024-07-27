@@ -1,9 +1,15 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -12,9 +18,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class MatchHeader : Container
     {
+        private const int cumulative_delta_height = 24;
+
+        public partial class MatchCumulativeScoreDiffCounter : CommaSeparatedScoreCounter
+        {
+            protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
+            {
+                s.Spacing = new Vector2(-2);
+                s.Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: cumulative_delta_height, fixedWidth: true);
+            });
+        }
+
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
+        private MatchCumulativeScoreDiffCounter cumulativeScoreDiffCounter = null!;
+        private FillFlowContainer cumulativeScoreDiffCounterContainer = null!;
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly Bindable<long?> team1Score = new Bindable<long?>();
+        private readonly Bindable<long?> team2Score = new Bindable<long?>();
+        private Bindable<bool> useCumulativeScore = null!;
+        private SpriteIcon leftWinningTriangle = null!;
+        private SpriteIcon rightWinningTriangle = null!;
 
         private bool showScores = true;
 
@@ -51,8 +76,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(LadderInfo ladder)
         {
+            useCumulativeScore = ladder.CumulativeScore.GetBoundCopy();
+            currentMatch.BindTo(ladder.CurrentMatch);
+
+            team1Score.BindValueChanged(_ => updateScoreDelta());
+            team2Score.BindValueChanged(_ => updateScoreDelta());
+
             RelativeSizeAxes = Axes.X;
             Height = 95;
             Children = new Drawable[]
@@ -81,7 +112,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Scale = new Vector2(0.4f)
-                        },
+                        }
                     }
                 },
                 teamDisplay1 = new TeamScoreDisplay(TeamColour.Red)
@@ -94,19 +125,93 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.TopRight,
                 },
+                cumulativeScoreDiffCounterContainer = new FillFlowContainer
+                {
+                    Direction = FillDirection.Horizontal,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Spacing = new Vector2(16),
+                    Y = 72,
+                    Children = new Drawable[]
+                    {
+                        leftWinningTriangle = new SpriteIcon
+                        {
+                            Icon = FontAwesome.Solid.ChevronLeft,
+                            Width = 12,
+                            Height = 12,
+                            Margin = new MarginPadding
+                            {
+                                Vertical = 7
+                            },
+                            Alpha = 0,
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            AlwaysPresent = true
+                        },
+                        cumulativeScoreDiffCounter = new MatchCumulativeScoreDiffCounter
+                        {
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                        },
+                        rightWinningTriangle = new SpriteIcon
+                        {
+                            Icon = FontAwesome.Solid.ChevronRight,
+                            Width = 12,
+                            Height = 12,
+                            Margin = new MarginPadding
+                            {
+                                Vertical = 7
+                            },
+                            Alpha = 0,
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            AlwaysPresent = true
+                        },
+                    }
+                }
             };
+        }
+
+        private void updateScoreDelta()
+        {
+            long scoreDelta = team1Score.Value - team2Score.Value ?? 0;
+
+            cumulativeScoreDiffCounter.Current.Value = Math.Abs(scoreDelta);
+
+            leftWinningTriangle.FadeTo(scoreDelta > 0 ? 1 : 0, 200);
+            rightWinningTriangle.FadeTo(scoreDelta < 0 ? 1 : 0, 200);
+        }
+
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            team1Score.UnbindBindings();
+            team2Score.UnbindBindings();
+
+            Scheduler.AddOnce(updateMatch);
+        }
+
+        private void updateMatch()
+        {
+            var match = currentMatch.Value;
+
+            if (match == null) return;
+
+            team1Score.BindTo(match.Team1Score);
+            team2Score.BindTo(match.Team2Score);
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            updateDisplay();
+            currentMatch.BindValueChanged(matchChanged, true);
+            useCumulativeScore.BindValueChanged(_ => updateDisplay(), true);
         }
 
         private void updateDisplay()
         {
             teamDisplay1.ShowScore = showScores;
             teamDisplay2.ShowScore = showScores;
+            cumulativeScoreDiffCounterContainer.FadeTo(showScores && useCumulativeScore.Value ? 1 : 0, 200);
 
             logo.Alpha = showLogo ? 1 : 0;
         }
