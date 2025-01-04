@@ -1,8 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
+using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -44,12 +42,12 @@ using JsonException = System.Text.Json.JsonException;
 namespace osu.Game.Online.Chat
 {
     /// <summary>
-    /// Display a chat channel in an insolated region.
+    /// Display a chat channel in an isolated region.
     /// </summary>
     public partial class StandAloneChatDisplay : CompositeDrawable
     {
         [Cached]
-        public readonly Bindable<Channel> Channel = new Bindable<Channel>();
+        public readonly Bindable<Channel?> Channel = new Bindable<Channel?>();
 
         [Resolved]
         private IGameStateBroadcastServer broadcastServer { get; set; } = null!;
@@ -57,10 +55,10 @@ namespace osu.Game.Online.Chat
         private readonly MultiplayerChatBroadcaster chatBroadcaster;
 
         [Resolved]
-        protected MultiplayerClient Client { get; private set; }
+        protected MultiplayerClient Client { get; private set; } = null!;
 
         [Resolved]
-        protected RulesetStore RulesetStore { get; private set; }
+        protected RulesetStore RulesetStore { get; private set; } = null!;
 
         private BeatmapModelDownloader beatmapsDownloader = null!;
 
@@ -68,7 +66,7 @@ namespace osu.Game.Online.Chat
 
         private BeatmapDownloadTracker beatmapDownloadTracker = null!;
 
-        private IDisposable selectionOperation;
+        private IDisposable? selectionOperation;
 
         private readonly Queue<Tuple<string, Channel>> messageQueue = new Queue<Tuple<string, Channel>>();
 
@@ -78,13 +76,13 @@ namespace osu.Game.Online.Chat
         private OngoingOperationTracker operationTracker { get; set; } = null!;
 
         [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
-        private BindableList<PlaylistItem> roomPlaylist { get; set; }
+        private BindableList<PlaylistItem>? roomPlaylist { get; set; }
 
-        protected readonly ChatTextBox TextBox;
+        protected readonly ChatTextBox? TextBox;
 
-        private ChannelManager channelManager;
+        private ChannelManager? channelManager;
 
-        private StandAloneDrawableChannel drawableChannel;
+        private StandAloneDrawableChannel? drawableChannel;
 
         private readonly bool postingTextBox;
 
@@ -94,7 +92,7 @@ namespace osu.Game.Online.Chat
         private const float text_box_height = 30;
 
         [Resolved]
-        private ChatTimerHandler chatTimerHandler { get; set; }
+        private ChatTimerHandler chatTimerHandler { get; set; } = null!;
 
         /// <summary>
         /// Construct a new instance.
@@ -196,8 +194,7 @@ namespace osu.Game.Online.Chat
             }
         }
 
-        [CanBeNull]
-        public static Mod ParseMod(Ruleset ruleset, string acronym, IEnumerable<object> parameters)
+        public static Mod? ParseMod(Ruleset ruleset, string acronym, IEnumerable<object> parameters)
         {
             var modInstance = ruleset.CreateModFromAcronym(acronym);
             if (modInstance == null)
@@ -214,7 +211,7 @@ namespace osu.Game.Online.Chat
             // foreach (object modParameter in parameters)
             for (int i = 0; i < parametersList.Count; i++)
             {
-                object paramValue = sourceProperties[i].Item2.GetValue(modInstance);
+                object? paramValue = sourceProperties[i].Item2.GetValue(modInstance);
                 var paramAttr = sourceProperties[i].Item1;
 
                 switch (paramValue)
@@ -309,6 +306,8 @@ namespace osu.Game.Online.Chat
 
         private void postMessage(TextBox sender, bool newText)
         {
+            Debug.Assert(TextBox != null);
+
             string text = TextBox.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(text))
@@ -336,7 +335,7 @@ namespace osu.Game.Online.Chat
                             case @"map":
                                 beatmapLookupCache.GetBeatmapAsync(numericParam).ContinueWith(task => Schedule(() =>
                                 {
-                                    APIBeatmap beatmapInfo = task.GetResultSafely();
+                                    APIBeatmap? beatmapInfo = task.GetResultSafely();
 
                                     if (beatmapInfo?.BeatmapSet == null)
                                     {
@@ -609,7 +608,7 @@ namespace osu.Game.Online.Chat
             });
         }
 
-        protected virtual ChatLine CreateMessage(Message message)
+        protected virtual ChatLine? CreateMessage(Message message)
         {
             chatBroadcaster.AddNewMessage(message);
             return new StandAloneMessage(message);
@@ -646,7 +645,7 @@ namespace osu.Game.Online.Chat
             }
         }
 
-        private void channelChanged(ValueChangedEvent<Channel> e)
+        private void channelChanged(ValueChangedEvent<Channel?> e)
         {
             if (drawableChannel != null)
                 drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
@@ -670,6 +669,9 @@ namespace osu.Game.Online.Chat
 
         public partial class ChatTextBox : HistoryTextBox
         {
+            public Action? Focus;
+            public Action? FocusLost;
+
             protected override bool OnKeyDown(KeyDownEvent e)
             {
                 // Chat text boxes are generally used in places where they retain focus, but shouldn't block interaction with other
@@ -695,32 +697,36 @@ namespace osu.Game.Online.Chat
                 BackgroundFocused = new Color4(10, 10, 10, 255);
             }
 
+            protected override void OnFocus(FocusEvent e)
+            {
+                base.OnFocus(e);
+                Focus?.Invoke();
+            }
+
             protected override void OnFocusLost(FocusLostEvent e)
             {
                 base.OnFocusLost(e);
                 FocusLost?.Invoke();
             }
-
-            public Action FocusLost;
         }
 
         public partial class StandAloneDrawableChannel : DrawableChannel
         {
-            public Func<Message, ChatLine> CreateChatLineAction;
+            public Func<Message, ChatLine?>? CreateChatLineAction;
 
             public StandAloneDrawableChannel(Channel channel)
                 : base(channel)
             {
             }
 
-            protected override ChatLine CreateChatLine(Message m) => CreateChatLineAction(m);
+            protected override ChatLine? CreateChatLine(Message m) => CreateChatLineAction?.Invoke(m) ?? null;
 
             protected override DaySeparator CreateDaySeparator(DateTimeOffset time) => new StandAloneDaySeparator(time);
         }
 
         protected partial class StandAloneDaySeparator : DaySeparator
         {
-            protected override float TextSize => 14;
+            protected override float TextSize => 13;
             protected override float LineHeight => 1;
             protected override float Spacing => 5;
             protected override float DateAlign => 125;
@@ -740,9 +746,8 @@ namespace osu.Game.Online.Chat
 
         protected partial class StandAloneMessage : ChatLine
         {
-            protected override float FontSize => 15;
             protected override float Spacing => 5;
-            protected override float UsernameWidth => 75;
+            protected override float UsernameWidth => 90;
 
             public StandAloneMessage(Message message)
                 : base(message)
@@ -760,7 +765,7 @@ public static class YepExtension
             return t.Name;
 
         StringBuilder sb = new StringBuilder();
-        sb.Append(t.Name.Substring(0, t.Name.IndexOf('`')));
+        sb.Append(t.Name.AsSpan(0, t.Name.IndexOf('`')));
         sb.Append('<');
         bool appendComma = false;
 

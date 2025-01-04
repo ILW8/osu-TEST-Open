@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -20,9 +21,22 @@ namespace osu.Game.Online.Broadcasts
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
+        private Room room;
+
         public MultiplayerRoomStateBroadcaster(Room room)
         {
-            Message.RoomName.BindTo(room.Name);
+            this.room = room;
+            this.room.PropertyChanged += onRoomPropertyChanged;
+        }
+
+        private void onRoomPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(Room.Name):
+                    Message.RoomName.Value = room.Name;
+                    break;
+            }
         }
 
         private void broadcast()
@@ -52,6 +66,7 @@ namespace osu.Game.Online.Broadcasts
         protected override void Dispose(bool isDisposing)
         {
             multiplayerClient.RoomUpdated -= onRoomUpdated;
+            room.PropertyChanged -= onRoomPropertyChanged;
 
             base.Dispose(isDisposing);
         }

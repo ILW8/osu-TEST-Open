@@ -91,7 +91,7 @@ namespace osu.Game.Overlays.Mods
         {
             base.LoadComplete();
 
-            ScheduleAfterChildren(() => GetContainingInputManager().ChangeFocus(nameTextBox));
+            ScheduleAfterChildren(() => GetContainingFocusManager()!.ChangeFocus(nameTextBox));
 
             nameTextBox.Current.BindValueChanged(s =>
             {

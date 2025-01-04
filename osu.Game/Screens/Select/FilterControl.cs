@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -27,7 +28,6 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Select.Filter;
 using osuTK;
-using osuTK.Graphics;
 using osuTK.Input;
 
 namespace osu.Game.Screens.Select
@@ -49,14 +49,13 @@ namespace osu.Game.Screens.Select
         }
 
         private OsuTabControl<SortMode> sortTabs;
-
         private Bindable<SortMode> sortMode;
-
         private Bindable<GroupMode> groupMode;
-
         private FilterControlTextBox searchTextBox;
-
         private CollectionDropdown collectionDropdown;
+
+        [CanBeNull]
+        private FilterCriteria currentCriteria;
 
         public FilterCriteria CreateCriteria()
         {
@@ -97,8 +96,8 @@ namespace osu.Game.Screens.Select
             {
                 new Box
                 {
-                    Colour = Color4.Black,
-                    Alpha = 0.8f,
+                    Colour = OsuColour.Gray(0.05f),
+                    Alpha = 0.96f,
                     Width = 2,
                     RelativeSizeAxes = Axes.Both,
                 },
@@ -228,7 +227,8 @@ namespace osu.Game.Screens.Select
                 if (m.NewValue.SequenceEqual(m.OldValue))
                     return;
 
-                updateCriteria();
+                if (currentCriteria?.RulesetCriteria?.FilterMayChangeFromMods(m) == true)
+                    updateCriteria();
             });
 
             groupMode.BindValueChanged(_ => updateCriteria());
@@ -244,7 +244,7 @@ namespace osu.Game.Screens.Select
             searchTextBox.ReadOnly = true;
             searchTextBox.HoldFocus = false;
             if (searchTextBox.HasFocus)
-                GetContainingInputManager().ChangeFocus(searchTextBox);
+                GetContainingFocusManager()!.ChangeFocus(searchTextBox);
         }
 
         public void Activate()
@@ -263,7 +263,7 @@ namespace osu.Game.Screens.Select
         private readonly Bindable<double> minimumStars = new BindableDouble();
         private readonly Bindable<double> maximumStars = new BindableDouble();
 
-        private void updateCriteria() => FilterChanged?.Invoke(CreateCriteria());
+        private void updateCriteria() => FilterChanged?.Invoke(currentCriteria = CreateCriteria());
 
         protected override bool OnClick(ClickEvent e) => true;
 

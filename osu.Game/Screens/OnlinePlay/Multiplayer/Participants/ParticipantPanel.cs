@@ -9,6 +9,7 @@ using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -36,7 +37,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 {
-    public partial class ParticipantPanel : MultiplayerRoomComposite, IHasContextMenu, IHasPopover
+    public partial class ParticipantPanel : CompositeDrawable, IHasContextMenu, IHasPopover
     {
         public readonly MultiplayerRoomUser User;
 
@@ -45,6 +46,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
         [Resolved]
         private IRulesetStore rulesets { get; set; } = null!;
+
+        [Resolved]
+        private MultiplayerClient client { get; set; } = null!;
 
         private SpriteIcon crown = null!;
 
@@ -199,23 +203,31 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                             Origin = Anchor.Centre,
                             Alpha = 0,
                             Margin = new MarginPadding(4),
-                            Action = () => Client.KickUser(User.UserID).FireAndForget(),
+                            Action = () => client.KickUser(User.UserID).FireAndForget(),
                         },
                     },
                 }
             };
         }
 
-        protected override void OnRoomUpdated()
+        protected override void LoadComplete()
         {
-            base.OnRoomUpdated();
+            base.LoadComplete();
 
-            if (Room == null || Client.LocalUser == null)
+            client.RoomUpdated += onRoomUpdated;
+            updateState();
+        }
+
+        private void onRoomUpdated() => Scheduler.AddOnce(updateState);
+
+        private void updateState()
+        {
+            if (client.Room == null || client.LocalUser == null)
                 return;
 
-            if (Room.MatchState is TeamVersusRoomState)
+            if (client.Room.MatchState is TeamVersusRoomState)
             {
-                var teamRedUsers = Room.Users.Where(u =>
+                var teamRedUsers = client.Room.Users.Where(u =>
                 {
                     if (u.MatchState is TeamVersusUserState teamVersusUserState)
                         return teamVersusUserState.TeamID == 0;
@@ -223,7 +235,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     return false;
                 });
 
-                var teamBlueUsers = Room.Users.Where(u =>
+                var teamBlueUsers = client.Room.Users.Where(u =>
                 {
                     if (u.MatchState is TeamVersusUserState teamVersusUserState)
                         return teamVersusUserState.TeamID == 1;
@@ -233,29 +245,29 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                 var multiplayerRoomUsers = teamRedUsers as MultiplayerRoomUser[] ?? teamRedUsers.ToArray();
                 foreach (var user in multiplayerRoomUsers)
-                    Room.Users.Remove(user);
-                Room.Users.AddRange(multiplayerRoomUsers);
+                    client.Room.Users.Remove(user);
+                client.Room.Users.AddRange(multiplayerRoomUsers);
 
                 var blueUsers = teamBlueUsers as MultiplayerRoomUser[] ?? teamBlueUsers.ToArray();
                 foreach (var user in blueUsers)
-                    Room.Users.Remove(user);
-                Room.Users.AddRange(blueUsers);
+                    client.Room.Users.Remove(user);
+                client.Room.Users.AddRange(blueUsers);
             }
 
             // move spectators to very bottom
-            for (int i = Room.Users.Count - 1; i >= 0; i--)
+            for (int i = client.Room.Users.Count - 1; i >= 0; i--)
             {
-                if (Room.Users[i].State != MultiplayerUserState.Spectating)
+                if (client.Room.Users[i].State != MultiplayerUserState.Spectating)
                     continue;
 
-                var user = Room.Users[i];
-                Room.Users.RemoveAt(i);
-                Room.Users.Add(user);
+                var user = client.Room.Users[i];
+                client.Room.Users.RemoveAt(i);
+                client.Room.Users.Add(user);
             }
 
             const double fade_time = 50;
 
-            var currentItem = Playlist.GetCurrentItem();
+            MultiplayerPlaylistItem? currentItem = client.Room.GetCurrentItem();
             Ruleset? ruleset = currentItem != null ? rulesets.GetRuleset(currentItem.RulesetID)?.CreateInstance() : null;
 
             int? currentModeRank = ruleset != null ? User.User?.RulesetsStatistics?.GetValueOrDefault(ruleset.ShortName)?.GlobalRank : null;
@@ -268,10 +280,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             else
                 userModsDisplay.FadeOut(fade_time);
 
-            kickButton.Alpha = Client.IsHost && !User.Equals(Client.LocalUser) ? 1 : 0;
-            crown.Alpha = Room.Host?.Equals(User) == true ? 1 : 0;
+            kickButton.Alpha = client.IsHost && !User.Equals(client.LocalUser) ? 1 : 0;
+            crown.Alpha = client.Room.Host?.Equals(User) == true ? 1 : 0;
 
-            ParticipantSlotNumber = Room.Users.IndexOf(User) + 1;
+            ParticipantSlotNumber = client.Room.Users.IndexOf(User) + 1;
 
             // If the mods are updated at the end of the frame, the flow container will skip a reflow cycle: https://github.com/ppy/osu-framework/issues/4187
             // This looks particularly jarring here, so re-schedule the update to that start of our frame as a fix.
@@ -285,14 +297,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
         {
             get
             {
-                if (Room == null)
+                if (client.Room == null)
                     return null;
 
                 // always allow moving slots regardless of host status
                 List<MenuItem> menuItems = new List<MenuItem> { new OsuMenuItem("Move to slot (client side)", MenuItemType.Standard, this.ShowPopover) };
 
                 // If the local user is not the host of the room.
-                if (Room.Host?.UserID != api.LocalUser.Value.Id)
+                if (client.Room.Host?.UserID != api.LocalUser.Value.Id)
                     return menuItems.ToArray();
 
                 int targetUser = User.UserID;
@@ -301,18 +313,18 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     new OsuMenuItem("Give host", MenuItemType.Standard, () =>
                     {
                         // Ensure the local user is still host.
-                        if (!Client.IsHost)
+                        if (!client.IsHost)
                             return;
 
-                        Client.TransferHost(targetUser).FireAndForget();
+                        client.TransferHost(targetUser).FireAndForget();
                     }),
                     new OsuMenuItem("Kick", MenuItemType.Destructive, () =>
                     {
                         // Ensure the local user is still host.
-                        if (!Client.IsHost)
+                        if (!client.IsHost)
                             return;
 
-                        Client.KickUser(targetUser).FireAndForget();
+                        client.KickUser(targetUser).FireAndForget();
                     })
                 });
 
@@ -443,6 +455,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                 sampleJoinFail?.Play();
             });
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (client.IsNotNull())
+                client.RoomUpdated -= onRoomUpdated;
         }
 
         public partial class KickButton : IconButton

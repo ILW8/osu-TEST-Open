@@ -1,11 +1,9 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System.Linq;
-using JetBrains.Annotations;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics.Containers;
@@ -14,12 +12,13 @@ using osuTK;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 {
-    public partial class ParticipantsList : MultiplayerRoomComposite
+    public partial class ParticipantsList : CompositeDrawable
     {
-        private FillFlowContainer<ParticipantPanel> panels;
+        private FillFlowContainer<ParticipantPanel> panels = null!;
+        private ParticipantPanel? currentHostPanel;
 
-        [CanBeNull]
-        private ParticipantPanel currentHostPanel;
+        [Resolved]
+        private MultiplayerClient client { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -38,44 +37,61 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             };
         }
 
-        protected override void OnRoomUpdated()
+        protected override void LoadComplete()
         {
-            base.OnRoomUpdated();
+            base.LoadComplete();
 
-            Scheduler.AddDelayed(() =>
+            client.RoomUpdated += onRoomUpdated;
+            updateState();
+        }
+
+        private void onRoomUpdated() => Scheduler.AddOnce(updateState);
+
+        private void updateState()
+        {
+            if (client.Room == null)
+                panels.Clear();
+            else
             {
-                if (Room == null)
-                    panels.Clear();
-                else
+                // Remove panels for users no longer in the room.
+                foreach (var p in panels)
                 {
-                    // Remove panels for users no longer in the room or spectators
-                    foreach (ParticipantPanel p in panels.Where(p => Room.Users.All(u => !ReferenceEquals(p.User, u) || p.User.State == MultiplayerUserState.Spectating)))
+                    // Note that we *must* use reference equality here, as this call is scheduled and a user may have left and joined since it was last run.
+                    if (client.Room.Users.All(u => !ReferenceEquals(p.User, u)) || p.User.State == MultiplayerUserState.Spectating)
                         p.Expire();
-
-                    // Add panels for all users new to the room except spectators
-                    foreach (var user in Room.Users.Where(u => panels.SingleOrDefault(panel => panel.User.Equals(u)) == null && u.State != MultiplayerUserState.Spectating))
-                        panels.Add(new ParticipantPanel(user));
-
-                    // sort users
-                    foreach ((var roomUser, int listPosition) in Room.Users.Select((value, i) => (value, i)))
-                    {
-                        var panel = panels.SingleOrDefault(u => u.User.Equals(roomUser));
-
-                        if (panel != null)
-                            panels.SetLayoutPosition(panel, listPosition);
-                    }
-
-                    if (currentHostPanel != null && currentHostPanel.User.Equals(Room.Host)) return;
-
-                    {
-                        currentHostPanel = null;
-
-                        // Change position of new host to display above all participants.
-                        if (Room.Host != null)
-                            currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(Room.Host));
-                    }
                 }
-            }, 100);
+
+                // Add panels for all users new to the room except spectators
+                foreach (var user in client.Room.Users.Except(panels.Select(p => p.User)))
+                    panels.Add(new ParticipantPanel(user));
+
+                // sort users
+                foreach ((var roomUser, int listPosition) in client.Room.Users.Select((value, i) => (value, i)))
+                {
+                    var panel = panels.SingleOrDefault(u => u.User.Equals(roomUser));
+
+                    if (panel != null)
+                        panels.SetLayoutPosition(panel, listPosition);
+                }
+
+                if (currentHostPanel != null && currentHostPanel.User.Equals(client.Room.Host)) return;
+
+                {
+                    currentHostPanel = null;
+
+                    // Change position of new host to display above all participants.
+                    if (client.Room.Host != null)
+                        currentHostPanel = panels.SingleOrDefault(u => u.User.Equals(client.Room.Host));
+                }
+            }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (client.IsNotNull())
+                client.RoomUpdated -= onRoomUpdated;
         }
     }
 }
