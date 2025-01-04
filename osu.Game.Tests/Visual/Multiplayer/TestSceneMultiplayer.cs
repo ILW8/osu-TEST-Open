@@ -104,15 +104,15 @@ namespace osu.Game.Tests.Visual.Multiplayer
         {
             createRoom(() => new Room
             {
-                Name = { Value = "Test Room" },
-                QueueMode = { Value = QueueMode.AllPlayers },
+                Name = "Test Room",
+                QueueMode = QueueMode.AllPlayers,
                 Playlist =
-                {
+                [
                     new PlaylistItem(beatmaps.GetWorkingBeatmap(importedSet.Beatmaps.First(b => b.Ruleset.OnlineID == 0)).BeatmapInfo)
                     {
                         RulesetID = new OsuRuleset().RulesetInfo.OnlineID,
                     }
-                }
+                ]
             });
 
             AddStep("join other user", () => multiplayerClient.AddUser(new APIUser { Id = 2 }));
