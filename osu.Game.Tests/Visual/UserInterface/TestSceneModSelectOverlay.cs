@@ -949,11 +949,11 @@ namespace osu.Game.Tests.Visual.UserInterface
             AddStep("select DT", () => SelectedMods.Value = new Mod[] { new OsuModDoubleTime() });
             AddStep("click new preset", () =>
             {
-                InputManager.MoveMouseTo(this.ChildrenOfType<AddPresetButton>().Single());
+                InputManager.MoveMouseTo(this.ChildrenOfType<AddPresetButton<ModPreset>>().Single());
                 InputManager.Click(MouseButton.Left);
             });
 
-            AddAssert("preset popover shown", () => this.ChildrenOfType<AddPresetPopover>().SingleOrDefault()?.IsPresent, () => Is.True);
+            AddAssert("preset popover shown", () => this.ChildrenOfType<AddPresetPopover<ModPreset>>().SingleOrDefault()?.IsPresent, () => Is.True);
 
             AddStep("click customisation header", () =>
             {
@@ -961,7 +961,7 @@ namespace osu.Game.Tests.Visual.UserInterface
                 InputManager.Click(MouseButton.Left);
             });
 
-            AddUntilStep("preset popover hidden", () => this.ChildrenOfType<AddPresetPopover>().SingleOrDefault()?.IsPresent, () => Is.Not.True);
+            AddUntilStep("preset popover hidden", () => this.ChildrenOfType<AddPresetPopover<ModPreset>>().SingleOrDefault()?.IsPresent, () => Is.Not.True);
             AddAssert("customisation panel shown", () => this.ChildrenOfType<ModCustomisationPanel>().Single().State.Value, () => Is.EqualTo(Visibility.Visible));
         }
 
