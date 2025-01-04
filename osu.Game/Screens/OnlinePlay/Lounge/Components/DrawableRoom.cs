@@ -4,10 +4,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
@@ -15,13 +13,9 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
-using osu.Game.Database;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Online.Chat;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Screens.OnlinePlay.Components;
@@ -388,19 +382,8 @@ namespace osu.Game.Screens.OnlinePlay.Lounge.Components
         {
             public readonly IBindable<PlaylistItem?> SelectedItem = new Bindable<PlaylistItem?>();
 
-            [Resolved]
-            private OsuColour colours { get; set; } = null!;
-
-            [Resolved]
-            private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
-
-            private readonly Room room;
-            private SpriteText statusText = null!;
-            private LinkFlowContainer beatmapText = null!;
-
-            public RoomStatusText(Room room)
+            public RoomStatusText(Room _)
             {
-                this.room = room;
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;
             }
@@ -420,76 +403,30 @@ namespace osu.Game.Screens.OnlinePlay.Lounge.Components
                     {
                         new Dimension(GridSizeMode.AutoSize)
                     },
-                    Content = new[]
-                    {
-                        new Drawable[]
-                        {
-                            statusText = new OsuSpriteText
-                            {
-                                Font = OsuFont.Default.With(size: 16),
-                                Colour = colours.Lime1
-                            },
-                            beatmapText = new LinkFlowContainer(s =>
-                            {
-                                s.Font = OsuFont.Default.With(size: 16);
-                                s.Colour = colours.Lime1;
-                            })
-                            {
-                                RelativeSizeAxes = Axes.X,
-                                // workaround to ensure only the first line of text shows, emulating truncation (but without ellipsis at the end).
-                                // TODO: remove when text/link flow can support truncation with ellipsis natively.
-                                Height = 16,
-                                Masking = true
-                            }
-                        }
-                    }
+                    // Content = new[]
+                    // {
+                    //     new Drawable[]
+                    //     {
+                    //         statusText = new OsuSpriteText
+                    //         {
+                    //             Font = OsuFont.Default.With(size: 16),
+                    //             Colour = colours.Lime1
+                    //         },
+                    //         beatmapText = new LinkFlowContainer(s =>
+                    //         {
+                    //             s.Font = OsuFont.Default.With(size: 16);
+                    //             s.Colour = colours.Lime1;
+                    //         })
+                    //         {
+                    //             RelativeSizeAxes = Axes.X,
+                    //             // workaround to ensure only the first line of text shows, emulating truncation (but without ellipsis at the end).
+                    //             // TODO: remove when text/link flow can support truncation with ellipsis natively.
+                    //             Height = 16,
+                    //             Masking = true
+                    //         }
+                    //     }
+                    // }
                 };
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-                SelectedItem.BindValueChanged(onSelectedItemChanged, true);
-            }
-
-            private CancellationTokenSource? beatmapLookupCancellation;
-
-            private void onSelectedItemChanged(ValueChangedEvent<PlaylistItem?> item)
-            {
-                beatmapLookupCancellation?.Cancel();
-                beatmapText.Clear();
-
-                if (room.Type == MatchType.Playlists)
-                {
-                    statusText.Text = "Ready to play";
-                    return;
-                }
-
-                var beatmap = item.NewValue?.Beatmap;
-                if (beatmap == null)
-                    return;
-
-                var cancellationSource = beatmapLookupCancellation = new CancellationTokenSource();
-                beatmapLookupCache.GetBeatmapAsync(beatmap.OnlineID, cancellationSource.Token)
-                                  .ContinueWith(task => Schedule(() =>
-                                  {
-                                      if (cancellationSource.IsCancellationRequested)
-                                          return;
-
-                                      var retrievedBeatmap = task.GetResultSafely();
-
-                                      statusText.Text = "Currently playing ";
-
-                                      if (retrievedBeatmap != null)
-                                      {
-                                          beatmapText.AddLink(retrievedBeatmap.GetDisplayTitleRomanisable(),
-                                              LinkAction.OpenBeatmap,
-                                              retrievedBeatmap.OnlineID.ToString(),
-                                              creationParameters: s => s.Truncate = true);
-                                      }
-                                      else
-                                          beatmapText.AddText("unknown beatmap");
-                                  }), cancellationSource.Token);
             }
         }
 
