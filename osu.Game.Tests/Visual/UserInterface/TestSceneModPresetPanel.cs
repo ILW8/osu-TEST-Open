@@ -126,9 +126,9 @@ namespace osu.Game.Tests.Visual.UserInterface
         [Test]
         public void TestSystemModsNotPreservedIfIncompatibleWithPresetMods()
         {
-            ModPresetPanel? panel = null;
+            ModPresetPanel<ModPreset>? panel = null;
 
-            AddStep("create panel", () => Child = panel = new ModPresetPanel(new ModPreset
+            AddStep("create panel", () => Child = panel = new ModPresetPanel<ModPreset>(new ModPreset
             {
                 Name = "Autopilot included",
                 Description = "no way",

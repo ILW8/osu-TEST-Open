@@ -402,7 +402,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             {
                 base.LoadComplete();
 
-                ScheduleAfterChildren(() => GetContainingInputManager().ChangeFocus(slotTextBox));
+                ScheduleAfterChildren(() => GetContainingFocusManager()?.ChangeFocus(slotTextBox));
                 slotTextBox.OnCommit += (_, _) => performMove();
             }
 
@@ -435,14 +435,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 room.Users.Remove(user);
                 room.Users.Insert(newSlot, user);
                 Client.ForceInvokeRoomUpdated();
-                GetContainingInputManager().TriggerFocusContention(slotTextBox);
+                GetContainingFocusManager()?.TriggerFocusContention(slotTextBox);
             }
 
             private void moveFailed(string error) => Schedule(() =>
             {
                 slotTextBox.Text = string.Empty;
 
-                GetContainingInputManager().ChangeFocus(slotTextBox);
+                GetContainingFocusManager()?.ChangeFocus(slotTextBox);
 
                 errorText.Text = error;
                 errorText
