@@ -91,8 +91,8 @@ namespace osu.Game.Online.Chat
 
         private const float text_box_height = 30;
 
-        [Resolved]
-        private ChatTimerHandler chatTimerHandler { get; set; } = null!;
+        [Resolved(CanBeNull = true)] // not sure if it actually can be null
+        private ChatTimerHandler? chatTimerHandler { get; set; }
 
         /// <summary>
         /// Construct a new instance.
@@ -292,14 +292,27 @@ namespace osu.Game.Online.Chat
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
             new StandAloneDrawableChannel(channel);
 
+        // todo: dry
         public void EnqueueBotMessage(string message)
         {
+            if (Channel.Value == null)
+            {
+                Logger.Log($"Channel is null, not queuing \"{message}\" as bot message", LoggingTarget.Network, LogLevel.Important);
+                return;
+            }
+
             Logger.Log($"Queued \"{message}\" as bot message");
             botMessageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
         }
 
         public void EnqueueUserMessage(string message)
         {
+            if (Channel.Value == null)
+            {
+                Logger.Log($"Channel is null, not queuing \"{message}\" as user message", LoggingTarget.Network, LogLevel.Important);
+                return;
+            }
+
             Logger.Log($"Queued \"{message}\" as user message");
             messageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
         }
@@ -412,60 +425,70 @@ namespace osu.Game.Online.Chat
                                     string modAcronym = mod[..2];
                                     var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
 
-                                    Mod modInstance;
+                                    if (rulesetInstance == null)
+                                    {
+                                        Logger.Log($@"[!mp mods] Couldn't create ruleset instance with ruleset ID {itemToEdit.RulesetID}, ignoring mod '{mod}'",
+                                            LoggingTarget.Runtime, LogLevel.Important);
+                                        continue;
+                                    }
 
+                                    Mod? modInstance;
+
+                                    // mod with no params
                                     if (mod.Length == 2)
                                     {
-                                        modInstance = ParseMod(rulesetInstance, modAcronym, new object[] { });
+                                        modInstance = ParseMod(rulesetInstance, modAcronym, Array.Empty<object>());
                                         if (modInstance != null)
                                             modInstances.Add(modInstance);
                                         continue;
                                     }
 
                                     // mod has parameters
-                                    JsonNode modParamsNode;
-
-                                    try
                                     {
-                                        modParamsNode = JsonNode.Parse(mod[2..]);
-                                    }
-                                    catch (JsonException)
-                                    {
-                                        modParamsNode = null;
-                                    }
+                                        JsonNode? modParamsNode;
 
-                                    if (modParamsNode is JsonArray modParams)
-                                    {
-                                        List<object> parsedParamsList = new List<object>();
-
-                                        foreach (JsonNode node in modParams)
+                                        try
                                         {
-                                            if (node.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
-                                                continue;
-
-                                            if (node.AsValue().TryGetValue(out int parsedInt))
-                                            {
-                                                parsedParamsList.Add(parsedInt);
-                                                continue;
-                                            }
-
-                                            if (node.AsValue().TryGetValue(out double parsedDouble))
-                                            {
-                                                parsedParamsList.Add(parsedDouble);
-                                                continue;
-                                            }
-
-                                            if (node.AsValue().TryGetValue(out bool parsedBool))
-                                                parsedParamsList.Add(parsedBool);
+                                            modParamsNode = JsonNode.Parse(mod[2..]);
+                                        }
+                                        catch (JsonException)
+                                        {
+                                            modParamsNode = null;
                                         }
 
-                                        modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
-                                        if (modInstance != null)
-                                            modInstances.Add(modInstance);
-                                    }
-                                    else
-                                    {
-                                        Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                        if (modParamsNode is JsonArray modParams)
+                                        {
+                                            List<object> parsedParamsList = new List<object>();
+
+                                            foreach (JsonNode? node in modParams)
+                                            {
+                                                if (node?.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
+                                                    continue;
+
+                                                if (node.AsValue().TryGetValue(out int parsedInt))
+                                                {
+                                                    parsedParamsList.Add(parsedInt);
+                                                    continue;
+                                                }
+
+                                                if (node.AsValue().TryGetValue(out double parsedDouble))
+                                                {
+                                                    parsedParamsList.Add(parsedDouble);
+                                                    continue;
+                                                }
+
+                                                if (node.AsValue().TryGetValue(out bool parsedBool))
+                                                    parsedParamsList.Add(parsedBool);
+                                            }
+
+                                            modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
+                                            if (modInstance != null)
+                                                modInstances.Add(modInstance);
+                                        }
+                                        else
+                                        {
+                                            Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                        }
                                     }
                                 }
 
@@ -478,7 +501,13 @@ namespace osu.Game.Online.Chat
                                 // get playlist item to edit:
                                 beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
                                 {
-                                    APIBeatmap beatmapInfo = task.GetResultSafely();
+                                    APIBeatmap? beatmapInfo = task.GetResultSafely();
+
+                                    if (beatmapInfo == null)
+                                    {
+                                        Logger.Log($@"Couldn't retrieve metadata for map ID {itemToEdit.BeatmapID}, not modifying playlist!", LoggingTarget.Runtime, LogLevel.Important);
+                                        return;
+                                    }
 
                                     var multiplayerItem = new MultiplayerPlaylistItem
                                     {
@@ -552,7 +581,7 @@ namespace osu.Game.Online.Chat
             if (Client.Room?.Users.All(u => u.State != MultiplayerUserState.Ready) ?? false)
             {
                 Logger.Log(@"Tried to start match when no player is ready. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
-                botMessageQueue.Enqueue(new Tuple<string, Channel>(@"No player ready, cannot start match.", Channel.Value));
+                botMessageQueue.Enqueue(new Tuple<string, Channel>(@"No player ready, cannot start match.", Channel.Value!)); // assume Channel is not null when starting match
                 return;
             }
 
@@ -561,13 +590,13 @@ namespace osu.Game.Online.Chat
 
         private void abortTimer()
         {
-            chatTimerHandler.Abort();
+            chatTimerHandler?.Abort();
 
             // move this into ChatTimerHandler?
             EnqueueBotMessage(@"Countdown aborted");
         }
 
-        private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[] requiredMods = null, APIMod[] allowedMods = null)
+        private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[]? requiredMods = null, APIMod[]? allowedMods = null)
         {
             // ensure user is host
             if (!Client.IsHost)
