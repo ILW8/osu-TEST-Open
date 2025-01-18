@@ -203,6 +203,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
 
+        private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
+        {
+            Default = 16,
+            MinValue = 1,
+            MaxValue = 16,
+            Value = 16
+        };
+
         private Container osuCookieContainer = null!;
 
         private AddItemButton addItemButton = null!;
@@ -416,6 +424,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             LabelText = @"Show osu! cookie",
                                             Current = showOsuCookie,
                                         }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsSlider<int>
+                                        {
+                                            LabelText = @"Number of clients when spectating",
+                                            Current = spectateClientCount,
+                                        }
                                     }
                                 },
                                 RowDimensions = new[]
@@ -425,6 +441,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize)
                                 }
@@ -665,7 +682,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             switch (client.LocalUser.State)
             {
                 case MultiplayerUserState.Spectating:
-                    return new MultiSpectatorScreen(Room, users.Take(PlayerGrid.MAX_PLAYERS).ToArray());
+                    return new MultiSpectatorScreen(Room, users.Take(PlayerGrid.MAX_PLAYERS).ToArray(), spectateClientCount.Value);
 
                 default:
                     return new MultiplayerPlayerLoader(() => new MultiplayerPlayer(Room, selectedItem, users));
