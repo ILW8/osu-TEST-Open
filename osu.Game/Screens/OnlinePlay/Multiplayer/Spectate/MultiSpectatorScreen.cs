@@ -81,13 +81,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         /// <param name="room">The room.</param>
         /// <param name="users">The players to spectate.</param>
-        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users)
+        /// <param name="maxUsers">Max number of players to show</param>
+        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users, int maxUsers)
             : base(users.Select(u => u.UserID).ToArray())
         {
             this.room = room;
             this.users = users;
 
-            instances = new PlayerArea[6];
+            instances = new PlayerArea[maxUsers];
         }
 
         [BackgroundDependencyLoader]
@@ -147,13 +148,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 new PlayerSettingsOverlay()
             };
 
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < instances.Length; i++)
                 grid.Add(instances[i] = new PlayerArea(i < Users.Count ? Users[i] : 0, syncManager.CreateManagedClock()));
 
             Scheduler.AddDelayed(() =>
             {
                 // hack...
-                for (int i = Users.Count; i < 6; i++)
+                for (int i = Users.Count; i < instances.Length; i++)
                 {
                     syncManager.RemoveManagedClock(instances[i].SpectatorPlayerClock);
                     instances[i].MarkInactive();
