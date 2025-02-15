@@ -82,7 +82,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// <param name="room">The room.</param>
         /// <param name="users">The players to spectate.</param>
         /// <param name="maxUsers">Max number of players to show</param>
-        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users, int maxUsers)
+        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users, int maxUsers = 8)
             : base(users.Select(u => u.UserID).ToArray())
         {
             this.room = room;
