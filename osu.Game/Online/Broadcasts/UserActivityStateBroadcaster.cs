@@ -3,7 +3,7 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Game.Online.API;
+using osu.Game.Configuration;
 using osu.Game.Users;
 
 namespace osu.Game.Online.Broadcasts
@@ -11,14 +11,14 @@ namespace osu.Game.Online.Broadcasts
     public partial class UserActivityStateBroadcaster : GameStateBroadcaster<string>
     {
         public override string Type => @"Activity";
-        public override string Message => activity?.Value?.GetType().Name ?? string.Empty;
+        public override string Message => activity.Value?.GetType().Name ?? string.Empty;
 
-        private IBindable<UserActivity>? activity;
+        private IBindable<UserActivity?> activity = null!;
 
         [BackgroundDependencyLoader]
-        private void load(IAPIProvider api)
+        private void load(SessionStatics session)
         {
-            activity = api.Activity.GetBoundCopy();
+            activity = session.GetBindable<UserActivity?>(Static.UserOnlineActivity).GetBoundCopy();
             activity.ValueChanged += _ => Broadcast();
         }
     }
