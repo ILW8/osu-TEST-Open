@@ -6,7 +6,6 @@
     <Description>A free-to-win rhythm game. Rhythm is just a *click* away!</Description>
     <AssemblyName>osu!</AssemblyName>
     <AssemblyTitle>osu!(lazer)</AssemblyTitle>
-    <AssemblyTitle>osu!(lazer)</AssemblyTitle>
     <Title>osu!</Title>
     <Product>osu!(lazer)</Product>
     <ApplicationIcon>lazer.ico</ApplicationIcon>
@@ -27,7 +26,8 @@
   <ItemGroup Label="Package References">
     <PackageReference Include="System.IO.Packaging" Version="8.0.1" />
     <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
-    <PackageReference Include="Velopack" Version="0.0.915" />  </ItemGroup>
+    <PackageReference Include="Velopack" Version="0.0.915" />
+  </ItemGroup>
   <ItemGroup Label="Framework References">
     <FrameworkReference Include="Microsoft.AspNetCore.App"/>
   </ItemGroup>
