@@ -67,7 +67,7 @@ namespace osu.Game.Screens.OnlinePlay
             freeModSelect = new FreeModSelectOverlay
             {
                 SelectedMods = { BindTarget = FreeMods },
-                IsValidMod = isValidFreeMod,
+                IsValidMod = IsValidFreeMod,
             };
         }
 
@@ -145,10 +145,10 @@ namespace osu.Game.Screens.OnlinePlay
 
         private void onModsChanged(ValueChangedEvent<IReadOnlyList<Mod>> mods)
         {
-            FreeMods.Value = FreeMods.Value.Where(isValidFreeMod).ToList();
+            FreeMods.Value = FreeMods.Value.Where(IsValidFreeMod).ToList();
 
             // Reset the validity delegate to update the overlay's display.
-            freeModSelect.IsValidMod = isValidFreeMod;
+            freeModSelect.IsValidMod = IsValidFreeMod;
         }
 
         private void onRulesetChanged(ValueChangedEvent<RulesetInfo> ruleset)
@@ -195,7 +195,7 @@ namespace osu.Game.Screens.OnlinePlay
 
         protected override ModSelectOverlay CreateModSelectOverlay() => new UserModSelectOverlay(OverlayColourScheme.Plum)
         {
-            IsValidMod = isValidMod
+            IsValidMod = IsValidMod
         };
 
         protected override IEnumerable<(FooterButton button, OverlayContainer? overlay)> CreateSongSelectFooterButtons()
@@ -225,18 +225,18 @@ namespace osu.Game.Screens.OnlinePlay
         /// </summary>
         /// <param name="mod">The <see cref="Mod"/> to check.</param>
         /// <returns>Whether <paramref name="mod"/> is a valid mod for online play.</returns>
-        private bool isValidMod(Mod mod) => ModUtils.IsValidModForMatchType(mod, room.Type);
+        protected virtual bool IsValidMod(Mod mod) => ModUtils.IsValidModForMatchType(mod, room.Type);
 
         /// <summary>
         /// Checks whether a given <see cref="Mod"/> is valid for per-player free-mod selection.
         /// </summary>
         /// <param name="mod">The <see cref="Mod"/> to check.</param>
         /// <returns>Whether <paramref name="mod"/> is a selectable free-mod.</returns>
-        private bool isValidFreeMod(Mod mod) => ModUtils.IsValidFreeModForMatchType(mod, room.Type)
-                                                // Mod must not be contained in the required mods.
-                                                && Mods.Value.All(m => m.Acronym != mod.Acronym)
-                                                // Mod must be compatible with all the required mods.
-                                                && ModUtils.CheckCompatibleSet(Mods.Value.Append(mod).ToArray());
+        protected virtual bool IsValidFreeMod(Mod mod) => ModUtils.IsValidFreeModForMatchType(mod, room.Type)
+                                                          // Mod must not be contained in the required mods.
+                                                          && Mods.Value.All(m => m.Acronym != mod.Acronym)
+                                                          // Mod must be compatible with all the required mods.
+                                                          && ModUtils.CheckCompatibleSet(Mods.Value.Append(mod).ToArray());
 
         protected override void Dispose(bool isDisposing)
         {
