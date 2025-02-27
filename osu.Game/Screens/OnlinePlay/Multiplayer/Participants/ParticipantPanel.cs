@@ -376,13 +376,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                             {
                                 slotTextBox = new OsuNumberBox
                                 {
-                                    Width = 200,
+                                    Width = 160,
                                     PlaceholderText = "slot number",
                                 },
                                 moveButton = new RoundedButton
                                 {
-                                    Width = 80,
-                                    Text = "Move",
+                                    Width = 240,
+                                    Text = $@"Move {user.User?.Username ?? ""}",
                                 }
                             }
                         },
