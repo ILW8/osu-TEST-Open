@@ -63,7 +63,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
 
                 // Add panels for all users new to the room except spectators
                 foreach (var user in client.Room.Users.Except(panels.Select(p => p.User)))
+                {
+                    if (user.State == MultiplayerUserState.Spectating)
+                        continue;
+
                     panels.Add(new ParticipantPanel(user));
+                }
 
                 // sort users
                 foreach ((var roomUser, int listPosition) in client.Room.Users.Select((value, i) => (value, i)))
