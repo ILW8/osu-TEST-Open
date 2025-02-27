@@ -75,9 +75,6 @@ namespace osu.Game.Online.Chat
         [Resolved]
         private OngoingOperationTracker operationTracker { get; set; } = null!;
 
-        [Resolved(typeof(Room), nameof(Room.Playlist), canBeNull: true)]
-        private BindableList<PlaylistItem>? roomPlaylist { get; set; }
-
         protected readonly ChatTextBox? TextBox;
 
         private ChannelManager? channelManager;
@@ -598,6 +595,7 @@ namespace osu.Game.Online.Chat
 
         private void addPlaylistItem(APIBeatmap beatmapInfo, APIMod[]? requiredMods = null, APIMod[]? allowedMods = null)
         {
+            Logger.Log($@"Adding beatmap {beatmapInfo.OnlineID} to playlist");
             // ensure user is host
             if (!Client.IsHost)
                 return;
@@ -622,7 +620,7 @@ namespace osu.Game.Online.Chat
                 AllowedMods = item.AllowedMods
             };
 
-            var itemsToRemove = roomPlaylist?.Where(playlistItem => !playlistItem.Expired).ToArray() ?? Array.Empty<PlaylistItem>();
+            var itemsToRemove = Client.Room?.Playlist.Where(playlistItem => !playlistItem.Expired).ToArray() ?? Array.Empty<MultiplayerPlaylistItem>();
             Task addPlaylistItemTask = Client.AddPlaylistItem(multiplayerItem);
 
             addPlaylistItemTask.FireAndForget(onSuccess: () =>
