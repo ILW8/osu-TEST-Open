@@ -35,6 +35,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         public Action? ReadyToStart;
 
+        public Action? ClocksCaughtUp;
+
         public double CurrentMasterTime => masterClock.CurrentTime;
 
         /// <summary>
@@ -50,6 +52,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private MasterClockState masterState = MasterClockState.Synchronised;
 
         private bool hasStarted;
+        private bool allClocksCaughtUp;
 
         private double? firstStartAttemptTime;
 
@@ -135,6 +138,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         private void updatePlayerCatchup()
         {
+            bool clocksCaughtUpDuringUpdate = true;
+
             for (int i = 0; i < playerClocks.Count; i++)
             {
                 var clock = playerClocks[i];
@@ -151,25 +156,41 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     // when it is required to be running (ie. if all players are ahead of the master).
                     clock.IsCatchingUp = false;
                     clock.IsRunning = false;
+                    clocksCaughtUpDuringUpdate = false;
                     continue;
                 }
 
                 // Make sure the player clock is running if it can.
                 clock.IsRunning = !clock.WaitingOnFrames;
 
+                if (!clock.IsRunning)
+                    clocksCaughtUpDuringUpdate = false;
+
                 if (clock.IsCatchingUp)
                 {
                     // Stop the player clock from catching up if it's within the sync target.
                     if (timeDelta <= SYNC_TARGET)
                         clock.IsCatchingUp = false;
+                    else
+                        clocksCaughtUpDuringUpdate = false;
                 }
                 else
                 {
                     // Make the player clock start catching up if it's exceeded the maximum allowable sync offset.
                     if (timeDelta > MAX_SYNC_OFFSET)
+                    {
                         clock.IsCatchingUp = true;
+                        clocksCaughtUpDuringUpdate = false;
+                    }
                 }
             }
+
+            if (clocksCaughtUpDuringUpdate == allClocksCaughtUp)
+                return;
+
+            allClocksCaughtUp = clocksCaughtUpDuringUpdate;
+            if (allClocksCaughtUp)
+                ClocksCaughtUp?.Invoke();
         }
 
         /// <summary>

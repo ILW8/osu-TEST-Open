@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -144,6 +143,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 syncManager = new SpectatorSyncManager(masterClockContainer)
                 {
                     ReadyToStart = performInitialSeek,
+                    ClocksCaughtUp = () =>
+                    {
+                        currentAudioSource = null; // reset current audio source to select based on player ordering in lobby after everyone has started playing.
+                    }
                 },
                 new PlayerSettingsOverlay()
             };
@@ -243,7 +246,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             if (!isCandidateAudioSource(currentAudioSource?.SpectatorPlayerClock))
             {
-                currentAudioSource = instances.Where(i => isCandidateAudioSource(i.SpectatorPlayerClock)).MinBy(i => Math.Abs(i.SpectatorPlayerClock.CurrentTime - syncManager.CurrentMasterTime));
+                currentAudioSource = instances.FirstOrDefault(i => isCandidateAudioSource(i.SpectatorPlayerClock));
 
                 // Only bind adjustments if there's actually a valid source, else just use the previous ones to ensure no sudden changes to audio.
                 if (currentAudioSource != null)
