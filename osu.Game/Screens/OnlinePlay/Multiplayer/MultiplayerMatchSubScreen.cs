@@ -26,7 +26,6 @@ using osu.Game.Online;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Online.API;
-using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
@@ -388,17 +387,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                 RelativeSizeAxes = Axes.Both,
                                 RowDimensions = new[]
                                 {
-                                    // new Dimension(GridSizeMode.AutoSize),
-                                    // new Dimension(GridSizeMode.AutoSize),
-                                    // new Dimension(GridSizeMode.Absolute, 5),
-                                    // new Dimension(),
-                                    // new Dimension(GridSizeMode.AutoSize),
-                                    // new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize)
@@ -427,7 +422,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             SelectedItem = SelectedItem
                                         }
                                     },
-                                                                        new[]
+                                    new[]
                                     {
                                         UserModsSection = new FillFlowContainer
                                         {
