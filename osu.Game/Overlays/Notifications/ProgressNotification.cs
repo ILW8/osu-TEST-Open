@@ -183,20 +183,14 @@ namespace osu.Game.Overlays.Notifications
 
         private ProgressNotificationState state;
 
-        protected virtual Notification CreateCompletionNotification() => new SilencedProgressCompletionNotification
+        protected virtual Notification CreateCompletionNotification() => new ProgressCompletionNotification
         {
             Activated = CompletionClickAction,
-            Text = CompletionText
+            Text = CompletionText,
+            IsImportant = false
         };
 
-        private partial class SilencedProgressCompletionNotification : ProgressCompletionNotification
-        {
-            public override bool IsImportant => false;
-        }
-
         public override bool DisplayOnTop => false;
-
-        public override bool IsImportant => false;
 
         private readonly ProgressBar progressBar;
         private Color4 colourQueued;
@@ -211,6 +205,8 @@ namespace osu.Game.Overlays.Notifications
 
         public ProgressNotification()
         {
+            IsImportant = false;
+
             Content.Add(textDrawable = new OsuTextFlowContainer(t => t.Font = t.Font.With(size: 14, weight: FontWeight.Medium))
             {
                 AutoSizeAxes = Axes.Y,

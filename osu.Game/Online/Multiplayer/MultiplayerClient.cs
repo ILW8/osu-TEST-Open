@@ -53,6 +53,11 @@ namespace osu.Game.Online.Multiplayer
         public event Action<MultiplayerRoomUser>? UserKicked;
 
         /// <summary>
+        /// Invoked when the room's host is changed.
+        /// </summary>
+        public event Action<MultiplayerRoomUser?>? HostChanged;
+
+        /// <summary>
         /// Invoked when a new item is added to the playlist.
         /// </summary>
         public event Action<MultiplayerPlaylistItem>? ItemAdded;
@@ -360,6 +365,8 @@ namespace osu.Game.Online.Multiplayer
 
         public abstract Task DisconnectInternal();
 
+        public abstract Task ChangeUserStyle(int? beatmapId, int? rulesetId);
+
         /// <summary>
         /// Change the local user's mods in the currently joined room.
         /// </summary>
@@ -542,6 +549,7 @@ namespace osu.Game.Online.Multiplayer
                 Room.Host = user;
                 APIRoom.Host = user?.User;
 
+                HostChanged?.Invoke(user);
                 RoomUpdated?.Invoke();
             }, false);
 
@@ -681,6 +689,25 @@ namespace osu.Game.Online.Multiplayer
                     return;
 
                 user.BeatmapAvailability = beatmapAvailability;
+
+                RoomUpdated?.Invoke();
+            }, false);
+
+            return Task.CompletedTask;
+        }
+
+        public Task UserStyleChanged(int userId, int? beatmapId, int? rulesetId)
+        {
+            Scheduler.Add(() =>
+            {
+                var user = Room?.Users.SingleOrDefault(u => u.UserID == userId);
+
+                // errors here are not critical - user style is mostly for display.
+                if (user == null)
+                    return;
+
+                user.BeatmapId = beatmapId;
+                user.RulesetId = rulesetId;
 
                 RoomUpdated?.Invoke();
             }, false);

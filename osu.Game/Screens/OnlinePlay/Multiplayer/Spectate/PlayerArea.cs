@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
+using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
@@ -59,7 +61,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public Score? Score { get; private set; }
 
         [Resolved]
-        private IBindable<WorkingBeatmap> beatmap { get; set; } = null!;
+        private BeatmapManager beatmapManager { get; set; } = null!;
 
         [Resolved]
         private OsuColour colours { get; set; } = null!;
@@ -69,6 +71,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private readonly Container gameplayContent;
         private readonly LoadingLayer loadingLayer;
         private OsuScreenStack? stack;
+        private Track? loadedTrack;
 
         public PlayerArea(int userId, SpectatorPlayerClock clock)
         {
@@ -98,7 +101,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             Score = score;
 
-            gameplayContent.Child = new PlayerIsolationContainer(beatmap.Value, Score.ScoreInfo.Ruleset, Score.ScoreInfo.Mods)
+            // Required for freestyle, where each player may be playing a different beatmap.
+            var workingBeatmap = beatmapManager.GetWorkingBeatmap(Score.ScoreInfo.BeatmapInfo);
+
+            // Required to avoid crashes, but we really don't want to be doing this if we can avoid it.
+            // If we get to fixing this, we will want to investigate every access to `Track` in gameplay.
+            if (!workingBeatmap.TrackLoaded)
+                loadedTrack = workingBeatmap.LoadTrack();
+
+            gameplayContent.Child = new PlayerIsolationContainer(workingBeatmap, Score.ScoreInfo.Ruleset, Score.ScoreInfo.Mods)
             {
                 RelativeSizeAxes = Axes.Both,
                 Child = stack = new OsuScreenStack
@@ -133,8 +144,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             get => mute;
             set
             {
+                if (mute == value)
+                    return;
+
                 mute = value;
                 volumeAdjustment.Value = value ? 0 : 1;
+                Logger.Log($"{(mute ? "muting" : "unmuting")} player {UserId}");
             }
         }
 
@@ -142,18 +157,27 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public override bool PropagatePositionalInputSubTree => false;
         public override bool PropagateNonPositionalInputSubTree => false;
 
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            loadedTrack?.Dispose();
+        }
+
         /// <summary>
         /// Isolates each player instance from the game-wide ruleset/beatmap/mods (to allow for different players having different settings).
         /// </summary>
         private partial class PlayerIsolationContainer : Container
         {
             [Cached]
+            [Cached(typeof(IBindable<RulesetInfo>))]
             private readonly Bindable<RulesetInfo> ruleset = new Bindable<RulesetInfo>();
 
             [Cached]
+            [Cached(typeof(IBindable<WorkingBeatmap>))]
             private readonly Bindable<WorkingBeatmap> beatmap = new Bindable<WorkingBeatmap>();
 
             [Cached]
+            [Cached(typeof(IBindable<IReadOnlyList<Mod>>))]
             private readonly Bindable<IReadOnlyList<Mod>> mods = new Bindable<IReadOnlyList<Mod>>();
 
             public PlayerIsolationContainer(WorkingBeatmap beatmap, RulesetInfo ruleset, IReadOnlyList<Mod> mods)
