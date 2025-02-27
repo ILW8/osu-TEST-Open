@@ -420,6 +420,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     moveFailed($@"couldn't parse {slotTextBox.Text} as integer");
                     return;
                 }
+                catch (OverflowException)
+                {
+                    moveFailed($@"{slotTextBox.Text} is too large");
+                    return;
+                }
 
                 var room = Client.Room;
 
