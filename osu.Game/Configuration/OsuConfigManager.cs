@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using osu.Framework;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Configuration.Tracking;
@@ -96,6 +97,7 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.NotifyOnUsernameMentioned, true);
             SetDefault(OsuSetting.NotifyOnPrivateMessage, true);
+            SetDefault(OsuSetting.NotifyOnFriendPresenceChange, true);
 
             // Audio
             SetDefault(OsuSetting.VolumeInactive, 0.25, 0, 1, 0.01);
@@ -164,11 +166,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.Version, string.Empty);
 
             SetDefault(OsuSetting.ShowFirstRunSetup, true);
+            SetDefault(OsuSetting.ShowMobileDisclaimer, RuntimeInfo.IsMobile);
 
             SetDefault(OsuSetting.ScreenshotFormat, ScreenshotFormat.Jpg);
             SetDefault(OsuSetting.ScreenshotCaptureMenuCursor, false);
-
-            SetDefault(OsuSetting.SongSelectRightMouseScroll, false);
 
             SetDefault(OsuSetting.Scaling, ScalingMode.Off);
             SetDefault(OsuSetting.SafeAreaConsiderations, true);
@@ -209,7 +210,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.LastProcessedMetadataId, -1);
 
             SetDefault(OsuSetting.ComboColourNormalisationAmount, 0.2f, 0f, 1f, 0.01f);
-            SetDefault<UserStatus?>(OsuSetting.UserOnlineStatus, null);
+            SetDefault(OsuSetting.UserOnlineStatus, UserStatus.Online);
 
             SetDefault(OsuSetting.BroadcastGameState, false);
             // SetDefault(OsuSetting.EnableHttpServer, false);
@@ -222,6 +223,7 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.AlwaysShowHoldForMenuButton, false);
             SetDefault(OsuSetting.AlwaysRequireHoldingForPause, false);
+            SetDefault(OsuSetting.EditorShowStoryboard, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -401,7 +403,6 @@ namespace osu.Game.Configuration
         Skin,
         ScreenshotFormat,
         ScreenshotCaptureMenuCursor,
-        SongSelectRightMouseScroll,
         BeatmapSkins,
         BeatmapColours,
         BeatmapHitsounds,
@@ -419,6 +420,7 @@ namespace osu.Game.Configuration
         IntroSequence,
         NotifyOnUsernameMentioned,
         NotifyOnPrivateMessage,
+        NotifyOnFriendPresenceChange,
         UIHoldActivationDelay,
         HitLighting,
         StarFountains,
@@ -443,7 +445,12 @@ namespace osu.Game.Configuration
         EditorShowSpeedChanges,
         TouchDisableGameplayTaps,
         ModSelectTextSearchStartsActive,
+
+        /// <summary>
+        /// The status for the current user to broadcast to other players.
+        /// </summary>
         UserOnlineStatus,
+
         MultiplayerRoomFilter,
         BroadcastGameState,
         HideCountryFlags,
@@ -458,5 +465,7 @@ namespace osu.Game.Configuration
         AlwaysRequireHoldingForPause,
         MultiplayerShowInProgressFilter,
         BeatmapListingFeaturedArtistFilter,
+        ShowMobileDisclaimer,
+        EditorShowStoryboard,
     }
 }
