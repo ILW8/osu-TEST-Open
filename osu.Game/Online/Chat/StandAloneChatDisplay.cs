@@ -233,6 +233,10 @@ namespace osu.Game.Online.Chat
                         bParamValueBool.Value = Convert.ToBoolean(parametersList[i]);
                         break;
 
+                    case DifficultyBindable bParamValueDifficulty:
+                        bParamValueDifficulty.Value = Convert.ToSingle(parametersList[i]);
+                        break;
+
                     case IBindable bindable:
                         var bindableType = bindable.GetType();
 
