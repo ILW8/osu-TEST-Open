@@ -196,8 +196,6 @@ namespace osu.Game.Overlays.Notifications
 
         public override bool DisplayOnTop => false;
 
-        public override bool IsImportant => false;
-
         private readonly ProgressBar progressBar;
         private Color4 colourQueued;
         private Color4 colourActive;
@@ -211,6 +209,8 @@ namespace osu.Game.Overlays.Notifications
 
         public ProgressNotification()
         {
+            IsImportant = false;
+
             Content.Add(textDrawable = new OsuTextFlowContainer(t => t.Font = t.Font.With(size: 14, weight: FontWeight.Medium))
             {
                 AutoSizeAxes = Axes.Y,
