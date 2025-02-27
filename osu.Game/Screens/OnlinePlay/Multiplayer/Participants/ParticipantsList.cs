@@ -6,7 +6,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Logging;
 using osu.Game.Graphics.Containers;
 using osu.Game.Online.Multiplayer;
 using osuTK;
@@ -68,7 +67,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                     if (user.State == MultiplayerUserState.Spectating)
                         continue;
 
-                    Logger.Log($@"Adding panel for {user.User?.Username ?? @"<unknown>"} with state {user.State}");
                     panels.Add(new ParticipantPanel(user));
                 }
 
