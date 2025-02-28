@@ -74,6 +74,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private readonly Room room;
         private readonly MultiplayerRoomUser[] users;
+        private readonly bool showChat;
 
         /// <summary>
         /// Creates a new <see cref="MultiSpectatorScreen"/>.
@@ -81,13 +82,40 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// <param name="room">The room.</param>
         /// <param name="users">The players to spectate.</param>
         /// <param name="maxUsers">Max number of players to show</param>
-        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users, int maxUsers = 8)
+        /// <param name="showChat">Show chat window in spectator screen</param>
+        public MultiSpectatorScreen(Room room, MultiplayerRoomUser[] users, int maxUsers = 8, bool showChat = true)
             : base(users.Select(u => u.UserID).ToArray())
         {
             this.room = room;
             this.users = users;
 
             instances = new PlayerArea[maxUsers];
+            this.showChat = showChat;
+        }
+
+        private FillFlowContainer getLeaderboardFlow(bool showChat)
+        {
+            if (showChat)
+            {
+                return new FillFlowContainer
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(5)
+                };
+            }
+
+            return new FillFlowContainer
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                AutoSizeAxes = Axes.None,
+                Width = 0,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0)
+            };
         }
 
         [BackgroundDependencyLoader]
@@ -124,14 +152,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                                     {
                                         new Drawable[]
                                         {
-                                            leaderboardFlow = new FillFlowContainer
-                                            {
-                                                Anchor = Anchor.CentreLeft,
-                                                Origin = Anchor.CentreLeft,
-                                                AutoSizeAxes = Axes.Both,
-                                                Direction = FillDirection.Vertical,
-                                                Spacing = new Vector2(5)
-                                            },
+                                            leaderboardFlow = getLeaderboardFlow(showChat),
                                             grid = new PlayerGrid { RelativeSizeAxes = Axes.Both }
                                         }
                                     }
@@ -175,6 +196,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                         continue;
 
                     leaderboard.AddClock(instance.UserId, instance.SpectatorPlayerClock);
+                }
+
+                if (!showChat)
+                {
+                    leaderboard.Width = 0;
                 }
 
                 leaderboardFlow.Insert(0, leaderboard);

@@ -205,6 +205,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
 
+        private readonly BindableBool showChatWhileSpectating = new BindableBool();
+
         private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
         {
             Default = 16,
@@ -396,6 +398,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize)
                                 },
                                 Content = new[]
@@ -494,6 +497,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                         {
                                             LabelText = @"Show osu! cookie",
                                             Current = showOsuCookie,
+                                        }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Show leaderboards and chat while spectating",
+                                            Current = showChatWhileSpectating,
                                         }
                                     },
                                     new Drawable[]
@@ -750,7 +761,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             switch (client.LocalUser.State)
             {
                 case MultiplayerUserState.Spectating:
-                    return new MultiSpectatorScreen(Room, users.Take(PlayerGrid.MAX_PLAYERS).ToArray(), spectateClientCount.Value);
+                    return new MultiSpectatorScreen(Room, users.Take(PlayerGrid.MAX_PLAYERS).ToArray(), spectateClientCount.Value, showChatWhileSpectating.Value);
 
                 default:
                     return new MultiplayerPlayerLoader(() => new MultiplayerPlayer(Room, selectedItem, users));
