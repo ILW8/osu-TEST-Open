@@ -205,6 +205,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
 
+        private readonly BindableBool forceSortByTeam = new BindableBool();
+
         private readonly BindableBool showChatWhileSpectating = new BindableBool();
 
         private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
@@ -340,16 +342,62 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     [
                                         new ParticipantsList
                                         {
-                                            RelativeSizeAxes = Axes.Both
+                                            RelativeSizeAxes = Axes.Both,
+                                            ForceSortByTeam = forceSortByTeam
                                         }
                                     ],
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Automatically download queued beatmaps",
+                                            Current = ConfigManager.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps),
+                                        },
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Show osu! cookie",
+                                            Current = showOsuCookie,
+                                        }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Show leaderboards and chat while spectating",
+                                            Current = showChatWhileSpectating,
+                                        }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsSlider<int>
+                                        {
+                                            LabelText = @"Number of clients when spectating",
+                                            Current = spectateClientCount,
+                                        }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Force sorting players by team",
+                                            Current = forceSortByTeam
+                                        }
+                                    }
                                 },
                                 RowDimensions =
                                 [
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension()
+                                    new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize)
                                 ]
                             },
                             // Spacer
@@ -396,10 +444,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                    new Dimension(GridSizeMode.AutoSize)
                                 },
                                 Content = new[]
                                 {
@@ -483,38 +527,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             }
                                         },
                                     },
-                                    new Drawable[]
-                                    {
-                                        new SettingsCheckbox
-                                        {
-                                            LabelText = @"Automatically download queued beatmaps",
-                                            Current = ConfigManager.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps),
-                                        },
-                                    },
-                                    new Drawable[]
-                                    {
-                                        new SettingsCheckbox
-                                        {
-                                            LabelText = @"Show osu! cookie",
-                                            Current = showOsuCookie,
-                                        }
-                                    },
-                                    new Drawable[]
-                                    {
-                                        new SettingsCheckbox
-                                        {
-                                            LabelText = @"Show leaderboards and chat while spectating",
-                                            Current = showChatWhileSpectating,
-                                        }
-                                    },
-                                    new Drawable[]
-                                    {
-                                        new SettingsSlider<int>
-                                        {
-                                            LabelText = @"Number of clients when spectating",
-                                            Current = spectateClientCount,
-                                        }
-                                    }
                                 },
                             },
                         }
