@@ -3,6 +3,7 @@
 
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -18,6 +19,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
     {
         private FillFlowContainer<ParticipantPanel> panels = null!;
         private ParticipantPanel? currentHostPanel;
+        public IBindable<bool> ForceSortByTeam { get; init; } = new Bindable<bool>();
 
         [Resolved]
         private MultiplayerClient client { get; set; } = null!;
@@ -56,7 +58,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
             else
             {
                 // section 1: update users list in room
-                if (client.Room.MatchState is TeamVersusRoomState)
+                if (ForceSortByTeam.Value && client.Room.MatchState is TeamVersusRoomState)
                 {
                     var teamRedUsers = client.Room.Users.Where(u =>
                     {

@@ -205,6 +205,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
 
+        private readonly BindableBool forceSortByTeam = new BindableBool();
+
         private readonly BindableBool showChatWhileSpectating = new BindableBool();
 
         private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
@@ -340,7 +342,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     [
                                         new ParticipantsList
                                         {
-                                            RelativeSizeAxes = Axes.Both
+                                            RelativeSizeAxes = Axes.Both,
+                                            ForceSortByTeam = forceSortByTeam
                                         }
                                     ],
                                     new Drawable[]
@@ -374,6 +377,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                             LabelText = @"Number of clients when spectating",
                                             Current = spectateClientCount,
                                         }
+                                    },
+                                    new Drawable[]
+                                    {
+                                        new SettingsCheckbox
+                                        {
+                                            LabelText = @"Force sorting players by team",
+                                            Current = forceSortByTeam
+                                        }
                                     }
                                 },
                                 RowDimensions =
@@ -382,6 +393,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
                                     new Dimension(GridSizeMode.AutoSize),
