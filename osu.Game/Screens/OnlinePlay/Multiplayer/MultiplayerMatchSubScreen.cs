@@ -207,7 +207,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly BindableBool forceSortByTeam = new BindableBool();
 
-        private readonly BindableBool showChatWhileSpectating = new BindableBool();
+        private readonly BindableBool showChatWhileSpectating = new BindableBool(true);
 
         private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
         {
