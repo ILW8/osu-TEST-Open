@@ -6,8 +6,10 @@ using osu.Framework.Allocation;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Extensions;
 using osu.Game.Graphics.Containers;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osuTK;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
@@ -53,6 +55,48 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
                 panels.Clear();
             else
             {
+                // section 1: update users list in room
+                if (client.Room.MatchState is TeamVersusRoomState)
+                {
+                    var teamRedUsers = client.Room.Users.Where(u =>
+                    {
+                        if (u.MatchState is TeamVersusUserState teamVersusUserState)
+                            return teamVersusUserState.TeamID == 0;
+
+                        return false;
+                    });
+
+                    var teamBlueUsers = client.Room.Users.Where(u =>
+                    {
+                        if (u.MatchState is TeamVersusUserState teamVersusUserState)
+                            return teamVersusUserState.TeamID == 1;
+
+                        return false;
+                    });
+
+                    var multiplayerRoomUsers = teamRedUsers as MultiplayerRoomUser[] ?? teamRedUsers.ToArray();
+                    foreach (var user in multiplayerRoomUsers)
+                        client.Room.Users.Remove(user);
+                    client.Room.Users.AddRange(multiplayerRoomUsers);
+
+                    var blueUsers = teamBlueUsers as MultiplayerRoomUser[] ?? teamBlueUsers.ToArray();
+                    foreach (var user in blueUsers)
+                        client.Room.Users.Remove(user);
+                    client.Room.Users.AddRange(blueUsers);
+                }
+
+                // move spectators to very bottom
+                for (int i = client.Room.Users.Count - 1; i >= 0; i--)
+                {
+                    if (client.Room.Users[i].State != MultiplayerUserState.Spectating)
+                        continue;
+
+                    var user = client.Room.Users[i];
+                    client.Room.Users.RemoveAt(i);
+                    client.Room.Users.Add(user);
+                }
+
+                // section 2: update panels list drawn
                 // Remove panels for users no longer in the room.
                 foreach (var p in panels)
                 {

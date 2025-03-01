@@ -30,7 +30,6 @@ using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -247,46 +246,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Participants
         {
             if (client.Room == null || client.LocalUser == null)
                 return;
-
-            if (client.Room.MatchState is TeamVersusRoomState)
-            {
-                var teamRedUsers = client.Room.Users.Where(u =>
-                {
-                    if (u.MatchState is TeamVersusUserState teamVersusUserState)
-                        return teamVersusUserState.TeamID == 0;
-
-                    return false;
-                });
-
-                var teamBlueUsers = client.Room.Users.Where(u =>
-                {
-                    if (u.MatchState is TeamVersusUserState teamVersusUserState)
-                        return teamVersusUserState.TeamID == 1;
-
-                    return false;
-                });
-
-                var multiplayerRoomUsers = teamRedUsers as MultiplayerRoomUser[] ?? teamRedUsers.ToArray();
-                foreach (var user in multiplayerRoomUsers)
-                    client.Room.Users.Remove(user);
-                client.Room.Users.AddRange(multiplayerRoomUsers);
-
-                var blueUsers = teamBlueUsers as MultiplayerRoomUser[] ?? teamBlueUsers.ToArray();
-                foreach (var user in blueUsers)
-                    client.Room.Users.Remove(user);
-                client.Room.Users.AddRange(blueUsers);
-            }
-
-            // move spectators to very bottom
-            for (int i = client.Room.Users.Count - 1; i >= 0; i--)
-            {
-                if (client.Room.Users[i].State != MultiplayerUserState.Spectating)
-                    continue;
-
-                var user = client.Room.Users[i];
-                client.Room.Users.RemoveAt(i);
-                client.Room.Users.Add(user);
-            }
 
             const double fade_time = 50;
 
