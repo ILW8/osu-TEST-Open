@@ -15,8 +15,6 @@ namespace osu.Game.Screens.OnlinePlay
 {
     public partial class FreeModSelectOverlay : ModSelectOverlay
     {
-        protected override bool ShowPresets => true;
-
         internal override IEnumerable<ColumnDimContainer> GetColumns() => CreateColumns<FreeModModPreset>();
 
         protected override bool AllowCustomisation => false;

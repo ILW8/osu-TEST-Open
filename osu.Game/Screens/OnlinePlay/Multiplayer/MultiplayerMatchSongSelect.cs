@@ -131,7 +131,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         protected override ModSelectOverlay CreateModSelectOverlay() => new MultiplayerMatchModSelectOverlay(OverlayColourScheme.Plum)
         {
-            IsValidMod = IsValidMod
+            IsValidMod = IsValidMod,
+            ShowPresets = true
         };
 
         internal partial class MultiplayerMatchModSelectOverlay : UserModSelectOverlay
@@ -140,8 +141,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                 : base(colourScheme)
             {
             }
-
-            protected override bool ShowPresets => true;
         }
     }
 }
