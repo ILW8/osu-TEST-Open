@@ -68,6 +68,7 @@ namespace osu.Game.Screens.OnlinePlay
             {
                 SelectedMods = { BindTarget = FreeMods },
                 IsValidMod = IsValidFreeMod,
+                ShowPresets = true,
             };
         }
 
