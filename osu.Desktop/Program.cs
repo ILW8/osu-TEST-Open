@@ -83,7 +83,13 @@ namespace osu.Desktop
                 {
                     case "--tournament":
                         tournamentClient = true;
-                        gameName = $"{base_game_name}-tournament";
+                        break;
+
+                    case "--acronym":
+                        if (val.Length == 0)
+                            break;
+
+                        gameName = $"{base_game_name}-referee-{val}";
                         break;
 
                     case "--debug-client-id":
