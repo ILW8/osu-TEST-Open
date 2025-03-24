@@ -86,6 +86,9 @@ namespace osu.Desktop
                         break;
 
                     case "--acronym":
+                        if (val.Length == 0)
+                            break;
+
                         gameName = $"{base_game_name}-{val}";
                         break;
 
