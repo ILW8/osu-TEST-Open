@@ -23,7 +23,7 @@ namespace osu.Desktop
 #if DEBUG
         private const string base_game_name = @"osu-development";
 #else
-        private const string base_game_name = @"osu";
+        private const string base_game_name = @"osu-referee";
 #endif
 
         private static LegacyTcpIpcProvider? legacyIpc;
@@ -83,7 +83,10 @@ namespace osu.Desktop
                 {
                     case "--tournament":
                         tournamentClient = true;
-                        gameName = $"{base_game_name}-tournament";
+                        break;
+
+                    case "--acronym":
+                        gameName = $"{base_game_name}-{val}";
                         break;
 
                     case "--debug-client-id":
