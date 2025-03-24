@@ -5,8 +5,9 @@ using osu.Framework.Allocation;
 using osu.Framework.Development;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Logging;
-using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -77,7 +78,7 @@ namespace osu.Game.Overlays.Settings
             }
         }
 
-        private partial class BuildDisplay : OsuAnimatedButton
+        private partial class BuildDisplay : OsuAnimatedButton, IHasContextMenu
         {
             private readonly string version;
 
@@ -85,7 +86,7 @@ namespace osu.Game.Overlays.Settings
             private OsuColour colours { get; set; } = null!;
 
             [Resolved]
-            private GameHost host { get; set; } = null!;
+            private OsuGame? game { get; set; }
 
             public BuildDisplay(string version)
             {
@@ -99,7 +100,7 @@ namespace osu.Game.Overlays.Settings
             [BackgroundDependencyLoader]
             private void load()
             {
-                Action = () => host.OpenUrlExternally(@"https://github.com/ILW8/osu-TEST-Open/releases");
+                Action = () => game?.OpenUrlExternally(@"https://github.com/ILW8/osu-TEST-Open/releases");
 
                 Add(new OsuSpriteText
                 {
@@ -112,6 +113,11 @@ namespace osu.Game.Overlays.Settings
                     Colour = DebugUtils.IsDebugBuild ? colours.Red : Color4.White,
                 });
             }
+
+            public MenuItem[] ContextMenuItems => new MenuItem[]
+            {
+                new OsuMenuItem("Copy version", MenuItemType.Standard, () => game?.CopyToClipboard(version))
+            };
         }
     }
 }
