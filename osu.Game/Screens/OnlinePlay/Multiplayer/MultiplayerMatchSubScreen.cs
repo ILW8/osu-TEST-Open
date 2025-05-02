@@ -532,51 +532,23 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     RelativeSizeAxes = Axes.Both,
                                                                     RowDimensions = new[]
                                                                     {
-                                                                        new Dimension(GridSizeMode.AutoSize),
-                                                                        new Dimension(GridSizeMode.AutoSize),
-                                                                        new Dimension(GridSizeMode.AutoSize),
-                                                                        new Dimension(GridSizeMode.Absolute, 5),
-                                                                        new Dimension(),
-                                                                        new Dimension(GridSizeMode.AutoSize),
-                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize), // chat OverlineHeader
+                                                                        new Dimension(), // chat
+                                                                        new Dimension(GridSizeMode.AutoSize), // beatmap queue OverlineHeader
+                                                                        new Dimension(GridSizeMode.AutoSize), // add item button
+                                                                        new Dimension(GridSizeMode.Absolute, row_padding),
+                                                                        new Dimension(), // playlist
+                                                                        new Dimension(GridSizeMode.AutoSize), // extra mods
+                                                                        new Dimension(GridSizeMode.AutoSize), // freestyle
                                                                     },
                                                                     Content = new[]
                                                                     {
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new OverlinedHeader("Chat")
-                                                                        },
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new MatchChatDisplay(room)
-                                                                            {
-                                                                                RelativeSizeAxes = Axes.Both
-                                                                            }
-                                                                        },
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new OverlinedHeader("Beatmap queue")
-                                                                        },
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new AddItemButton
-                                                                            {
-                                                                                RelativeSizeAxes = Axes.X,
-                                                                                Height = 40,
-                                                                                Text = "Add item",
-                                                                                Action = () => ShowSongSelect()
-                                                                            },
-                                                                        },
+                                                                        new Drawable[] { new OverlinedHeader("Chat") },
+                                                                        new Drawable[] { new MatchChatDisplay(room) { RelativeSizeAxes = Axes.Both } },
+                                                                        new Drawable[] { new OverlinedHeader("Beatmap queue") },
+                                                                        new Drawable[] { new AddItemButton { RelativeSizeAxes = Axes.X, Height = 40, Text = "Add item", Action = () => ShowSongSelect() }, },
                                                                         null,
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new MultiplayerPlaylist
-                                                                            {
-                                                                                RelativeSizeAxes = Axes.Both,
-                                                                                RequestEdit = ShowSongSelect,
-                                                                                RequestResults = showResults
-                                                                            }
-                                                                        },
+                                                                        new Drawable[] { new MultiplayerPlaylist { RelativeSizeAxes = Axes.Both, RequestEdit = ShowSongSelect, RequestResults = showResults } },
                                                                         new Drawable[]
                                                                         {
                                                                             userModsSection = new FillFlowContainer
