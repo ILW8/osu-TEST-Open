@@ -22,6 +22,7 @@ using osu.Framework.Threading;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Online;
@@ -31,6 +32,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Menu;
 using osu.Game.Rulesets.Mods;
@@ -226,6 +228,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved]
+        protected OsuConfigManager ConfigManager { get; private set; } = null!;
+
+        [Resolved]
         private AudioManager audio { get; set; } = null!;
 
         [Resolved]
@@ -255,6 +260,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         [Resolved]
         private OsuGame? game { get; set; }
 
+        [Resolved]
+        private BeatmapModelDownloader beatmapsDownloader { get; set; } = null!;
+
         [Cached(typeof(OnlinePlayBeatmapAvailabilityTracker))]
         private readonly OnlinePlayBeatmapAvailabilityTracker beatmapAvailabilityTracker = new MultiplayerBeatmapAvailabilityTracker();
 
@@ -274,8 +282,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private long lastPlaylistItemId;
         private bool isRoomJoined;
-        [Resolved]
-        private BeatmapModelDownloader beatmapsDownloader { get; set; } = null!;
 
         // private BeatmapDownloadTracker beatmapDownloadTracker = null!;
         private readonly List<BeatmapDownloadTracker> beatmapDownloadTrackers = new List<BeatmapDownloadTracker>();
@@ -299,8 +305,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         };
 
         private Container osuCookieContainer = null!;
-
-        private AddItemButton addItemButton = null!;
 
         private Container osuCookieBackgroundContainer = null!;
 
@@ -389,7 +393,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                         {
                                                             new Dimension(),
                                                             new Dimension(GridSizeMode.Absolute, column_padding),
-                                                            new Dimension(),
+                                                            new Dimension(GridSizeMode.AutoSize), // osu cookie
                                                             new Dimension(GridSizeMode.Absolute, column_padding),
                                                             new Dimension(),
                                                         },
@@ -397,15 +401,30 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                         {
                                                             new Drawable?[]
                                                             {
+                                                                // left column
                                                                 new GridContainer
                                                                 {
                                                                     RelativeSizeAxes = Axes.Both,
-                                                                    RowDimensions = new[]
-                                                                    {
+                                                                    // RowDimensions = new[]
+                                                                    // {
+                                                                    //     new Dimension(GridSizeMode.AutoSize)
+                                                                    // },
+                                                                    RowDimensions =
+                                                                    [
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(),
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(GridSizeMode.AutoSize),
                                                                         new Dimension(GridSizeMode.AutoSize)
-                                                                    },
+                                                                    ],
                                                                     Content = new[]
                                                                     {
+                                                                        new Drawable[] { new OverlinedHeader("Lobby ID") },
+                                                                        new Drawable[] { new LinkFlowContainer { Height = 24, AutoSizeAxes = Axes.X } },
                                                                         new Drawable[]
                                                                         {
                                                                             new ParticipantsListHeader()
@@ -416,15 +435,104 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                             {
                                                                                 RelativeSizeAxes = Axes.Both
                                                                             },
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsCheckbox
+                                                                            {
+                                                                                LabelText = @"Automatically download queued beatmaps",
+                                                                                Current = ConfigManager.GetBindable<bool>(OsuSetting.AutomaticallyDownloadMultiMissingBeatmaps),
+                                                                            },
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsCheckbox
+                                                                            {
+                                                                                LabelText = @"Show osu! cookie",
+                                                                                Current = showOsuCookie,
+                                                                            }
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsCheckbox
+                                                                            {
+                                                                                LabelText = @"Show leaderboards and chat while spectating",
+                                                                                Current = showChatWhileSpectating,
+                                                                            }
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsSlider<int>
+                                                                            {
+                                                                                LabelText = @"Number of clients when spectating",
+                                                                                Current = spectateClientCount,
+                                                                            }
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsCheckbox
+                                                                            {
+                                                                                LabelText = @"Force sorting players by team",
+                                                                                Current = forceSortByTeam
+                                                                            }
                                                                         }
                                                                     }
                                                                 },
                                                                 null,
+                                                                // osu! cookie
+                                                                osuCookieContainer = new Container
+                                                                {
+                                                                    Anchor = Anchor.Centre,
+                                                                    Origin = Anchor.Centre,
+                                                                    Size = new Vector2(420f),
+                                                                    Children = new Drawable[]
+                                                                    {
+                                                                        osuCookieBackgroundContainer = new Container
+                                                                        {
+                                                                            AutoSizeAxes = Axes.None,
+                                                                            RelativeSizeAxes = Axes.Both,
+                                                                            Size = new Vector2(1f),
+                                                                            Child = osuCookieBackground = getOsuCookieBackground(Beatmap.Value)
+                                                                        },
+                                                                        new Container
+                                                                        {
+                                                                            RelativeSizeAxes = Axes.Both,
+                                                                            Child = new OsuLogo
+                                                                            {
+                                                                                Anchor = Anchor.Centre,
+                                                                                Origin = Anchor.Centre,
+                                                                                Scale = new Vector2(0.5f),
+                                                                                Margin = new MarginPadding(32.0f),
+                                                                            },
+                                                                        }
+                                                                    }
+                                                                },
+                                                                // // center column
+                                                                // new GridContainer
+                                                                // {
+                                                                //     RelativeSizeAxes = Axes.Both,
+                                                                //     RowDimensions = new[]
+                                                                //     {
+                                                                //         new Dimension(GridSizeMode.AutoSize),
+                                                                //         new Dimension(GridSizeMode.AutoSize),
+                                                                //         new Dimension(GridSizeMode.Absolute, 5),
+                                                                //         new Dimension(),
+                                                                //         new Dimension(GridSizeMode.AutoSize),
+                                                                //         new Dimension(GridSizeMode.AutoSize),
+                                                                //     },
+                                                                //     Content = new[]
+                                                                //     {
+                                                                //
+                                                                //     },
+                                                                // },
+                                                                null,
+                                                                // right column
                                                                 new GridContainer
                                                                 {
                                                                     RelativeSizeAxes = Axes.Both,
                                                                     RowDimensions = new[]
                                                                     {
+                                                                        new Dimension(GridSizeMode.AutoSize),
                                                                         new Dimension(GridSizeMode.AutoSize),
                                                                         new Dimension(GridSizeMode.AutoSize),
                                                                         new Dimension(GridSizeMode.Absolute, 5),
@@ -434,6 +542,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     },
                                                                     Content = new[]
                                                                     {
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new OverlinedHeader("Chat")
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new MatchChatDisplay(room)
+                                                                            {
+                                                                                RelativeSizeAxes = Axes.Both
+                                                                            }
+                                                                        },
                                                                         new Drawable[]
                                                                         {
                                                                             new OverlinedHeader("Beatmap queue")
@@ -515,29 +634,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                                 }
                                                                             },
                                                                         },
-                                                                    },
-                                                                },
-                                                                null,
-                                                                new GridContainer
-                                                                {
-                                                                    RelativeSizeAxes = Axes.Both,
-                                                                    RowDimensions = new[]
-                                                                    {
-                                                                        new Dimension(GridSizeMode.AutoSize)
-                                                                    },
-                                                                    Content = new[]
-                                                                    {
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new OverlinedHeader("Chat")
-                                                                        },
-                                                                        new Drawable[]
-                                                                        {
-                                                                            new MatchChatDisplay(room)
-                                                                            {
-                                                                                RelativeSizeAxes = Axes.Both
-                                                                            }
-                                                                        }
                                                                     }
                                                                 }
                                                             }
