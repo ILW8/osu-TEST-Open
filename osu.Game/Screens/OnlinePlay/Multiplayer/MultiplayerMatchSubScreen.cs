@@ -215,6 +215,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public override string ShortTitle => "room";
         private LinkFlowContainer linkFlowContainer = null!;
+        private StandAloneChatDisplay chatDisplay = null!;
 
         public override bool? ApplyModTrackAdjustments => true;
 
@@ -245,6 +246,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         [Resolved]
         private MusicController music { get; set; } = null!;
+
+        [Resolved]
+        private ChatTimerHandler chatTimerHandler { get; set; } = null!;
 
         [Resolved]
         private OnlinePlayScreen? parentScreen { get; set; }
@@ -300,7 +304,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly BindableBool showChatWhileSpectating = new BindableBool(true);
 
-         private Bindable<int> spectateClientCount = null!;
+        private Bindable<int> spectateClientCount = null!;
 
         private Container osuCookieContainer = null!;
 
@@ -525,7 +529,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     Content = new[]
                                                                     {
                                                                         new Drawable[] { new OverlinedHeader("Chat") },
-                                                                        new Drawable[] { new MatchChatDisplay(room) { RelativeSizeAxes = Axes.Both } },
+                                                                        new Drawable[] { chatDisplay = new MatchChatDisplay(room) { RelativeSizeAxes = Axes.Both } },
                                                                         new Drawable[] { new OverlinedHeader("Beatmap queue") },
                                                                         new Drawable[] { new AddItemButton { RelativeSizeAxes = Axes.X, Height = 40, Text = "Add item", Action = () => ShowSongSelect() }, },
                                                                         null,
@@ -991,6 +995,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public override void OnEntering(ScreenTransitionEvent e)
         {
+            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueBotMessage;
             base.OnEntering(e);
             beginHandlingTrack();
         }
@@ -998,6 +1003,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         public override void OnSuspending(ScreenTransitionEvent e)
         {
             onLeaving();
+
+            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueBotMessage;
+
             base.OnSuspending(e);
         }
 
@@ -1005,6 +1013,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         {
             base.OnResuming(e);
             beginHandlingTrack();
+
+            chatTimerHandler.OnChatMessageDue += chatDisplay.EnqueueBotMessage;
 
             // Required to update beatmap/ruleset when resuming from style selection.
             updateGameplayState();
@@ -1014,6 +1024,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         {
             if (!ensureExitConfirmed())
                 return true;
+
+            chatTimerHandler.OnChatMessageDue -= chatDisplay.EnqueueBotMessage;
+            chatTimerHandler.Abort();
 
             client.LeaveRoom().FireAndForget();
 
