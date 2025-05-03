@@ -38,6 +38,21 @@ namespace osu.Game.Online.Multiplayer
         public virtual event Action? RoomUpdated;
 
         /// <summary>
+        /// Invoked when a user's local style is changed.
+        /// </summary>
+        public event Action<MultiplayerRoomUser>? UserStyleChanged;
+
+        /// <summary>
+        /// Invoked when a user's local mods are changed.
+        /// </summary>
+        public event Action<MultiplayerRoomUser>? UserModsChanged;
+
+        /// <summary>
+        /// Invoked when the room's settings are changed.
+        /// </summary>
+        public event Action<MultiplayerRoomSettings>? SettingsChanged;
+
+        /// <summary>
         /// Invoked when a new user joins the room.
         /// </summary>
         public event Action<MultiplayerRoomUser>? UserJoined;
@@ -745,7 +760,7 @@ namespace osu.Game.Online.Multiplayer
             return Task.CompletedTask;
         }
 
-        public Task UserStyleChanged(int userId, int? beatmapId, int? rulesetId)
+        Task IMultiplayerClient.UserStyleChanged(int userId, int? beatmapId, int? rulesetId)
         {
             Scheduler.Add(() =>
             {
@@ -758,13 +773,14 @@ namespace osu.Game.Online.Multiplayer
                 user.BeatmapId = beatmapId;
                 user.RulesetId = rulesetId;
 
+                UserStyleChanged?.Invoke(user);
                 RoomUpdated?.Invoke();
             }, false);
 
             return Task.CompletedTask;
         }
 
-        public Task UserModsChanged(int userId, IEnumerable<APIMod> mods)
+        Task IMultiplayerClient.UserModsChanged(int userId, IEnumerable<APIMod> mods)
         {
             Scheduler.Add(() =>
             {
@@ -776,6 +792,7 @@ namespace osu.Game.Online.Multiplayer
 
                 user.Mods = mods;
 
+                UserModsChanged?.Invoke(user);
                 RoomUpdated?.Invoke();
             }, false);
 
@@ -948,6 +965,7 @@ namespace osu.Game.Online.Multiplayer
             APIRoom.CurrentPlaylistItem = APIRoom.Playlist.Single(item => item.ID == settings.PlaylistItemId);
             APIRoom.AutoSkip = Room.Settings.AutoSkip;
 
+            SettingsChanged?.Invoke(settings);
             RoomUpdated?.Invoke();
         }
 

@@ -29,14 +29,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
         private const float height_reduction_ratio = 720f / 1080f; // active area height is 720 for a 1080p stream
         private const int stream_area_width = 1366;
 
-        public required Bindable<PlaylistItem?> SelectedItem
-        {
-            get => selectedItem;
-            set => selectedItem.Current = value;
-        }
-
-        private readonly BindableWithCurrent<PlaylistItem?> selectedItem = new BindableWithCurrent<PlaylistItem?>();
-
         public MultiplayerMatchFooter()
         {
             RelativeSizeAxes = Axes.Both;
@@ -65,13 +57,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                         new MultiplayerSpectateButton
                         {
                             RelativeSizeAxes = Axes.Both,
-                            SelectedItem = selectedItem
                         },
                         null,
                         new MatchStartControl
                         {
                             RelativeSizeAxes = Axes.Both,
-                            SelectedItem = selectedItem
                         },
                         null
                     }

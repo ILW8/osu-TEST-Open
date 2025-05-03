@@ -13,6 +13,7 @@ using osu.Framework.Graphics.Pooling;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
+using osu.Game.Graphics.Carousel;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Screens.Select;
 
@@ -23,7 +24,7 @@ namespace osu.Game.Screens.SelectV2
     {
         public Action<BeatmapInfo>? RequestPresentBeatmap { private get; init; }
 
-        public const float SPACING = 5f;
+        public const float SPACING = 3f;
 
         private IBindableList<BeatmapSetInfo> detachedBeatmaps = null!;
 
