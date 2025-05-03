@@ -12,6 +12,7 @@ using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -23,6 +24,7 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Models;
 using osu.Game.Online.Broadcasts;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -58,7 +60,13 @@ namespace osu.Game.Online.Chat
         protected MultiplayerClient Client { get; private set; } = null!;
 
         [Resolved]
+        protected IAPIProvider API { get; private set; } = null!;
+
+        [Resolved]
         protected RulesetStore RulesetStore { get; private set; } = null!;
+
+        [Resolved]
+        private BeatmapManager beatmapManager { get; set; } = null!;
 
         private BeatmapModelDownloader beatmapsDownloader = null!;
 
@@ -67,6 +75,8 @@ namespace osu.Game.Online.Chat
         private BeatmapDownloadTracker beatmapDownloadTracker = null!;
 
         private IDisposable? selectionOperation;
+
+        private Task lastFetchTask = Task.CompletedTask;
 
         private readonly Queue<Tuple<string, Channel>> messageQueue = new Queue<Tuple<string, Channel>>();
 
@@ -288,6 +298,18 @@ namespace osu.Game.Online.Chat
 
             Scheduler.Add(() => broadcastServer.Remove(chatBroadcaster));
             base.Dispose(isDisposing);
+        }
+
+        private PlaylistItem? getLastPlaylistItem()
+        {
+            if (Client.Room.IsNull())
+                return null;
+
+            var latestResult = Client.Room.Playlist.Where(p => p.Expired)
+                                     .OrderByDescending(p => p.PlayedAt)
+                                     .FirstOrDefault();
+
+            return latestResult != null ? new PlaylistItem(latestResult) : null;
         }
 
         protected virtual StandAloneDrawableChannel CreateDrawableChannel(Channel channel) =>
@@ -543,6 +565,7 @@ namespace osu.Game.Online.Chat
                     if (!(parts.Length == 2 && parts[0] == @"!mp"))
                         break;
 
+                    // commands with no parameters
                     switch (parts[1])
                     {
                         case @"abort":
@@ -561,6 +584,21 @@ namespace osu.Game.Online.Chat
                         case @"aborttimer":
                             abortTimer();
                             break;
+
+                        case @"results":
+                            if (!lastFetchTask.IsCompleted)
+                                return;
+
+                            Schedule(() =>
+                            {
+                                long? roomID = Client.Room?.RoomID;
+                                var playlistItem = getLastPlaylistItem();
+
+                                if (roomID != null && playlistItem != null)
+                                    lastFetchTask = Task.Run(async () => await postLatestResults((long)roomID, playlistItem).ConfigureAwait(false));
+                            });
+
+                            break;
                     }
 
                     break;
@@ -568,6 +606,66 @@ namespace osu.Game.Online.Chat
             }
 
             TextBox.Text = string.Empty;
+        }
+
+        private async Task postLatestResults(long roomID, PlaylistItem? playlistItem)
+        {
+            if (playlistItem == null) return;
+
+            var requestTaskSource = new TaskCompletionSource<IndexedMultiplayerScores>();
+            var request = new IndexPlaylistScoresRequest(roomID, playlistItem.ID);
+            request.Success += requestTaskSource.SetResult;
+            request.Failure += requestTaskSource.SetException;
+            API.Queue(request);
+
+            try
+            {
+                var indexMultiplayerScores = await requestTaskSource.Task.ConfigureAwait(false);
+
+                int scoreMapId = indexMultiplayerScores.Scores.Select(s => s.BeatmapId).Distinct().FirstOrDefault();
+
+                if (scoreMapId == 0)
+                {
+                    EnqueueBotMessage($@"Unexpected beatmap ID for score: {scoreMapId}");
+                    return;
+                }
+
+                BeatmapInfo? localBeatmap = beatmapManager.QueryBeatmap(b => b.OnlineID == scoreMapId);
+
+                if (localBeatmap == null)
+                {
+                    APIBeatmap? onlineBeatmap = await beatmapLookupCache.GetBeatmapAsync(scoreMapId).ConfigureAwait(false);
+
+                    if (onlineBeatmap != null)
+                    {
+                        localBeatmap = new BeatmapInfo
+                        {
+                            Metadata =
+                            {
+                                Artist = onlineBeatmap.Metadata.Artist,
+                                Title = onlineBeatmap.Metadata.Title,
+                                Author = new RealmUser
+                                {
+                                    Username = onlineBeatmap.Metadata.Author.Username,
+                                    OnlineID = onlineBeatmap.Metadata.Author.OnlineID,
+                                }
+                            },
+                            DifficultyName = onlineBeatmap.DifficultyName,
+                        };
+                    }
+                }
+
+                EnqueueBotMessage($@"[{playlistItem.ID}] Results for {localBeatmap?.Metadata.ToString() ?? @"UNKNOWN BEATMAP"} [{localBeatmap?.DifficultyName ?? @"unknown difficulty"}]: ");
+
+                foreach (var score in indexMultiplayerScores.Scores)
+                {
+                    EnqueueBotMessage($@"{score.User.Username}: {score.TotalScore:N0} score, {100 * score.Accuracy:00.000}% accuracy");
+                }
+            }
+            catch (Exception ex)
+            {
+                EnqueueBotMessage($@"Failed to fetch all scores: {ex}");
+            }
         }
 
         private void startMatch()
