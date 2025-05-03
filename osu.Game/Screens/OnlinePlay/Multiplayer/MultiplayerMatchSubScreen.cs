@@ -300,13 +300,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly BindableBool showChatWhileSpectating = new BindableBool(true);
 
-        private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
-        {
-            Default = 4,
-            MinValue = 1,
-            MaxValue = 16,
-            Value = 16
-        };
+         private Bindable<int> spectateClientCount = null!;
 
         private Container osuCookieContainer = null!;
 
@@ -336,6 +330,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         private void load()
         {
             sampleStart = audio.Samples.Get(@"SongSelect/confirm-selection");
+            spectateClientCount = ConfigManager.GetBindable<int>(OsuSetting.MultiplayerSpectateNumberOfPlayers);
 
             InternalChild = new OsuContextMenuContainer
             {
