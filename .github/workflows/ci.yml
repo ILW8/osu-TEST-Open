@@ -2,11 +2,12 @@ on:
   push:
     tags:
       - '**'
+  pull_request:
   workflow_dispatch:
 
-name: Build tagged releases
+name: Build local release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 permissions:
@@ -17,13 +18,11 @@ jobs:
     name: Build
     runs-on: Ubuntu-latest
     strategy:
-       fail-fast: false
-       matrix:
-          os:
-            - linux-x64
-            - osx-arm64
-            - osx-x64
-            - win-x64
+      fail-fast: false
+      matrix:
+        os:
+          - linux-x64
+          - win-x64
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -86,8 +85,6 @@ jobs:
           name: |
             win-x64
             linux-x64
-            osx-arm64
-            osx-x64
 
       - name: Release
         uses: softprops/action-gh-release@v2
