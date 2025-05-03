@@ -293,13 +293,16 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         private readonly Bindable<bool> showOsuCookie = new Bindable<bool>();
 
-        private readonly BindableBool forceSortByTeam = new BindableBool();
+        private readonly BindableBool forceSortByTeam = new BindableBool()
+        {
+            Default = true
+        };
 
         private readonly BindableBool showChatWhileSpectating = new BindableBool(true);
 
         private readonly BindableNumber<int> spectateClientCount = new BindableNumber<int>
         {
-            Default = 16,
+            Default = 4,
             MinValue = 1,
             MaxValue = 16,
             Value = 16

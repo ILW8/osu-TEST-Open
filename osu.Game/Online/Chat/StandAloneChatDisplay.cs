@@ -167,7 +167,7 @@ namespace osu.Game.Online.Chat
                 if (botMessageQueue.Count > 0)
                 {
                     (string text, Channel target) = botMessageQueue.Dequeue();
-                    string message = $@"[TESTOpenBot]: {text}";
+                    string message = $@"[FakeBanchoBot]: {text}";
                     sendMessageAndLog(message, target);
                     Scheduler.AddDelayed(processMessageQueue, 1250);
                     return;
