@@ -4,7 +4,6 @@
 using System;
 using System.IO;
 using System.Runtime.Versioning;
-using osu.Desktop.LegacyIpc;
 using osu.Desktop.Windows;
 using osu.Framework;
 using osu.Framework.Development;
@@ -25,8 +24,6 @@ namespace osu.Desktop
 #else
         private const string base_game_name = @"osu";
 #endif
-
-        private static LegacyTcpIpcProvider? legacyIpc;
 
         [STAThread]
         public static void Main(string[] args)
@@ -116,27 +113,6 @@ namespace osu.Desktop
                 {
                     if (trySendIPCMessage(host, cwd, args))
                         return;
-
-                    // we want to allow multiple instances to be started when in debug.
-                    if (!DebugUtils.IsDebugBuild)
-                    {
-                        Logger.Log(@"osu! does not support multiple running instances.", LoggingTarget.Runtime, LogLevel.Error);
-                        return;
-                    }
-                }
-
-                if (host.IsPrimaryInstance)
-                {
-                    try
-                    {
-                        Logger.Log("Starting legacy IPC provider...");
-                        legacyIpc = new LegacyTcpIpcProvider();
-                        legacyIpc.Bind();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error(ex, "Failed to start legacy IPC provider");
-                    }
                 }
 
                 if (tournamentClient)
