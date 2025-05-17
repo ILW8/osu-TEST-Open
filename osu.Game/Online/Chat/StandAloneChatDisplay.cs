@@ -113,7 +113,6 @@ namespace osu.Game.Online.Chat
         /// Construct a new instance.
         /// </summary>
         /// <param name="postingTextBox">Whether a textbox for posting new messages should be displayed.</param>
-        /// <param name="pacingInterval">delay between messages being sent</param>
         public StandAloneChatDisplay(bool postingTextBox = false)
         {
             const float corner_radius = 10;
