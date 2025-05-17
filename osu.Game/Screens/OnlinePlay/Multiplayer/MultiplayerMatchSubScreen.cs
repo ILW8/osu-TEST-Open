@@ -518,7 +518,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     RowDimensions = new[]
                                                                     {
                                                                         new Dimension(GridSizeMode.AutoSize), // chat OverlineHeader
-                                                                        new Dimension(), // chat
+                                                                        new Dimension(), // chat,
+                                                                        new Dimension(GridSizeMode.AutoSize), // chat send delay slider
+                                                                        new Dimension(GridSizeMode.Absolute, row_padding),
                                                                         new Dimension(GridSizeMode.AutoSize), // beatmap queue OverlineHeader
                                                                         new Dimension(GridSizeMode.AutoSize), // add item button
                                                                         new Dimension(GridSizeMode.Absolute, row_padding),
@@ -530,6 +532,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     {
                                                                         new Drawable[] { new OverlinedHeader("Chat") },
                                                                         new Drawable[] { chatDisplay = new MatchChatDisplay(room) { RelativeSizeAxes = Axes.Both } },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsSlider<int> { LabelText = @"Chat message send interval (setting too low can cause messages to be dropped!!!!)", Current = chatDisplay.ChatPacingInterval, }
+                                                                        },
+                                                                        null,
                                                                         new Drawable[] { new OverlinedHeader("Beatmap queue") },
                                                                         new Drawable[] { new AddItemButton { RelativeSizeAxes = Axes.X, Height = 40, Text = "Add item", Action = () => ShowSongSelect() }, },
                                                                         null,
