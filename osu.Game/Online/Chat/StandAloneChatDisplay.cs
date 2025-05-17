@@ -98,6 +98,14 @@ namespace osu.Game.Online.Chat
 
         private const float text_box_height = 30;
 
+        public readonly Bindable<int> ChatPacingInterval = new BindableInt
+        {
+            MinValue = 100,
+            MaxValue = 2500,
+            Default = 1250,
+            Value = 1250
+        };
+
         [Resolved(CanBeNull = true)] // not sure if it actually can be null
         private ChatTimerHandler? chatTimerHandler { get; set; }
 
@@ -105,6 +113,7 @@ namespace osu.Game.Online.Chat
         /// Construct a new instance.
         /// </summary>
         /// <param name="postingTextBox">Whether a textbox for posting new messages should be displayed.</param>
+        /// <param name="pacingInterval">delay between messages being sent</param>
         public StandAloneChatDisplay(bool postingTextBox = false)
         {
             const float corner_radius = 10;
@@ -167,7 +176,7 @@ namespace osu.Game.Online.Chat
                 {
                     (string text, var target) = messageQueue.Dequeue();
                     sendMessageAndLog(text, target);
-                    Scheduler.AddDelayed(processMessageQueue, 1250);
+                    Scheduler.AddDelayed(processMessageQueue, ChatPacingInterval.Value);
                     return;
                 }
             }
@@ -179,7 +188,7 @@ namespace osu.Game.Online.Chat
                     (string text, Channel target) = botMessageQueue.Dequeue();
                     string message = $@"[FakeBanchoBot]: {text}";
                     sendMessageAndLog(message, target);
-                    Scheduler.AddDelayed(processMessageQueue, 1250);
+                    Scheduler.AddDelayed(processMessageQueue, ChatPacingInterval.Value);
                     return;
                 }
             }
@@ -816,6 +825,16 @@ namespace osu.Game.Online.Chat
                 }
 
                 return base.OnKeyDown(e);
+            }
+
+            protected override bool CanAddCharacter(char character)
+            {
+                if (character != '\n')
+                    return base.CanAddCharacter(character);
+
+                // special-case newline char to send a message instead
+                Commit();
+                return false;
             }
 
             protected override void LoadComplete()
