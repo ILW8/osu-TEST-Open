@@ -118,7 +118,7 @@ namespace osu.Game
 
         public bool IsDeployedBuild => AssemblyVersion.Major > 0;
 
-        internal const string BUILD_SUFFIX = @"TEST-Open";
+        internal const string BUILD_SUFFIX = @"LGA";
 
         public virtual string Version
         {
