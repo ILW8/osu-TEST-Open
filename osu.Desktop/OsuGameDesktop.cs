@@ -110,7 +110,7 @@ namespace osu.Desktop
 
         protected override UpdateManager CreateUpdateManager()
         {
-            return new NoActionUpdateManager();
+            return new GitHubReleaseUpdateManager();
         }
 
         public override bool RestartAppWhenExited()
