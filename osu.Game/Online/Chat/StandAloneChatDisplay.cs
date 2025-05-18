@@ -28,6 +28,7 @@ using osu.Game.Models;
 using osu.Game.Online.Broadcasts;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays.Chat;
@@ -63,6 +64,9 @@ namespace osu.Game.Online.Chat
         protected IAPIProvider API { get; private set; } = null!;
 
         [Resolved]
+        private MetadataClient metadataClient { get; set; } = null!;
+
+        [Resolved]
         protected RulesetStore RulesetStore { get; private set; } = null!;
 
         [Resolved]
@@ -85,6 +89,8 @@ namespace osu.Game.Online.Chat
         [Resolved]
         private OngoingOperationTracker operationTracker { get; set; } = null!;
 
+        // private GetUserRequest? userReq;
+
         protected readonly ChatTextBox? TextBox;
 
         private ChannelManager? channelManager;
@@ -105,6 +111,8 @@ namespace osu.Game.Online.Chat
             Default = 1250,
             Value = 1250
         };
+
+        private IDisposable? userWatchToken;
 
         [Resolved(CanBeNull = true)] // not sure if it actually can be null
         private ChatTimerHandler? chatTimerHandler { get; set; }
@@ -165,6 +173,13 @@ namespace osu.Game.Online.Chat
 
             Scheduler.Add(() => broadcastServer.Add(chatBroadcaster));
             Scheduler.Add(processMessageQueue);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            userWatchToken = metadataClient.BeginWatchingUserPresence();
         }
 
         private void processMessageQueue()
@@ -305,6 +320,7 @@ namespace osu.Game.Online.Chat
                 return;
 
             Scheduler.Add(() => broadcastServer.Remove(chatBroadcaster));
+            userWatchToken?.Dispose();
             base.Dispose(isDisposing);
         }
 
@@ -420,6 +436,11 @@ namespace osu.Game.Online.Chat
                                 break;
                         }
                     }
+                    // special-case player invites
+                    else if (parts[2].StartsWith('#') && int.TryParse(parts[2].AsSpan(1), out numericParam) && parts[1] == @"invite")
+                    {
+                        inviteUserToRoom(numericParam);
+                    }
                     else
                     {
                         switch (parts[1])
@@ -434,6 +455,38 @@ namespace osu.Game.Online.Chat
                                 if (parts[2] == @"abort")
                                     abortTimer();
 
+                                break;
+
+                            case @"invite":
+                                // // parameter is a username since it didn't start with `#`
+                                // if (string.IsNullOrEmpty(parts[2]))
+                                // {
+                                //     EnqueueBotMessage(@"Invalid username provided");
+                                //     break;
+                                // }
+                                //
+                                // string username = parts[2].Replace('_', ' ');
+                                //
+                                // // check if user is already in the lobby
+                                // var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
+                                //
+                                // if (matchingUser != null)
+                                // {
+                                //     EnqueueBotMessage($@"User {matchingUser.User?.Username ?? ""} is already in the room!");
+                                //     break;
+                                // }
+                                //
+                                // // try to resolve the username
+                                // userReq?.Cancel();
+                                // userReq = new GetUserRequest(username);
+                                // userReq.Success += u => inviteUserToRoom(u.Id);
+                                // userReq.Failure += e =>
+                                // {
+                                //     EnqueueBotMessage($@"Couldn't find user {username}: {e.InnerException?.Message}");
+                                // };
+                                //
+                                // API.Queue(userReq);
+                                EnqueueBotMessage("use their user IDs from the sheets please kthx");
                                 break;
 
                             case @"mods":
@@ -618,6 +671,24 @@ namespace osu.Game.Online.Chat
             }
 
             TextBox.Text = string.Empty;
+        }
+
+        private void inviteUserToRoom(int userId)
+        {
+            var matchingUser = Client.Room?.Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (matchingUser != null)
+            {
+                EnqueueBotMessage($@"User {matchingUser.User?.Username ?? $@"ID {matchingUser.UserID}"} is already in the room!");
+                return;
+            }
+
+            // It's possible the user isn't truly offline, so send the invite anyway. Warn the user in chat though.
+            EnqueueBotMessage(metadataClient.GetPresence(userId) == null
+                                  ? $@"User ID {userId} may be offline, attempting to send an invite anyway."
+                                  : $@"Sent an invite to user ID {userId}");
+
+            Client.InvitePlayer(userId);
         }
 
         private async Task postLatestResults(long roomID, PlaylistItem? playlistItem)
