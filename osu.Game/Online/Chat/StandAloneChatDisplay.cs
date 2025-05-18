@@ -583,6 +583,10 @@ namespace osu.Game.Online.Chat
                             Client.AbortMatch().FireAndForget();
                             break;
 
+                        case @"settings":
+                            EnqueueBotMessage(@"Look at the lobby on your screen");
+                            break;
+
                         // start immediately
                         case @"start":
                             startMatch();
