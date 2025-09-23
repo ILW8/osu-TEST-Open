@@ -381,6 +381,24 @@ namespace osu.Game.Online.Chat
 
                 string[] parts = text.Split();
 
+                if (parts.Length > 0 && parts[0] == @"!mp")
+                {
+                    if (!Client.IsHost)
+                    {
+                        Logger.Log(@"Tried to use !mp command when user is not host of the room. Not running command locally", LoggingTarget.Runtime, LogLevel.Debug);
+                    }
+                    else
+                    {
+                        processChatCommands(parts);
+                    }
+                }
+            }
+
+            TextBox.Text = string.Empty;
+            return;
+
+            void processChatCommands(string[] parts)
+            {
                 for (;;)
                 {
                     // 3 part commands
@@ -458,35 +476,7 @@ namespace osu.Game.Online.Chat
                                 break;
 
                             case @"invite":
-                                // // parameter is a username since it didn't start with `#`
-                                // if (string.IsNullOrEmpty(parts[2]))
-                                // {
-                                //     EnqueueBotMessage(@"Invalid username provided");
-                                //     break;
-                                // }
-                                //
-                                // string username = parts[2].Replace('_', ' ');
-                                //
-                                // // check if user is already in the lobby
-                                // var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
-                                //
-                                // if (matchingUser != null)
-                                // {
-                                //     EnqueueBotMessage($@"User {matchingUser.User?.Username ?? ""} is already in the room!");
-                                //     break;
-                                // }
-                                //
-                                // // try to resolve the username
-                                // userReq?.Cancel();
-                                // userReq = new GetUserRequest(username);
-                                // userReq.Success += u => inviteUserToRoom(u.Id);
-                                // userReq.Failure += e =>
-                                // {
-                                //     EnqueueBotMessage($@"Couldn't find user {username}: {e.InnerException?.Message}");
-                                // };
-                                //
-                                // API.Queue(userReq);
-                                EnqueueBotMessage("use their user IDs from the sheets please kthx");
+                                EnqueueBotMessage(@"use their user IDs from the sheets please kthx");
                                 break;
 
                             case @"mods":
@@ -669,8 +659,6 @@ namespace osu.Game.Online.Chat
                     break;
                 }
             }
-
-            TextBox.Text = string.Empty;
         }
 
         private void inviteUserToRoom(int userId)
