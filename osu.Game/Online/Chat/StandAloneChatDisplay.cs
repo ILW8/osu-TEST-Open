@@ -681,7 +681,7 @@ namespace osu.Game.Online.Chat
                             };
                             userReq.Failure += e =>
                             {
-                                Logger.Log($@"[addref] Could not resolve user ${patchedUsername}");
+                                Logger.Log($@"[addref] Could not resolve user {patchedUsername}");
                                 tcs.TrySetResult(null);
                             };
 
