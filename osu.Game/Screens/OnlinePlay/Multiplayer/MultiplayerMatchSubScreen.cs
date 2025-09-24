@@ -72,6 +72,40 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         public readonly BindableList<PoolMap> Beatmaps = new BindableList<PoolMap>();
     }
 
+    public partial class MultiplayerRefereeTracker : Component
+    {
+        [Resolved]
+        private MultiplayerClient client { get; set; } = null!;
+
+        public readonly BindableList<APIUser> Referees = new BindableList<APIUser>();
+        private bool isRoomJoined;
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            client.RoomUpdated += onRoomUpdated;
+        }
+
+        public void AddRef(APIUser user)
+        {
+            if (!Referees.Contains(user))
+            {
+                Referees.Add(user);
+            }
+        }
+
+        private void onRoomUpdated()
+        {
+            bool wasRoomJoined = isRoomJoined;
+            bool roomJoined = client.Room != null;
+
+            if (wasRoomJoined && !roomJoined)
+                Referees.Clear();
+
+            isRoomJoined = roomJoined;
+        }
+    }
+
     public partial class ChatTimerHandler : Component
     {
         private readonly MultiplayerCountdown multiplayerChatTimerCountdown = new MatchStartCountdown { TimeRemaining = TimeSpan.Zero };
