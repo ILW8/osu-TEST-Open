@@ -27,6 +27,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Models;
 using osu.Game.Online.Broadcasts;
 using osu.Game.Online.API;
+using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
@@ -116,6 +117,11 @@ namespace osu.Game.Online.Chat
 
         [Resolved(CanBeNull = true)] // not sure if it actually can be null
         private ChatTimerHandler? chatTimerHandler { get; set; }
+
+        [Resolved]
+        private MultiplayerRefereeTracker multiplayerRefereeTracker { get; set; } = null!;
+
+        private GetUserRequest? userReq;
 
         /// <summary>
         /// Construct a new instance.
@@ -364,6 +370,269 @@ namespace osu.Game.Online.Chat
             messageQueue.Enqueue(new Tuple<string, Channel>(message, Channel.Value));
         }
 
+        private void processChatCommands(string[] parts)
+        {
+            for (;;)
+            {
+                // 3 part commands
+                if (!(parts.Length == 3 && parts[0] == @"!mp"))
+                    break;
+
+                // commands with numerical parameter
+                if (int.TryParse(parts[2], out int numericParam))
+                {
+                    switch (parts[1])
+                    {
+                        case @"map":
+                            beatmapLookupCache.GetBeatmapAsync(numericParam).ContinueWith(task => Schedule(() =>
+                            {
+                                APIBeatmap? beatmapInfo = task.GetResultSafely();
+
+                                if (beatmapInfo?.BeatmapSet == null)
+                                {
+                                    EnqueueBotMessage($@"Couldn't retrieve metadata for map ID {numericParam}");
+                                    return;
+                                }
+
+                                addPlaylistItem(beatmapInfo);
+
+                                RemoveInternal(beatmapDownloadTracker, true);
+                                AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
+                                beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
+                                {
+                                    if (changeEvent.NewValue != DownloadState.NotDownloaded) return;
+
+                                    if (autoDownload.Value)
+                                        beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
+
+                                    beatmapDownloadTracker.State.UnbindAll();
+                                    RemoveInternal(beatmapDownloadTracker, true);
+                                });
+                            }));
+                            break;
+
+                        case @"timer":
+                            chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current);
+                            break;
+
+                        case @"start":
+                            // we intentionally do this check both in startMatch and here
+                            if (!Client.IsHost)
+                            {
+                                Logger.Log(@"Tried to start match when user is not host of the room. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
+                                return;
+                            }
+
+                            chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, messagePrefix: @"Match starts in", onTimerComplete: startMatch);
+                            break;
+                    }
+                }
+                // special-case player invites
+                else if (parts[2].StartsWith('#') && int.TryParse(parts[2].AsSpan(1), out numericParam) && parts[1] == @"invite")
+                {
+                    inviteUserToRoom(numericParam);
+                }
+                else
+                {
+                    switch (parts[1])
+                    {
+                        // i don't think this belongs here in the first place... whatever
+                        // ReSharper disable once StringLiteralTypo
+                        case @"aborttimer":
+                            abortTimer();
+                            break;
+
+                        case @"timer":
+                            if (parts[2] == @"abort")
+                                abortTimer();
+
+                            break;
+
+                        case @"invite":
+                            EnqueueBotMessage(@"use their user IDs from the sheets please kthx");
+                            break;
+
+                        case @"mods":
+                            var itemToEdit = Client.Room?.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
+
+                            if (itemToEdit == null)
+                                break;
+
+                            string[] mods = parts[2].Split("+");
+                            List<Mod> modInstances = new List<Mod>();
+
+                            foreach (string mod in mods)
+                            {
+                                if (mod.Length < 2)
+                                {
+                                    Logger.Log($@"[!mp mods] Unknown mod '{mod}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                    continue;
+                                }
+
+                                string modAcronym = mod[..2];
+                                var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
+
+                                if (rulesetInstance == null)
+                                {
+                                    Logger.Log($@"[!mp mods] Couldn't create ruleset instance with ruleset ID {itemToEdit.RulesetID}, ignoring mod '{mod}'",
+                                        LoggingTarget.Runtime, LogLevel.Important);
+                                    continue;
+                                }
+
+                                Mod? modInstance;
+
+                                // mod with no params
+                                if (mod.Length == 2)
+                                {
+                                    modInstance = ParseMod(rulesetInstance, modAcronym, Array.Empty<object>());
+                                    if (modInstance != null)
+                                        modInstances.Add(modInstance);
+                                    continue;
+                                }
+
+                                // mod has parameters
+                                {
+                                    JsonNode? modParamsNode;
+
+                                    try
+                                    {
+                                        modParamsNode = JsonNode.Parse(mod[2..]);
+                                    }
+                                    catch (JsonException)
+                                    {
+                                        modParamsNode = null;
+                                    }
+
+                                    if (modParamsNode is JsonArray modParams)
+                                    {
+                                        List<object> parsedParamsList = new List<object>();
+
+                                        foreach (JsonNode? node in modParams)
+                                        {
+                                            if (node?.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
+                                                continue;
+
+                                            if (node.AsValue().TryGetValue(out int parsedInt))
+                                            {
+                                                parsedParamsList.Add(parsedInt);
+                                                continue;
+                                            }
+
+                                            if (node.AsValue().TryGetValue(out double parsedDouble))
+                                            {
+                                                parsedParamsList.Add(parsedDouble);
+                                                continue;
+                                            }
+
+                                            if (node.AsValue().TryGetValue(out bool parsedBool))
+                                                parsedParamsList.Add(parsedBool);
+                                        }
+
+                                        modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
+                                        if (modInstance != null)
+                                            modInstances.Add(modInstance);
+                                    }
+                                    else
+                                    {
+                                        Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                    }
+                                }
+                            }
+
+                            if (!ModUtils.CheckCompatibleSet(modInstances))
+                            {
+                                Logger.Log($@"[!mp mods] Mods {string.Join(", ", modInstances.Select(mod => mod.Acronym))} are not compatible together", LoggingTarget.Runtime, LogLevel.Important);
+                                break;
+                            }
+
+                            // get playlist item to edit:
+                            beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
+                            {
+                                APIBeatmap? beatmapInfo = task.GetResultSafely();
+
+                                if (beatmapInfo == null)
+                                {
+                                    Logger.Log($@"Couldn't retrieve metadata for map ID {itemToEdit.BeatmapID}, not modifying playlist!", LoggingTarget.Runtime, LogLevel.Important);
+                                    return;
+                                }
+
+                                var multiplayerItem = new MultiplayerPlaylistItem
+                                {
+                                    ID = itemToEdit.ID,
+                                    BeatmapID = beatmapInfo.OnlineID,
+                                    BeatmapChecksum = beatmapInfo.MD5Hash,
+                                    RulesetID = itemToEdit.RulesetID,
+                                    RequiredMods = modInstances.Select(mod => new APIMod(mod)).ToArray(),
+                                    AllowedMods = Array.Empty<APIMod>()
+                                };
+
+                                selectionOperation = operationTracker.BeginOperation();
+                                Task editPlaylistTask = Client.EditPlaylistItem(multiplayerItem);
+
+                                editPlaylistTask.FireAndForget(onSuccess: () =>
+                                {
+                                    selectionOperation?.Dispose();
+                                }, onError: _ =>
+                                {
+                                    selectionOperation?.Dispose();
+                                });
+                            }));
+                            break;
+                    }
+                }
+
+                break;
+            }
+
+            for (;;)
+            {
+                if (!(parts.Length == 2 && parts[0] == @"!mp"))
+                    break;
+
+                // commands with no parameters
+                switch (parts[1])
+                {
+                    case @"abort":
+                        if (!Client.IsHost)
+                            return;
+
+                        Client.AbortMatch().FireAndForget();
+                        break;
+
+                    case @"settings":
+                        EnqueueBotMessage(@"Look at the lobby on your screen");
+                        break;
+
+                    // start immediately
+                    case @"start":
+                        startMatch();
+                        break;
+
+                    // ReSharper disable once StringLiteralTypo
+                    case @"aborttimer":
+                        abortTimer();
+                        break;
+
+                    case @"results":
+                        if (!lastFetchTask.IsCompleted)
+                            return;
+
+                        Schedule(() =>
+                        {
+                            long? roomID = Client.Room?.RoomID;
+                            var playlistItem = getLastPlaylistItem();
+
+                            if (roomID != null && playlistItem != null)
+                                lastFetchTask = Task.Run(async () => await postLatestResults((long)roomID, playlistItem).ConfigureAwait(false));
+                        });
+
+                        break;
+                }
+
+                break;
+            }
+        }
+
         private void postMessage(TextBox sender, bool newText)
         {
             Debug.Assert(TextBox != null);
@@ -381,292 +650,66 @@ namespace osu.Game.Online.Chat
 
                 string[] parts = text.Split();
 
-                for (;;)
+                if (parts.Length > 0 && parts[0] == @"!mp")
                 {
-                    // 3 part commands
-                    if (!(parts.Length == 3 && parts[0] == @"!mp"))
-                        break;
-
-                    // commands with numerical parameter
-                    if (int.TryParse(parts[2], out int numericParam))
+                    if (!Client.IsHost)
                     {
-                        switch (parts[1])
-                        {
-                            case @"map":
-                                beatmapLookupCache.GetBeatmapAsync(numericParam).ContinueWith(task => Schedule(() =>
-                                {
-                                    APIBeatmap? beatmapInfo = task.GetResultSafely();
-
-                                    if (beatmapInfo?.BeatmapSet == null)
-                                    {
-                                        EnqueueBotMessage($@"Couldn't retrieve metadata for map ID {numericParam}");
-                                        return;
-                                    }
-
-                                    addPlaylistItem(beatmapInfo);
-
-                                    RemoveInternal(beatmapDownloadTracker, true);
-                                    AddInternal(beatmapDownloadTracker = new BeatmapDownloadTracker(beatmapInfo.BeatmapSet));
-                                    beatmapDownloadTracker.State.BindValueChanged(changeEvent =>
-                                    {
-                                        if (changeEvent.NewValue != DownloadState.NotDownloaded) return;
-
-                                        if (autoDownload.Value)
-                                            beatmapsDownloader.Download(beatmapInfo.BeatmapSet);
-
-                                        beatmapDownloadTracker.State.UnbindAll();
-                                        RemoveInternal(beatmapDownloadTracker, true);
-                                    });
-                                }));
-                                break;
-
-                            case @"timer":
-                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current);
-                                break;
-
-                            case @"start":
-                                // we intentionally do this check both in startMatch and here
-                                if (!Client.IsHost)
-                                {
-                                    Logger.Log(@"Tried to start match when user is not host of the room. Cancelling!", LoggingTarget.Runtime, LogLevel.Important);
-                                    return;
-                                }
-
-                                chatTimerHandler?.SetTimer(TimeSpan.FromSeconds(numericParam), Time.Current, messagePrefix: @"Match starts in", onTimerComplete: startMatch);
-                                break;
-                        }
-                    }
-                    // special-case player invites
-                    else if (parts[2].StartsWith('#') && int.TryParse(parts[2].AsSpan(1), out numericParam) && parts[1] == @"invite")
-                    {
-                        inviteUserToRoom(numericParam);
+                        Logger.Log(@"Tried to use !mp command when user is not host of the room. Not running command locally", LoggingTarget.Runtime, LogLevel.Debug);
                     }
                     else
                     {
-                        switch (parts[1])
+                        async Task<APIUser?> queryUsername(string username)
                         {
-                            // i don't think this belongs here in the first place... whatever
-                            // ReSharper disable once StringLiteralTypo
-                            case @"aborttimer":
-                                abortTimer();
-                                break;
+                            string patchedUsername = username.Replace('_', ' ');
 
-                            case @"timer":
-                                if (parts[2] == @"abort")
-                                    abortTimer();
+                            // check if user is already in the lobby
+                            var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, patchedUsername, StringComparison.OrdinalIgnoreCase));
 
-                                break;
-
-                            case @"invite":
-                                // // parameter is a username since it didn't start with `#`
-                                // if (string.IsNullOrEmpty(parts[2]))
-                                // {
-                                //     EnqueueBotMessage(@"Invalid username provided");
-                                //     break;
-                                // }
-                                //
-                                // string username = parts[2].Replace('_', ' ');
-                                //
-                                // // check if user is already in the lobby
-                                // var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
-                                //
-                                // if (matchingUser != null)
-                                // {
-                                //     EnqueueBotMessage($@"User {matchingUser.User?.Username ?? ""} is already in the room!");
-                                //     break;
-                                // }
-                                //
-                                // // try to resolve the username
-                                // userReq?.Cancel();
-                                // userReq = new GetUserRequest(username);
-                                // userReq.Success += u => inviteUserToRoom(u.Id);
-                                // userReq.Failure += e =>
-                                // {
-                                //     EnqueueBotMessage($@"Couldn't find user {username}: {e.InnerException?.Message}");
-                                // };
-                                //
-                                // API.Queue(userReq);
-                                EnqueueBotMessage("use their user IDs from the sheets please kthx");
-                                break;
-
-                            case @"mods":
-                                var itemToEdit = Client.Room?.Playlist.SingleOrDefault(i => i.ID == Client.Room?.Settings.PlaylistItemId);
-
-                                if (itemToEdit == null)
-                                    break;
-
-                                string[] mods = parts[2].Split("+");
-                                List<Mod> modInstances = new List<Mod>();
-
-                                foreach (string mod in mods)
-                                {
-                                    if (mod.Length < 2)
-                                    {
-                                        Logger.Log($@"[!mp mods] Unknown mod '{mod}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
-                                        continue;
-                                    }
-
-                                    string modAcronym = mod[..2];
-                                    var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
-
-                                    if (rulesetInstance == null)
-                                    {
-                                        Logger.Log($@"[!mp mods] Couldn't create ruleset instance with ruleset ID {itemToEdit.RulesetID}, ignoring mod '{mod}'",
-                                            LoggingTarget.Runtime, LogLevel.Important);
-                                        continue;
-                                    }
-
-                                    Mod? modInstance;
-
-                                    // mod with no params
-                                    if (mod.Length == 2)
-                                    {
-                                        modInstance = ParseMod(rulesetInstance, modAcronym, Array.Empty<object>());
-                                        if (modInstance != null)
-                                            modInstances.Add(modInstance);
-                                        continue;
-                                    }
-
-                                    // mod has parameters
-                                    {
-                                        JsonNode? modParamsNode;
-
-                                        try
-                                        {
-                                            modParamsNode = JsonNode.Parse(mod[2..]);
-                                        }
-                                        catch (JsonException)
-                                        {
-                                            modParamsNode = null;
-                                        }
-
-                                        if (modParamsNode is JsonArray modParams)
-                                        {
-                                            List<object> parsedParamsList = new List<object>();
-
-                                            foreach (JsonNode? node in modParams)
-                                            {
-                                                if (node?.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
-                                                    continue;
-
-                                                if (node.AsValue().TryGetValue(out int parsedInt))
-                                                {
-                                                    parsedParamsList.Add(parsedInt);
-                                                    continue;
-                                                }
-
-                                                if (node.AsValue().TryGetValue(out double parsedDouble))
-                                                {
-                                                    parsedParamsList.Add(parsedDouble);
-                                                    continue;
-                                                }
-
-                                                if (node.AsValue().TryGetValue(out bool parsedBool))
-                                                    parsedParamsList.Add(parsedBool);
-                                            }
-
-                                            modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
-                                            if (modInstance != null)
-                                                modInstances.Add(modInstance);
-                                        }
-                                        else
-                                        {
-                                            Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
-                                        }
-                                    }
-                                }
-
-                                if (!ModUtils.CheckCompatibleSet(modInstances))
-                                {
-                                    Logger.Log($@"[!mp mods] Mods {string.Join(", ", modInstances.Select(mod => mod.Acronym))} are not compatible together", LoggingTarget.Runtime, LogLevel.Important);
-                                    break;
-                                }
-
-                                // get playlist item to edit:
-                                beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
-                                {
-                                    APIBeatmap? beatmapInfo = task.GetResultSafely();
-
-                                    if (beatmapInfo == null)
-                                    {
-                                        Logger.Log($@"Couldn't retrieve metadata for map ID {itemToEdit.BeatmapID}, not modifying playlist!", LoggingTarget.Runtime, LogLevel.Important);
-                                        return;
-                                    }
-
-                                    var multiplayerItem = new MultiplayerPlaylistItem
-                                    {
-                                        ID = itemToEdit.ID,
-                                        BeatmapID = beatmapInfo.OnlineID,
-                                        BeatmapChecksum = beatmapInfo.MD5Hash,
-                                        RulesetID = itemToEdit.RulesetID,
-                                        RequiredMods = modInstances.Select(mod => new APIMod(mod)).ToArray(),
-                                        AllowedMods = Array.Empty<APIMod>()
-                                    };
-
-                                    selectionOperation = operationTracker.BeginOperation();
-                                    Task editPlaylistTask = Client.EditPlaylistItem(multiplayerItem);
-
-                                    editPlaylistTask.FireAndForget(onSuccess: () =>
-                                    {
-                                        selectionOperation?.Dispose();
-                                    }, onError: _ =>
-                                    {
-                                        selectionOperation?.Dispose();
-                                    });
-                                }));
-                                break;
-                        }
-                    }
-
-                    break;
-                }
-
-                for (;;)
-                {
-                    if (!(parts.Length == 2 && parts[0] == @"!mp"))
-                        break;
-
-                    // commands with no parameters
-                    switch (parts[1])
-                    {
-                        case @"abort":
-                            if (!Client.IsHost)
-                                return;
-
-                            Client.AbortMatch().FireAndForget();
-                            break;
-
-                        case @"settings":
-                            EnqueueBotMessage(@"Look at the lobby on your screen");
-                            break;
-
-                        // start immediately
-                        case @"start":
-                            startMatch();
-                            break;
-
-                        // ReSharper disable once StringLiteralTypo
-                        case @"aborttimer":
-                            abortTimer();
-                            break;
-
-                        case @"results":
-                            if (!lastFetchTask.IsCompleted)
-                                return;
-
-                            Schedule(() =>
+                            if (matchingUser != null)
                             {
-                                long? roomID = Client.Room?.RoomID;
-                                var playlistItem = getLastPlaylistItem();
+                                return matchingUser.User;
+                            }
 
-                                if (roomID != null && playlistItem != null)
-                                    lastFetchTask = Task.Run(async () => await postLatestResults((long)roomID, playlistItem).ConfigureAwait(false));
+                            // try to resolve the username
+                            userReq?.Cancel();
+                            var tcs = new TaskCompletionSource<APIUser?>();
+                            userReq = new GetUserRequest(patchedUsername);
+                            userReq.Success += u =>
+                            {
+                                Logger.Log($@"[addref] Successfully resolved user ${u}");
+                                tcs.TrySetResult(u);
+                            };
+                            userReq.Failure += e =>
+                            {
+                                Logger.Log($@"[addref] Could not resolve user {patchedUsername}");
+                                tcs.TrySetResult(null);
+                            };
+
+                            API.Queue(userReq);
+
+                            return await tcs.Task.ConfigureAwait(false);
+                        }
+
+                        // special-case addref. only handle it locally
+                        if (parts.Length == 3 && parts[1] == @"addref")
+                        {
+                            queryUsername(parts[2]).ContinueWith(t =>
+                            {
+                                APIUser? user = t.GetResultSafely();
+
+                                if (user == null)
+                                {
+                                    EnqueueBotMessage($@"Failed to find user {parts[2]}");
+                                    return;
+                                }
+
+                                multiplayerRefereeTracker.AddRef(user);
+                                EnqueueBotMessage($@"Match referees: {string.Join(", ", multiplayerRefereeTracker.Referees)}");
                             });
+                        }
 
-                            break;
+                        processChatCommands(parts);
                     }
-
-                    break;
                 }
             }
 
@@ -684,9 +727,10 @@ namespace osu.Game.Online.Chat
             }
 
             // It's possible the user isn't truly offline, so send the invite anyway. Warn the user in chat though.
-            EnqueueBotMessage(metadataClient.GetPresence(userId) == null
-                                  ? $@"User ID {userId} may be offline, attempting to send an invite anyway."
-                                  : $@"Sent an invite to user ID {userId}");
+            string msg = metadataClient.GetPresence(userId) == null
+                ? $@"User ID {userId} may be offline, attempting to send an invite anyway."
+                : $@"Sent an invite to user ID {userId}";
+            EnqueueBotMessage(msg);
 
             Client.InvitePlayer(userId);
         }
@@ -826,41 +870,57 @@ namespace osu.Game.Online.Chat
             return new StandAloneMessage(message);
         }
 
-        private void newCommandHandler(IEnumerable<Message> messages)
+        private void newMessageCommandHandler(IEnumerable<Message> messages)
         {
             foreach (var message in messages)
             {
                 string[] parts = message.Content.Split();
-                if (parts.Length <= 0 || parts[0] != @"!roll" || !Client.IsHost) continue;
+                if (parts.Length <= 0 || !Client.IsHost) continue;
 
-                long limit = 100;
-
-                if (parts.Length > 1)
+                if (parts[0] == @"!roll" && parts.Length <= 2)
                 {
-                    try
-                    {
-                        limit = long.Parse(parts[1]);
-                    }
-                    catch (OverflowException)
-                    {
-                        limit = long.MaxValue;
-                    }
-                    catch (Exception)
-                    {
-                        limit = 100;
-                    }
+                    postRollResult(parts, message);
+                    continue;
                 }
 
-                var rnd = new Random();
-                long randomNumber = rnd.NextInt64(1, limit + 1);
-                EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
+                if (multiplayerRefereeTracker.Referees.Any(refereeApiUser => refereeApiUser.Equals(message.Sender)))
+                {
+                    // sender is a referee, execute command on their behalf
+                    Logger.Log($@"Executing '{message.Content}' on behalf of referee {message.Sender}");
+                    processChatCommands(parts);
+                }
             }
+        }
+
+        private void postRollResult(string[] parts, Message message)
+        {
+            long limit = 100;
+
+            if (parts.Length > 1)
+            {
+                try
+                {
+                    limit = long.Parse(parts[1]);
+                }
+                catch (OverflowException)
+                {
+                    limit = long.MaxValue;
+                }
+                catch (Exception)
+                {
+                    limit = 100;
+                }
+            }
+
+            var rnd = new Random();
+            long randomNumber = rnd.NextInt64(1, limit + 1);
+            EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
         }
 
         private void channelChanged(ValueChangedEvent<Channel?> e)
         {
             if (drawableChannel != null)
-                drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
+                drawableChannel.Channel.NewMessagesArrived -= newMessageCommandHandler;
             drawableChannel?.Expire();
 
             if (e.OldValue != null)
@@ -873,7 +933,7 @@ namespace osu.Game.Online.Chat
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
-            drawableChannel.Channel.NewMessagesArrived += newCommandHandler;
+            drawableChannel.Channel.NewMessagesArrived += newMessageCommandHandler;
 
             chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);

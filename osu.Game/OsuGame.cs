@@ -1127,6 +1127,7 @@ namespace osu.Game
             loadComponentSingleFile(difficultyRecommender = new DifficultyRecommender(statisticsProvider), Add, true);
             loadComponentSingleFile(new UserStatisticsWatcher(statisticsProvider), Add, true);
             loadComponentSingleFile(new ChatTimerHandler(), Add, true);
+            loadComponentSingleFile(new MultiplayerRefereeTracker(), Add, true);
             loadComponentSingleFile(Toolbar = new Toolbar
             {
                 OnHome = delegate

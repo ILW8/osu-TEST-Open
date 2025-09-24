@@ -185,11 +185,7 @@ namespace osu.Game.Online.Metadata
 
         public override Task UpdateActivity(UserActivity? activity)
         {
-            if (connector?.IsConnected.Value != true)
-                return Task.FromCanceled(new CancellationToken(true));
-
-            Debug.Assert(connection != null);
-            return connection.InvokeAsync(nameof(IMetadataServer.UpdateActivity), activity);
+            return Task.FromCanceled(new CancellationToken(true));
         }
 
         public override Task UpdateStatus(UserStatus? status)
