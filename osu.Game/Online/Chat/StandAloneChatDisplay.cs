@@ -814,41 +814,52 @@ namespace osu.Game.Online.Chat
             return new StandAloneMessage(message);
         }
 
-        private void newCommandHandler(IEnumerable<Message> messages)
+        private void newMessageCommandHandler(IEnumerable<Message> messages)
         {
             foreach (var message in messages)
             {
                 string[] parts = message.Content.Split();
-                if (parts.Length <= 0 || parts[0] != @"!roll" || !Client.IsHost) continue;
+                if (parts.Length <= 0 || !Client.IsHost) continue;
 
-                long limit = 100;
-
-                if (parts.Length > 1)
+                if (parts[0] == @"!roll" && parts.Length <= 2)
                 {
-                    try
-                    {
-                        limit = long.Parse(parts[1]);
-                    }
-                    catch (OverflowException)
-                    {
-                        limit = long.MaxValue;
-                    }
-                    catch (Exception)
-                    {
-                        limit = 100;
-                    }
+                    postRollResult(parts, message);
+                    continue;
                 }
 
-                var rnd = new Random();
-                long randomNumber = rnd.NextInt64(1, limit + 1);
-                EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
+                if (false) {}
             }
+        }
+
+        private void postRollResult(string[] parts, Message message)
+        {
+            long limit = 100;
+
+            if (parts.Length > 1)
+            {
+                try
+                {
+                    limit = long.Parse(parts[1]);
+                }
+                catch (OverflowException)
+                {
+                    limit = long.MaxValue;
+                }
+                catch (Exception)
+                {
+                    limit = 100;
+                }
+            }
+
+            var rnd = new Random();
+            long randomNumber = rnd.NextInt64(1, limit + 1);
+            EnqueueBotMessage($@"{message.Sender} rolls {randomNumber}");
         }
 
         private void channelChanged(ValueChangedEvent<Channel?> e)
         {
             if (drawableChannel != null)
-                drawableChannel.Channel.NewMessagesArrived -= newCommandHandler;
+                drawableChannel.Channel.NewMessagesArrived -= newMessageCommandHandler;
             drawableChannel?.Expire();
 
             if (e.OldValue != null)
@@ -861,7 +872,7 @@ namespace osu.Game.Online.Chat
             drawableChannel = CreateDrawableChannel(e.NewValue);
             drawableChannel.CreateChatLineAction = CreateMessage;
             drawableChannel.Padding = new MarginPadding { Bottom = postingTextBox ? text_box_height : 0 };
-            drawableChannel.Channel.NewMessagesArrived += newCommandHandler;
+            drawableChannel.Channel.NewMessagesArrived += newMessageCommandHandler;
 
             chatBroadcaster.Message.ChatMessages.Clear();
             AddInternal(drawableChannel);
