@@ -472,7 +472,7 @@ namespace osu.Game.Online.Chat
                                 var newAllowedMods = availableMods.Value
                                                                   .SelectMany(pair => pair.Value)
                                                                   .SelectMany(ModUtils.FlattenMod)
-                                                                  .Where(mod => ModUtils.IsValidFreeModForMatchType(mod, MatchType.TeamVersus));
+                                                                  .Where(mod => ModUtils.IsValidFreeModForMatchType(mod, Client.Room?.Settings.MatchType ?? MatchType.TeamVersus));
 
                                 allowedMods.AddRange(newAllowedMods);
                             }
