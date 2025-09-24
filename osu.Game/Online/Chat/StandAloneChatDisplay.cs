@@ -33,7 +33,6 @@ using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays.Chat;
-using osu.Game.Overlays.Mods;
 using osu.Game.Resources.Localisation.Web;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -169,8 +168,6 @@ namespace osu.Game.Online.Chat
 
         private readonly Bindable<Dictionary<ModType, IReadOnlyList<Mod>>> availableMods = new Bindable<Dictionary<ModType, IReadOnlyList<Mod>>>();
 
-        private Bindable<Dictionary<ModType, IReadOnlyList<ModState>>> availableModsState { get; } = new Bindable<Dictionary<ModType, IReadOnlyList<ModState>>>(new Dictionary<ModType, IReadOnlyList<ModState>>());
-
         [BackgroundDependencyLoader(true)]
         private void load(ChannelManager manager, BeatmapModelDownloader beatmaps, BeatmapLookupCache beatmapsCache, OsuConfigManager config, OsuGameBase game)
         {
@@ -186,27 +183,6 @@ namespace osu.Game.Online.Chat
             Scheduler.Add(processMessageQueue);
 
             availableMods.BindTo(game.AvailableMods);
-
-            populateModStates();
-        }
-
-        /// <summary>
-        /// yoinked most of the code from ModSelectOverlay.createLocalMods
-        /// </summary>
-        private void populateModStates()
-        {
-            var newLocalAvailableMods = new Dictionary<ModType, IReadOnlyList<ModState>>();
-
-            foreach (var (modType, mods) in availableMods.Value)
-            {
-                var modStates = mods.SelectMany(ModUtils.FlattenMod)
-                                    .Select(mod => new ModState(mod.DeepClone()))
-                                    .ToArray();
-
-                newLocalAvailableMods[modType] = modStates;
-            }
-
-            availableModsState.Value = newLocalAvailableMods;
         }
 
         protected override void LoadComplete()
@@ -493,11 +469,10 @@ namespace osu.Game.Online.Chat
                             if (mods.Length == 1 && mods[0].Equals(@"fm", StringComparison.OrdinalIgnoreCase))
                             {
                                 // hardcode freemod to allow all mods, leaves requiredMods empty
-                                var newAllowedMods = availableModsState.Value
-                                                                       .SelectMany(pair => pair.Value)
-                                                                       .Where(state => state.ValidForSelection.Value)
-                                                                       .Select(state => state.Mod)
-                                                                       .Where(mod => ModUtils.IsValidFreeModForMatchType(mod, MatchType.TeamVersus));
+                                var newAllowedMods = availableMods.Value
+                                                                  .SelectMany(pair => pair.Value)
+                                                                  .SelectMany(ModUtils.FlattenMod)
+                                                                  .Where(mod => ModUtils.IsValidFreeModForMatchType(mod, MatchType.TeamVersus));
 
                                 allowedMods.AddRange(newAllowedMods);
                             }
