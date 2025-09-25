@@ -570,12 +570,12 @@ namespace osu.Game.Online.Chat
 
                             // ensure allowed mods are compatible with required mods
                             // inspired by https://github.com/ppy/osu-server-spectator/blob/156923578a34b4559582df9ccd49fda499b4fa0a/osu.Server.Spectator/Extensions/MultiplayerPlaylistItemExtensions.cs#L88-L92
-                            List<Mod> modsToRemoveFromAllowed = new List<Mod>();
+                            HashSet<Mod> modsToRemoveFromAllowed = new HashSet<Mod>();
 
                             foreach (var allowedMod in allowedMods)
                             {
                                 if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out var invalidMods))
-                                    modsToRemoveFromAllowed.AddRange(invalidMods.Where(m => allowedMods.Contains(m)));
+                                    modsToRemoveFromAllowed.UnionWith(invalidMods.Where(m => allowedMods.Contains(m)));
                             }
 
                             allowedMods.RemoveAll(modsToRemoveFromAllowed.Contains);
