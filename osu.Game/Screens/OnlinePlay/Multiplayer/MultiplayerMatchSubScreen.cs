@@ -86,12 +86,24 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             client.RoomUpdated += onRoomUpdated;
         }
 
-        public void AddRef(APIUser user)
+        public bool AddRef(APIUser user)
         {
-            if (!Referees.Contains(user))
-            {
-                Referees.Add(user);
-            }
+            if (Referees.Contains(user))
+                return false;
+
+            Referees.Add(user);
+            return true;
+        }
+
+        public bool RemoveRef(string username)
+        {
+            var user = Referees.FirstOrDefault(u => u.Username == username);
+            return user != null && RemoveRef(user);
+        }
+
+        public bool RemoveRef(APIUser user)
+        {
+            return Referees.Remove(user);
         }
 
         private void onRoomUpdated()

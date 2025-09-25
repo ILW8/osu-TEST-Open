@@ -711,12 +711,12 @@ namespace osu.Game.Online.Chat
                             userReq = new GetUserRequest(patchedUsername);
                             userReq.Success += u =>
                             {
-                                Logger.Log($@"[addref] Successfully resolved user ${u}");
+                                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Successfully resolved user ${u}");
                                 tcs.TrySetResult(u);
                             };
                             userReq.Failure += e =>
                             {
-                                Logger.Log($@"[addref] Could not resolve user {patchedUsername}");
+                                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Could not resolve user {patchedUsername}");
                                 tcs.TrySetResult(null);
                             };
 
@@ -725,25 +725,47 @@ namespace osu.Game.Online.Chat
                             return await tcs.Task.ConfigureAwait(false);
                         }
 
-                        // special-case addref. only handle it locally
-                        if (parts.Length == 3 && parts[1] == @"addref")
-                        {
-                            queryUsername(parts[2]).ContinueWith(t =>
-                            {
-                                APIUser? user = t.GetResultSafely();
+                        void printRefsList() => EnqueueBotMessage($@"Match referees: {string.Join(", ", multiplayerRefereeTracker.Referees)}");
 
-                                if (user == null)
+                        switch (parts.Length)
+                        {
+                            // special-case addref. only handle it locally
+                            case 3 when parts[1] == @"addref":
+                                queryUsername(parts[2]).ContinueWith(t =>
                                 {
-                                    EnqueueBotMessage($@"Failed to find user {parts[2]}");
-                                    return;
+                                    APIUser? user = t.GetResultSafely();
+
+                                    if (user == null)
+                                    {
+                                        EnqueueBotMessage($@"Failed to find user {parts[2]}");
+                                        return;
+                                    }
+
+                                    multiplayerRefereeTracker.AddRef(user);
+                                    printRefsList();
+                                });
+                                break;
+
+                            case 3 when parts[1] == @"removeref":
+                            {
+                                if (parts[2].Length == 0 || !multiplayerRefereeTracker.RemoveRef(parts[2]))
+                                {
+                                    EnqueueBotMessage($@"No referee found matching '{parts[2]}'");
+                                    break;
                                 }
 
-                                multiplayerRefereeTracker.AddRef(user);
-                                EnqueueBotMessage($@"Match referees: {string.Join(", ", multiplayerRefereeTracker.Referees)}");
-                            });
-                        }
+                                printRefsList();
+                                break;
+                            }
 
-                        processChatCommands(parts);
+                            case 2 when parts[1] == @"listrefs":
+                                printRefsList();
+                                break;
+
+                            default:
+                                processChatCommands(parts);
+                                break;
+                        }
                     }
                 }
             }
