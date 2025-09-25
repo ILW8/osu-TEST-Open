@@ -575,7 +575,7 @@ namespace osu.Game.Online.Chat
                             foreach (var allowedMod in allowedMods)
                             {
                                 if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out var invalidMods))
-                                    modsToRemoveFromAllowed.AddRange(invalidMods);
+                                    modsToRemoveFromAllowed.AddRange(invalidMods.Where(m => allowedMods.Contains(m)));
                             }
 
                             allowedMods.RemoveAll(modsToRemoveFromAllowed.Contains);
