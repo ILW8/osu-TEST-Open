@@ -466,93 +466,94 @@ namespace osu.Game.Online.Chat
                             List<Mod> requiredMods = new List<Mod>();
                             List<Mod> allowedMods = new List<Mod>();
 
-                            if (mods.Length == 1 && mods[0].Equals(@"fm", StringComparison.OrdinalIgnoreCase))
+                            foreach (string mod in mods)
                             {
-                                // hardcode freemod to allow all mods, leaves requiredMods empty
-                                var newAllowedMods = availableMods.Value
-                                                                  .SelectMany(pair => pair.Value)
-                                                                  .SelectMany(ModUtils.FlattenMod)
-                                                                  .Where(mod => ModUtils.IsValidFreeModForMatchType(mod, Client.Room?.Settings.MatchType ?? MatchType.TeamVersus));
-
-                                allowedMods.AddRange(newAllowedMods);
-                            }
-                            else // handle regular mods
-                            {
-                                foreach (string mod in mods)
+                                if (mod.Length < 2)
                                 {
-                                    if (mod.Length < 2)
+                                    Logger.Log($@"[!mp mods] Unknown mod '{mod}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
+                                    continue;
+                                }
+
+                                string modAcronym = mod[..2];
+
+                                if (modAcronym.Equals(@"fm", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // hardcode freemod to allow all mods, leaves requiredMods empty
+                                    var newAllowedMods = availableMods.Value
+                                                                      .SelectMany(pair => pair.Value)
+                                                                      .SelectMany(ModUtils.FlattenMod)
+                                                                      .Where(availableMod =>
+                                                                          ModUtils.IsValidFreeModForMatchType(availableMod, Client.Room?.Settings.MatchType ?? MatchType.TeamVersus));
+
+                                    allowedMods.AddRange(newAllowedMods);
+                                    continue;
+                                }
+
+                                var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
+
+                                if (rulesetInstance == null)
+                                {
+                                    Logger.Log($@"[!mp mods] Couldn't create ruleset instance with ruleset ID {itemToEdit.RulesetID}, ignoring mod '{mod}'",
+                                        LoggingTarget.Runtime, LogLevel.Important);
+                                    continue;
+                                }
+
+                                Mod? modInstance;
+
+                                // mod with no params
+                                if (mod.Length == 2)
+                                {
+                                    modInstance = ParseMod(rulesetInstance, modAcronym, Array.Empty<object>());
+                                    if (modInstance != null)
+                                        requiredMods.Add(modInstance);
+                                    continue;
+                                }
+
+                                // mod has parameters
+                                {
+                                    JsonNode? modParamsNode;
+
+                                    try
                                     {
-                                        Logger.Log($@"[!mp mods] Unknown mod '{mod}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
-                                        continue;
+                                        modParamsNode = JsonNode.Parse(mod[2..]);
+                                    }
+                                    catch (JsonException)
+                                    {
+                                        modParamsNode = null;
                                     }
 
-                                    string modAcronym = mod[..2];
-                                    var rulesetInstance = RulesetStore.GetRuleset(itemToEdit.RulesetID)?.CreateInstance();
-
-                                    if (rulesetInstance == null)
+                                    if (modParamsNode is JsonArray modParams)
                                     {
-                                        Logger.Log($@"[!mp mods] Couldn't create ruleset instance with ruleset ID {itemToEdit.RulesetID}, ignoring mod '{mod}'",
-                                            LoggingTarget.Runtime, LogLevel.Important);
-                                        continue;
-                                    }
+                                        List<object> parsedParamsList = new List<object>();
 
-                                    Mod? modInstance;
-
-                                    // mod with no params
-                                    if (mod.Length == 2)
-                                    {
-                                        modInstance = ParseMod(rulesetInstance, modAcronym, Array.Empty<object>());
-                                        if (modInstance != null)
-                                            requiredMods.Add(modInstance);
-                                        continue;
-                                    }
-
-                                    // mod has parameters
-                                    {
-                                        JsonNode? modParamsNode;
-
-                                        try
+                                        foreach (JsonNode? node in modParams)
                                         {
-                                            modParamsNode = JsonNode.Parse(mod[2..]);
-                                        }
-                                        catch (JsonException)
-                                        {
-                                            modParamsNode = null;
-                                        }
+                                            if (node?.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
+                                                continue;
 
-                                        if (modParamsNode is JsonArray modParams)
-                                        {
-                                            List<object> parsedParamsList = new List<object>();
-
-                                            foreach (JsonNode? node in modParams)
+                                            if (node.AsValue().TryGetValue(out int parsedInt))
                                             {
-                                                if (node?.GetValueKind() is not (JsonValueKind.Number or JsonValueKind.False or JsonValueKind.True))
-                                                    continue;
-
-                                                if (node.AsValue().TryGetValue(out int parsedInt))
-                                                {
-                                                    parsedParamsList.Add(parsedInt);
-                                                    continue;
-                                                }
-
-                                                if (node.AsValue().TryGetValue(out double parsedDouble))
-                                                {
-                                                    parsedParamsList.Add(parsedDouble);
-                                                    continue;
-                                                }
-
-                                                if (node.AsValue().TryGetValue(out bool parsedBool))
-                                                    parsedParamsList.Add(parsedBool);
+                                                parsedParamsList.Add(parsedInt);
+                                                continue;
                                             }
 
-                                            modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
-                                            if (modInstance != null)
-                                                requiredMods.Add(modInstance);
+                                            if (node.AsValue().TryGetValue(out double parsedDouble))
+                                            {
+                                                parsedParamsList.Add(parsedDouble);
+                                                continue;
+                                            }
+
+                                            if (node.AsValue().TryGetValue(out bool parsedBool))
+                                                parsedParamsList.Add(parsedBool);
                                         }
-                                        else
-                                        {
-                                            Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
-                                        }
+
+                                        modInstance = ParseMod(rulesetInstance, modAcronym, parsedParamsList);
+                                        if (modInstance != null)
+                                            requiredMods.Add(modInstance);
+                                    }
+                                    else
+                                    {
+                                        Logger.Log($@"[!mp mods] Couldn't parse mod parameter(s) '{mod[2..]}', ignoring", LoggingTarget.Runtime, LogLevel.Important);
                                     }
                                 }
                             }
@@ -562,6 +563,22 @@ namespace osu.Game.Online.Chat
                                 Logger.Log($@"[!mp mods] Mods {string.Join(", ", requiredMods.Select(mod => mod.Acronym))} are not compatible together", LoggingTarget.Runtime, LogLevel.Important);
                                 break;
                             }
+
+                            // remove duplicate required mods from allowed mods (if present)
+                            // don't use Mod.Equals, as it will return false if parameters differ
+                            allowedMods.RemoveAll(mod => requiredMods.Any(rMod => rMod.Acronym == mod.Acronym));
+
+                            // ensure allowed mods are compatible with required mods
+                            // inspired by https://github.com/ppy/osu-server-spectator/blob/156923578a34b4559582df9ccd49fda499b4fa0a/osu.Server.Spectator/Extensions/MultiplayerPlaylistItemExtensions.cs#L88-L92
+                            HashSet<Mod> modsToRemoveFromAllowed = new HashSet<Mod>();
+
+                            foreach (var allowedMod in allowedMods)
+                            {
+                                if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out var invalidMods))
+                                    modsToRemoveFromAllowed.UnionWith(invalidMods.Where(m => allowedMods.Contains(m)));
+                            }
+
+                            allowedMods.RemoveAll(modsToRemoveFromAllowed.Contains);
 
                             // get playlist item to edit:
                             beatmapLookupCache.GetBeatmapAsync(itemToEdit.BeatmapID).ContinueWith(task => Schedule(() =>
