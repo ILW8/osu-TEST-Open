@@ -432,9 +432,16 @@ namespace osu.Game.Online.Chat
                     }
                 }
                 // special-case player invites
-                else if (parts[2].StartsWith('#') && int.TryParse(parts[2].AsSpan(1), out numericParam) && parts[1] == @"invite")
+                else if (parts[1] == @"invite")
                 {
-                    inviteUserToRoom(numericParam);
+                    if (parts[2].StartsWith('#') && int.TryParse(parts[2].AsSpan(1), out numericParam))
+                    {
+                        inviteIdToRoom(numericParam);
+                    }
+                    else
+                    {
+                        inviteUserToRoom(parts[2]);
+                    }
                 }
                 else
                 {
@@ -693,38 +700,6 @@ namespace osu.Game.Online.Chat
                     }
                     else
                     {
-                        async Task<APIUser?> queryUsername(string username)
-                        {
-                            string patchedUsername = username.Replace('_', ' ');
-
-                            // check if user is already in the lobby
-                            var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, patchedUsername, StringComparison.OrdinalIgnoreCase));
-
-                            if (matchingUser != null)
-                            {
-                                return matchingUser.User;
-                            }
-
-                            // try to resolve the username
-                            userReq?.Cancel();
-                            var tcs = new TaskCompletionSource<APIUser?>();
-                            userReq = new GetUserRequest(patchedUsername);
-                            userReq.Success += u =>
-                            {
-                                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Successfully resolved user ${u}");
-                                tcs.TrySetResult(u);
-                            };
-                            userReq.Failure += e =>
-                            {
-                                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Could not resolve user {patchedUsername}");
-                                tcs.TrySetResult(null);
-                            };
-
-                            API.Queue(userReq);
-
-                            return await tcs.Task.ConfigureAwait(false);
-                        }
-
                         void printRefsList() => EnqueueBotMessage($@"Match referees: {string.Join(", ", multiplayerRefereeTracker.Referees)}");
 
                         switch (parts.Length)
@@ -773,7 +748,39 @@ namespace osu.Game.Online.Chat
             TextBox.Text = string.Empty;
         }
 
-        private void inviteUserToRoom(int userId)
+        private async Task<APIUser?> queryUsername(string username)
+        {
+            string patchedUsername = username.Replace('_', ' ');
+
+            // check if user is already in the lobby
+            var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, patchedUsername, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingUser != null)
+            {
+                return matchingUser.User;
+            }
+
+            // try to resolve the username
+            userReq?.Cancel();
+            var tcs = new TaskCompletionSource<APIUser?>();
+            userReq = new GetUserRequest(patchedUsername);
+            userReq.Success += u =>
+            {
+                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Successfully resolved user ${u}");
+                tcs.TrySetResult(u);
+            };
+            userReq.Failure += e =>
+            {
+                Logger.Log($@"[{nameof(StandAloneChatDisplay)}] Could not resolve user {patchedUsername}");
+                tcs.TrySetResult(null);
+            };
+
+            API.Queue(userReq);
+
+            return await tcs.Task.ConfigureAwait(false);
+        }
+
+        private void inviteIdToRoom(int userId)
         {
             var matchingUser = Client.Room?.Users.FirstOrDefault(u => u.UserID == userId);
 
@@ -790,6 +797,38 @@ namespace osu.Game.Online.Chat
             EnqueueBotMessage(msg);
 
             Client.InvitePlayer(userId);
+        }
+
+        private void inviteUserToRoom(string username)
+        {
+            string patchedUsername = username.Replace('_', ' ');
+
+            var matchingUser = Client.Room?.Users.FirstOrDefault(u => string.Equals(u.User?.Username, patchedUsername, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingUser != null)
+            {
+                EnqueueBotMessage($@"User {matchingUser.User?.Username ?? $@"ID {matchingUser.UserID}"} is already in the room!");
+                return;
+            }
+
+            queryUsername(username).ContinueWith(t =>
+            {
+                APIUser? user = t.GetResultSafely();
+
+                if (user == null)
+                {
+                    EnqueueBotMessage($@"Failed to find user {username}");
+                    return;
+                }
+
+                // It's possible the user isn't truly offline, so send the invite anyway. Warn the user in chat though.
+                string msg = metadataClient.GetPresence(user.Id) == null
+                    ? $@"User {username} may be offline, attempting to send an invite anyway."
+                    : $@"Sent an invite to user {username}";
+                EnqueueBotMessage(msg);
+
+                Client.InvitePlayer(user.Id);
+            });
         }
 
         private async Task postLatestResults(long roomID, PlaylistItem? playlistItem)
