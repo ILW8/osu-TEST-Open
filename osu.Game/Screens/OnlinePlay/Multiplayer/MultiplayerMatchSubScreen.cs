@@ -25,6 +25,7 @@ using osu.Game.Beatmaps.Drawables;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.API;
@@ -261,6 +262,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public override string ShortTitle => "room";
         private LinkFlowContainer linkFlowContainer = null!;
+        private OsuSpriteText channelIdText = null!;
         private StandAloneChatDisplay chatDisplay = null!;
 
         public override bool? ApplyModTrackAdjustments => true;
@@ -473,7 +475,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     Content = new[]
                                                                     {
                                                                         new Drawable[] { new OverlinedHeader("Lobby ID") },
-                                                                        new Drawable[] { linkFlowContainer = new LinkFlowContainer { Height = 24, AutoSizeAxes = Axes.X } },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            linkFlowContainer = new LinkFlowContainer { Height = 24, AutoSizeAxes = Axes.X },
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            channelIdText = new OsuSpriteText { Height = 24, Text = @"Loading chat..." },
+                                                                        },
                                                                         new Drawable[]
                                                                         {
                                                                             new ParticipantsListHeader()
@@ -693,6 +702,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             base.LoadComplete();
 
             userModsSelectOverlayRegistration = overlayManager?.RegisterBlockingOverlay(userModsSelectOverlay);
+
+            chatDisplay.Channel.BindValueChanged(channel =>
+            {
+                channelIdText.Text = $@"Chat channel ID: {channel.NewValue?.Id ?? 0}";
+            });
 
             Beatmap.BindValueChanged(vce =>
             {
